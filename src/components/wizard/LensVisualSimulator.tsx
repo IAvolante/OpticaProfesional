@@ -50,6 +50,8 @@ export function LensVisualSimulator({
           ? 20
           : 10;
 
+  const baseUrl = import.meta.env.BASE_URL;
+
   const activeVideoFile =
     mode === 'SUN_PHOTO'
       ? 'videos/optical-photochromic-flow.mp4'
@@ -59,12 +61,12 @@ export function LensVisualSimulator({
 
   const activePosterUrl =
     mode === 'SUN_PHOTO'
-      ? '/videos/optical-photochromic-flow-poster.jpg'
+      ? `${baseUrl}videos/optical-photochromic-flow-poster.jpg`
       : mode === 'BLUE_AR'
-        ? '/videos/optical-titanium-bluecut-flow-poster.jpg'
-        : '/videos/optical-hero-flow-poster.jpg';
+        ? `${baseUrl}videos/optical-titanium-bluecut-flow-poster.jpg`
+        : `${baseUrl}videos/optical-hero-flow-poster.jpg`;
 
-  const activeVideoUrl = `/${activeVideoFile}`;
+  const activeVideoUrl = `${baseUrl}${activeVideoFile}`;
 
   useEffect(() => {
     const videoEl = videoRef.current;

@@ -17,7 +17,7 @@ export function OpticalBrandTransition(_props: OpticalBrandTransitionProps) {
       className="pointer-events-none fixed inset-0 z-[1] flex items-center justify-center overflow-hidden"
     >
       <img
-        src="/logo-optica-profesional.png"
+        src={`${import.meta.env.BASE_URL}logo-optica-profesional.png`}
         alt={ENV_CONFIG.brandNameB2C}
         className="w-52 max-w-[55%] object-contain opacity-[0.14] blur-[3px] select-none"
       />

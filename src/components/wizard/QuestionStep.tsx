@@ -41,21 +41,23 @@ const STEP_PILLS: readonly {
   { id: 'framePreference', code: '05', shortLabel: 'Armazón' },
 ];
 
+const BASE_URL = import.meta.env.BASE_URL;
+
 const SHOWCASE_POOL = [
   {
     poolId: 'hero',
-    src: '/videos/optical-hero-flow.mp4',
-    poster: '/videos/optical-hero-flow-poster.jpg',
+    src: `${BASE_URL}videos/optical-hero-flow.mp4`,
+    poster: `${BASE_URL}videos/optical-hero-flow-poster.jpg`,
   },
   {
     poolId: 'titanium',
-    src: '/videos/optical-titanium-bluecut-flow.mp4',
-    poster: '/videos/optical-titanium-bluecut-flow-poster.jpg',
+    src: `${BASE_URL}videos/optical-titanium-bluecut-flow.mp4`,
+    poster: `${BASE_URL}videos/optical-titanium-bluecut-flow-poster.jpg`,
   },
   {
     poolId: 'photochromic',
-    src: '/videos/optical-photochromic-flow.mp4',
-    poster: '/videos/optical-photochromic-flow-poster.jpg',
+    src: `${BASE_URL}videos/optical-photochromic-flow.mp4`,
+    poster: `${BASE_URL}videos/optical-photochromic-flow-poster.jpg`,
   },
 ] as const;
 
@@ -72,31 +74,31 @@ const QUESTION_VIDEO_SHOWCASE: Record<
 > = {
   visionNeed: {
     poolId: 'hero',
-    poster: '/videos/optical-hero-flow-poster.jpg',
+    poster: `${BASE_URL}videos/optical-hero-flow-poster.jpg`,
     caption: 'Laboratorio Óptico Digital · Salta',
     code: 'OPT-01',
   },
   screenExposure: {
     poolId: 'titanium',
-    poster: '/videos/optical-titanium-bluecut-flow-poster.jpg',
+    poster: `${BASE_URL}videos/optical-titanium-bluecut-flow-poster.jpg`,
     caption: 'Tratamiento Blue Cut + Antirreflex HD',
     code: 'OPT-02',
   },
   lightSensitivity: {
     poolId: 'photochromic',
-    poster: '/videos/optical-photochromic-flow-poster.jpg',
+    poster: `${BASE_URL}videos/optical-photochromic-flow-poster.jpg`,
     caption: 'Transición Fotocromática Solar UV400',
     code: 'OPT-03',
   },
   graduationSeverity: {
     poolId: 'hero',
-    poster: '/videos/optical-hero-flow-poster.jpg',
+    poster: `${BASE_URL}videos/optical-hero-flow-poster.jpg`,
     caption: 'Cálculo de Índice y Espesor Asférico',
     code: 'OPT-04',
   },
   framePreference: {
     poolId: 'titanium',
-    poster: '/videos/optical-titanium-bluecut-flow-poster.jpg',
+    poster: `${BASE_URL}videos/optical-titanium-bluecut-flow-poster.jpg`,
     caption: 'Calibración de Montura y Biselado Digital',
     code: 'OPT-05',
   },

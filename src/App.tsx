@@ -142,7 +142,7 @@ export function App() {
                 className="flex items-center gap-2 text-left truncate cursor-pointer focus-visible:outline-none"
               >
                 <img
-                  src="/logo-optica-profesional.png"
+                  src={`${import.meta.env.BASE_URL}logo-optica-profesional.png`}
                   alt={ENV_CONFIG.brandNameB2C}
                   className="h-8 w-auto object-contain shrink-0"
                 />

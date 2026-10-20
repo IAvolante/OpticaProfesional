@@ -9,21 +9,23 @@ export interface BackgroundVideoStageProps {
   readonly activeQuestionId?: QuestionId;
 }
 
+const BASE_URL = import.meta.env.BASE_URL;
+
 const STAGE_VIDEOS = [
   {
     id: 'hero',
-    src: '/videos/optical-hero-flow.mp4',
-    poster: '/videos/optical-hero-flow-poster.jpg',
+    src: `${BASE_URL}videos/optical-hero-flow.mp4`,
+    poster: `${BASE_URL}videos/optical-hero-flow-poster.jpg`,
   },
   {
     id: 'photochromic',
-    src: '/videos/optical-photochromic-flow.mp4',
-    poster: '/videos/optical-photochromic-flow-poster.jpg',
+    src: `${BASE_URL}videos/optical-photochromic-flow.mp4`,
+    poster: `${BASE_URL}videos/optical-photochromic-flow-poster.jpg`,
   },
   {
     id: 'titanium',
-    src: '/videos/optical-titanium-bluecut-flow.mp4',
-    poster: '/videos/optical-titanium-bluecut-flow-poster.jpg',
+    src: `${BASE_URL}videos/optical-titanium-bluecut-flow.mp4`,
+    poster: `${BASE_URL}videos/optical-titanium-bluecut-flow-poster.jpg`,
   },
 ] as const;
 
