@@ -1,0 +1,179 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-heading: 'DM Sans', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+/* ============================================================================
+ * SISTEMA VISUAL CLÍNICO-LUMINOSO (@opticaprofesionalsla — SALTA)
+ * ============================================================================
+ * Estética Light Liquid Glass (Zeiss / Apple Health / shadcn Light) con tarjetas
+ * blancas translúcidas de alta pureza, bordes luminosos, botones con gradiente
+ * esmeralda y tipografía clínica de precisión (Inter + DM Sans + JetBrains Mono).
+ */
+
+:root,
+[data-theme="theme-clinical"] {
+  --brand-canvas: #F8FAFC;
+  --brand-surface: #FFFFFF;
+  --brand-surface-elevated: #F1F5F9;
+  --brand-primary: #0D9488;
+  --brand-primary-hover: #0F766E;
+  --brand-primary-foreground: #FFFFFF;
+  --brand-accent: #F0FDFA;
+  --brand-accent-border: #99F6E4;
+  --brand-accent-foreground: #115E59;
+  --brand-text: #0F172A;
+  --brand-text-muted: #475569;
+  --brand-border: #E2E8F0;
+  --brand-ring: #14B8A6;
+  --brand-glow: rgba(13, 148, 136, 0.22);
+  --brand-gradient-start: #0F766E;
+  --brand-gradient-end: #0D9488;
+  --brand-badge-stock-bg: #ECFDF5;
+  --brand-badge-stock-text: #065F46;
+  --brand-badge-lab-bg: #F0F9FF;
+  --brand-badge-lab-text: #075985;
+}
+
+[data-theme="theme-boutique"] {
+  --brand-canvas: #FAF7F5;
+  --brand-surface: #FFFFFF;
+  --brand-surface-elevated: #F5EFEA;
+  --brand-primary: #881337;
+  --brand-primary-hover: #9F1239;
+  --brand-primary-foreground: #FFFFFF;
+  --brand-accent: #FFF1F2;
+  --brand-accent-border: #FECDD3;
+  --brand-accent-foreground: #881337;
+  --brand-text: #1C1917;
+  --brand-text-muted: #57534E;
+  --brand-border: #E7E0DA;
+  --brand-ring: #BE123C;
+  --brand-glow: rgba(136, 19, 55, 0.22);
+  --brand-gradient-start: #881337;
+  --brand-gradient-end: #BE123C;
+  --brand-badge-stock-bg: #ECFDF5;
+  --brand-badge-stock-text: #065F46;
+  --brand-badge-lab-bg: #FFF1F2;
+  --brand-badge-lab-text: #9F1239;
+}
+
+[data-theme="theme-neutral"] {
+  --brand-canvas: #F9FAFB;
+  --brand-surface: #FFFFFF;
+  --brand-surface-elevated: #F3F4F6;
+  --brand-primary: #18181B;
+  --brand-primary-hover: #27272A;
+  --brand-primary-foreground: #FFFFFF;
+  --brand-accent: #EEF2FF;
+  --brand-accent-border: #C7D2FE;
+  --brand-accent-foreground: #3730A3;
+  --brand-text: #09090B;
+  --brand-text-muted: #52525B;
+  --brand-border: #E4E4E7;
+  --brand-ring: #4F46E5;
+  --brand-glow: rgba(79, 70, 229, 0.2);
+  --brand-gradient-start: #18181B;
+  --brand-gradient-end: #3F3F46;
+  --brand-badge-stock-bg: #F0FDF4;
+  --brand-badge-stock-text: #166534;
+  --brand-badge-lab-bg: #FEFCE8;
+  --brand-badge-lab-text: #854D0E;
+}
+
+@layer base {
+  *,
+  *::before,
+  *::after {
+    -webkit-tap-highlight-color: transparent;
+    box-sizing: border-box;
+  }
+
+  html {
+    background-color: var(--brand-canvas);
+    color: var(--brand-text);
+    font-family: var(--font-sans);
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+    overflow-x: hidden;
+    color-scheme: light;
+  }
+
+  body {
+    background-color: var(--brand-canvas);
+    color: var(--brand-text);
+    font-family: var(--font-sans);
+    letter-spacing: -0.008em;
+    line-height: 1.5;
+    min-height: 100dvh;
+    overflow-x: hidden;
+    touch-action: manipulation;
+    transition: background-color 250ms ease, color 250ms ease;
+  }
+
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+    font-family: var(--font-sans);
+  }
+
+  h1,
+  h2,
+  h3,
+  .font-brand-heading {
+    font-family: var(--font-heading);
+    letter-spacing: -0.022em;
+  }
+}
+
+/* Superficie Light Liquid Glass Clínica con Borde Luminoso */
+.optical-glass-card {
+  position: relative;
+  background-color: color-mix(in srgb, var(--brand-surface) 90%, transparent);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  border: 1px solid color-mix(in srgb, var(--brand-border) 88%, #ffffff);
+  box-shadow:
+    0 10px 30px -10px rgba(15, 23, 42, 0.08),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.85);
+}
+
+/* Tarjeta Activa en Modo Claro con Halo Esmeralda Sutil */
+.optical-glass-card-active {
+  background-color: color-mix(in srgb, var(--brand-accent) 92%, #ffffff);
+  border: 2px solid var(--brand-primary);
+  box-shadow:
+    0 10px 26px -6px var(--brand-glow),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.9);
+}
+
+/* Botón Principal con Gradiente Clínico y Brillo Superior */
+.optical-gradient-btn {
+  background: linear-gradient(
+    135deg,
+    var(--brand-gradient-start) 0%,
+    var(--brand-gradient-end) 100%
+  );
+  color: #FFFFFF;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  box-shadow:
+    0 8px 20px -4px var(--brand-glow),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.25);
+}
+
+.optical-gradient-btn:hover {
+  filter: brightness(1.05);
+}
+
+/* Utilidad para respetar la barra inferior de iOS y Android */
+.pb-safe-bottom {
+  padding-bottom: max(0.875rem, env(safe-area-inset-bottom));
+}
