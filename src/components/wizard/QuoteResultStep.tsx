@@ -605,7 +605,7 @@ export function QuoteResultStep({
 
       {/* Barra Inferior Fija de Conversión a WhatsApp (Thumb-Zone) */}
       <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-[var(--brand-border)] bg-[var(--brand-surface)]/95 backdrop-blur-xl px-4 pt-2.5 pb-safe-bottom shadow-xl">
-        <div className="mx-auto max-w-[430px] space-y-1.5">
+        <div className="mx-auto max-w-[480px] space-y-1.5">
           <div className="flex items-center justify-between text-xs">
             <span className="font-mono font-medium text-[var(--brand-text)] truncate max-w-[215px]">
               #{passportCode} · {activeLens.sku}

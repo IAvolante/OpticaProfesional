@@ -116,6 +116,8 @@ export function LeadCaptureStep({
 }: LeadCaptureStepProps) {
   const prefersReducedMotion = useReducedMotion();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const nameInputRef = useRef<HTMLInputElement | null>(null);
+  const phoneInputRef = useRef<HTMLInputElement | null>(null);
 
   const [fullName, setFullName] = useState<string>(
     initialLead?.fullName ?? ''
@@ -181,24 +183,35 @@ export function LeadCaptureStep({
     const trimmedName = fullName.trim();
     const cleanDigits = sanitizeArgentinePhone(whatsapp);
 
-    let hasValidationError = false;
+    let firstInvalidElement: HTMLInputElement | null = null;
 
     if (trimmedName.length < 2) {
-      setNameError('Ingresá tu nombre para emitir tu Ficha y Pasaporte Óptico.');
-      hasValidationError = true;
+      setNameError('Completá tu nombre y apellido para emitir tu cotización.');
+      firstInvalidElement = nameInputRef.current;
     } else {
       setNameError('');
     }
 
     if (cleanDigits.length < 8) {
-      setPhoneError('Ingresá tu WhatsApp sin 0 ni 15 (ej. 3875123456).');
-      hasValidationError = true;
+      setPhoneError(
+        'Completá tu número de WhatsApp sin 0 ni 15 (ej: 3875123456).'
+      );
+      if (!firstInvalidElement) {
+        firstInvalidElement = phoneInputRef.current;
+      }
     } else {
       setPhoneError('');
     }
 
-    if (hasValidationError) {
+    if (firstInvalidElement) {
       triggerHapticFeedback(25);
+      firstInvalidElement.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+      });
+      window.setTimeout(() => {
+        firstInvalidElement?.focus({ preventScroll: true });
+      }, 280);
       return;
     }
 
@@ -231,7 +244,7 @@ export function LeadCaptureStep({
         animate={{ opacity: 1, y: 0 }}
         exit={prefersReducedMotion ? undefined : { opacity: 0, y: -12 }}
         transition={{ type: 'spring', stiffness: 360, damping: 28 }}
-        className="w-full pb-36"
+        className="w-full pb-28"
       >
         <Card variant="elevated" className="w-full overflow-hidden">
           <CardHeader className="pb-3">
@@ -263,7 +276,8 @@ export function LeadCaptureStep({
               {/* 1. Datos de Contacto */}
               <div className="space-y-3">
                 <InputField
-                  label="Nombre y Apellido"
+                  ref={nameInputRef}
+                  label="Nombre y Apellido *"
                   placeholder="Ej: Mariana Gómez"
                   value={fullName}
                   onChange={(e) => {
@@ -278,7 +292,8 @@ export function LeadCaptureStep({
                 />
 
                 <InputField
-                  label="WhatsApp de Contacto (Salta / NOA)"
+                  ref={phoneInputRef}
+                  label="WhatsApp de Contacto (Salta / NOA) *"
                   type="tel"
                   inputMode="tel"
                   placeholder="Ej: 387 5123456"
@@ -552,21 +567,6 @@ export function LeadCaptureStep({
                   className="w-full rounded-xl border border-[var(--brand-border)] bg-[var(--brand-surface)] px-3.5 py-2.5 text-sm text-[var(--brand-text)] placeholder:text-[var(--brand-text-muted)]/60 focus:border-[var(--brand-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-ring)]/25"
                 />
               </div>
-
-              <div className="pt-1">
-                <Button
-                  type="submit"
-                  variant="primary"
-                  size="lg"
-                  fullWidth
-                  disabled={isSubmitting}
-                  rightIcon={<ArrowRight className="h-4 w-4" />}
-                >
-                  {isSubmitting
-                    ? 'Generando Ficha y Cotización...'
-                    : 'Emitir Mi Cotización Ahora'}
-                </Button>
-              </div>
             </form>
           </CardContent>
         </Card>
@@ -574,7 +574,7 @@ export function LeadCaptureStep({
 
       {/* Barra Inferior Fija en Zona del Pulgar — Fuera de `motion.div` para iOS Safari */}
       <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-[var(--brand-border)] bg-[var(--brand-surface)]/95 backdrop-blur-xl px-4 pt-2.5 pb-safe-bottom shadow-xl">
-        <div className="mx-auto max-w-[430px]">
+        <div className="mx-auto max-w-[480px]">
           <Button
             type="submit"
             form="lead-capture-form"

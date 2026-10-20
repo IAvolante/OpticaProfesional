@@ -4,7 +4,6 @@ import { cn } from '../../utils/cn';
 
 export interface BackgroundVideoStageProps {
   readonly enabled: boolean;
-  readonly isMuted: boolean;
   readonly currentStep: WizardStepType;
   readonly activeQuestionId?: QuestionId;
 }
@@ -60,14 +59,13 @@ function resolveStageVideoId(
 }
 
 /**
- * Escenario de Video Inmersivo con Pool Persistente (0ms Re-buffering):
- * - En el paso WELCOME reproduce el video principal con audio opcional.
- * - En los pasos internos usa los posters de alta resolución + video pre-cargado
- *   sin destruir ni volver a descargar los archivos en cada paso.
+ * Escenario de Video Inmersivo Responsive (Mobile-First + Full Viewport):
+ * - 100% silencioso (`muted` permanente, sin controles de audio).
+ * - Cubre todo el lienzo de forma fluida sin franjas blancas laterales ni cortes bruscos
+ *   en teléfonos grandes, tablets o monitores de escritorio.
  */
 export function BackgroundVideoStage({
   enabled,
-  isMuted,
   currentStep,
   activeQuestionId,
 }: BackgroundVideoStageProps) {
@@ -90,22 +88,21 @@ export function BackgroundVideoStage({
       if (!el) continue;
 
       const isCurrent = item.id === activeVideoId;
-      el.defaultMuted = isCurrent ? isMuted : true;
-      el.muted = isCurrent ? isMuted : true;
+      el.defaultMuted = true;
+      el.muted = true;
 
       if (isCurrent) {
         const playPromise = el.play();
         if (playPromise !== undefined) {
           playPromise.catch(() => {
-            el.muted = true;
-            void el.play();
+            // Ignorar si el navegador difiere reproducción automática
           });
         }
       } else {
         el.pause();
       }
     }
-  }, [enabled, isMuted, activeVideoId]);
+  }, [enabled, activeVideoId]);
 
   if (!enabled) {
     return null;
@@ -114,10 +111,10 @@ export function BackgroundVideoStage({
   return (
     <div
       aria-hidden="true"
-      className="pointer-events-none fixed inset-0 z-0 overflow-hidden flex justify-center bg-[var(--brand-canvas)]"
+      className="pointer-events-none fixed inset-0 z-0 overflow-hidden bg-[var(--brand-canvas)]"
     >
-      {/* Contenedor del video calibrado al viewport móvil con pool persistente */}
-      <div className="relative h-full w-full max-w-[430px] overflow-hidden">
+      {/* Video a pantalla completa con transición suave y sin cortes laterales */}
+      <div className="relative h-full w-full overflow-hidden">
         {STAGE_VIDEOS.map((item) => {
           const isCurrent = item.id === activeVideoId;
           return (
@@ -129,27 +126,27 @@ export function BackgroundVideoStage({
               src={item.src}
               poster={item.poster}
               loop
-              muted={isCurrent ? isMuted : true}
+              muted
               playsInline
               preload="auto"
               className={cn(
                 'absolute inset-0 h-full w-full object-cover object-center transition-opacity duration-300 ease-out',
                 isCurrent ? 'opacity-100' : 'opacity-0 pointer-events-none',
                 isWelcomeStep
-                  ? 'scale-100 brightness-[0.98] contrast-[1.04]'
-                  : 'scale-105 blur-[1.5px] brightness-[0.92] contrast-[1.02]'
+                  ? 'scale-100 brightness-[0.96] contrast-[1.03] sm:blur-[2px]'
+                  : 'scale-105 blur-[3px] brightness-[0.92] contrast-[1.02]'
               )}
             />
           );
         })}
 
-        {/* Gradiente suave que deja despejada la parte superior del video y funde hacia el lienzo claro abajo */}
+        {/* Gradiente continuo en todo el ancho de pantalla para lectura limpia en móvil y desktop */}
         <div
           className={cn(
             'absolute inset-0 transition-opacity duration-500',
             isWelcomeStep
-              ? 'bg-gradient-to-b from-black/15 via-transparent to-[var(--brand-canvas)]/90'
-              : 'bg-gradient-to-b from-[var(--brand-canvas)]/35 via-[var(--brand-canvas)]/65 to-[var(--brand-canvas)]/92'
+              ? 'bg-gradient-to-b from-slate-950/20 via-[var(--brand-canvas)]/45 to-[var(--brand-canvas)]/95'
+              : 'bg-gradient-to-b from-[var(--brand-canvas)]/55 via-[var(--brand-canvas)]/80 to-[var(--brand-canvas)]/96'
           )}
         />
       </div>

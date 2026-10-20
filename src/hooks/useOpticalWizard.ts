@@ -23,7 +23,7 @@ import type {
 import { generateLeadId } from '../utils/formatters';
 import { trackMetaPixelEvent } from '../utils/metaPixel.tracker';
 
-const WIZARD_SESSION_STORAGE_KEY = 'optica_profesional_wizard_state_v2';
+const WIZARD_SESSION_STORAGE_KEY = 'optica_profesional_wizard_state_v3';
 
 interface PersistedWizardSnapshot {
   readonly step: WizardStepType;
@@ -47,7 +47,7 @@ function isCompletedAnswers(
 function loadInitialSnapshot(): PersistedWizardSnapshot {
   if (typeof window === 'undefined') {
     return {
-      step: 'WELCOME',
+      step: 'QUESTIONS',
       activeQuestionIndex: 0,
       answers: {},
       lead: null,
@@ -58,7 +58,7 @@ function loadInitialSnapshot(): PersistedWizardSnapshot {
     const raw = window.sessionStorage.getItem(WIZARD_SESSION_STORAGE_KEY);
     if (!raw) {
       return {
-        step: 'WELCOME',
+        step: 'QUESTIONS',
         activeQuestionIndex: 0,
         answers: {},
         lead: null,
@@ -68,7 +68,7 @@ function loadInitialSnapshot(): PersistedWizardSnapshot {
     const parsed: unknown = JSON.parse(raw);
     if (typeof parsed !== 'object' || parsed === null) {
       return {
-        step: 'WELCOME',
+        step: 'QUESTIONS',
         activeQuestionIndex: 0,
         answers: {},
         lead: null,
@@ -77,12 +77,11 @@ function loadInitialSnapshot(): PersistedWizardSnapshot {
 
     const snapshot = parsed as Partial<PersistedWizardSnapshot>;
     const validStep: WizardStepType =
-      snapshot.step === 'WELCOME' ||
       snapshot.step === 'QUESTIONS' ||
       snapshot.step === 'LEAD_CAPTURE' ||
       snapshot.step === 'QUOTE_RESULT'
         ? snapshot.step
-        : 'WELCOME';
+        : 'QUESTIONS';
 
     const rawIndex =
       typeof snapshot.activeQuestionIndex === 'number'
@@ -132,7 +131,7 @@ function loadInitialSnapshot(): PersistedWizardSnapshot {
     };
   } catch {
     return {
-      step: 'WELCOME',
+      step: 'QUESTIONS',
       activeQuestionIndex: 0,
       answers: {},
       lead: null,
@@ -167,7 +166,7 @@ export interface UseOpticalWizardReturn {
 
 /**
  * Máquina de estados del Cotizador Óptico:
- * - Gestiona el paso actual ('WELCOME' | 'QUESTIONS' | 'LEAD_CAPTURE' | 'QUOTE_RESULT').
+ * - Abre directamente en el Paso 1 ('QUESTIONS') sin pantalla intermedia de inicio.
  * - Calcula el porcentaje de avance del flujo.
  * - Persiste automáticamente en `sessionStorage` para resistir recargas en navegadores móviles (Instagram in-app browser).
  * - Dispara los eventos de conversión `ViewContent`, `Lead` y `Contact` hacia Meta Pixel.
@@ -242,18 +241,9 @@ export function useOpticalWizard({
       };
     }
 
-    if (snapshot.step === 'QUESTIONS') {
-      return {
-        step: 'QUESTIONS',
-        activeQuestionIndex: snapshot.activeQuestionIndex,
-        answers: snapshot.answers,
-        lead: snapshot.lead,
-      };
-    }
-
     return {
-      step: 'WELCOME',
-      activeQuestionIndex: 0,
+      step: 'QUESTIONS',
+      activeQuestionIndex: snapshot.activeQuestionIndex,
       answers: snapshot.answers,
       lead: snapshot.lead,
     };
@@ -261,12 +251,10 @@ export function useOpticalWizard({
 
   const progressPercentage = useMemo(() => {
     switch (wizardState.step) {
-      case 'WELCOME':
-        return 8;
       case 'QUESTIONS': {
         const questionProgress =
           ((wizardState.activeQuestionIndex + 1) / (totalQuestions + 1)) * 85;
-        return Math.round(Math.max(18, Math.min(82, questionProgress)));
+        return Math.round(Math.max(16, Math.min(82, questionProgress)));
       }
       case 'LEAD_CAPTURE':
         return 90;
@@ -275,7 +263,8 @@ export function useOpticalWizard({
     }
   }, [wizardState.step, wizardState.activeQuestionIndex, totalQuestions]);
 
-  const canGoBack = wizardState.step !== 'WELCOME';
+  const canGoBack =
+    wizardState.step !== 'QUESTIONS' || wizardState.activeQuestionIndex > 0;
 
   const startWizard = useCallback(() => {
     trackMetaPixelEvent('ViewContent', {
@@ -374,11 +363,7 @@ export function useOpticalWizard({
             activeQuestionIndex: prev.activeQuestionIndex - 1,
           };
         }
-        return {
-          ...prev,
-          step: 'WELCOME',
-          activeQuestionIndex: 0,
-        };
+        return prev;
       }
 
       return prev;
@@ -454,7 +439,7 @@ export function useOpticalWizard({
 
   const resetWizard = useCallback(() => {
     setSnapshot({
-      step: 'WELCOME',
+      step: 'QUESTIONS',
       activeQuestionIndex: 0,
       answers: {},
       lead: null,

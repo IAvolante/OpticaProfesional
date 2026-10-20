@@ -30,7 +30,7 @@ export function MobileSheet({
         <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs transition-opacity" />
         <DialogPrimitive.Content
           className={cn(
-            'fixed bottom-0 left-0 right-0 z-50 mx-auto w-full max-w-[430px] rounded-t-3xl border-t border-[var(--brand-border)] bg-[var(--brand-surface)] p-5 shadow-2xl focus:outline-none pb-safe-bottom max-h-[85dvh] overflow-y-auto',
+            'fixed bottom-0 left-0 right-0 z-50 mx-auto w-full max-w-[480px] rounded-t-3xl border-t border-[var(--brand-border)] bg-[var(--brand-surface)] p-5 shadow-2xl focus:outline-none pb-safe-bottom max-h-[85dvh] overflow-y-auto',
             className
           )}
         >
