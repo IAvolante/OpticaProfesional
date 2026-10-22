@@ -3,27 +3,28 @@ import { OPTICAL_WIZARD_QUESTIONS } from '../data/questions.data';
 import { calculateOpticalRecommendation } from '../services/recommendation.engine';
 import { submitLeadToGoogleSheets } from '../services/sheets.service';
 import type {
+  ActivityContextAnswer,
   BrandThemeId,
+  BudgetPreferenceAnswer,
+  ClientPriorityAnswer,
   CompletedOpticalAnswers,
-  FramePreferenceAnswer,
-  GraduationSeverityAnswer,
+  ImprovementGoalAnswer,
   LeadContactData,
   LensCatalogItem,
-  LightSensitivityAnswer,
   OpticalRecommendationResult,
+  PrescriptionAttachmentAnswer,
   QuestionId,
   QuestionOptionValue,
-  ScreenExposureAnswer,
   UserOpticalAnswers,
-  VisionNeedAnswer,
   WizardQuestionDefinition,
   WizardStateDiscriminated,
   WizardStepType,
 } from '../types/optical.types';
 import { generateLeadId } from '../utils/formatters';
 import { trackMetaPixelEvent } from '../utils/metaPixel.tracker';
+import { buildWhatsAppDeepLink } from '../utils/whatsapp.encoder';
 
-const WIZARD_SESSION_STORAGE_KEY = 'optica_profesional_wizard_state_v3';
+const WIZARD_SESSION_STORAGE_KEY = 'optica_profesional_wizard_state_v4';
 
 interface PersistedWizardSnapshot {
   readonly step: WizardStepType;
@@ -36,11 +37,12 @@ function isCompletedAnswers(
   answers: UserOpticalAnswers
 ): answers is CompletedOpticalAnswers {
   return (
-    typeof answers.visionNeed === 'string' &&
-    typeof answers.screenExposure === 'string' &&
-    typeof answers.lightSensitivity === 'string' &&
-    typeof answers.graduationSeverity === 'string' &&
-    typeof answers.framePreference === 'string'
+    typeof answers.improvementGoal === 'string' &&
+    typeof answers.activityContext === 'string' &&
+    typeof answers.clientPriority === 'string' &&
+    Array.isArray(answers.budgetPreferences) &&
+    answers.budgetPreferences.length > 0 &&
+    typeof answers.prescriptionAttachment === 'string'
   );
 }
 
@@ -77,9 +79,7 @@ function loadInitialSnapshot(): PersistedWizardSnapshot {
 
     const snapshot = parsed as Partial<PersistedWizardSnapshot>;
     const validStep: WizardStepType =
-      snapshot.step === 'QUESTIONS' ||
-      snapshot.step === 'LEAD_CAPTURE' ||
-      snapshot.step === 'QUOTE_RESULT'
+      snapshot.step === 'QUESTIONS' || snapshot.step === 'QUOTE_RESULT'
         ? snapshot.step
         : 'QUESTIONS';
 
@@ -102,22 +102,10 @@ function loadInitialSnapshot(): PersistedWizardSnapshot {
         ? (snapshot.lead as LeadContactData)
         : null;
 
-    if (
-      (validStep === 'LEAD_CAPTURE' || validStep === 'QUOTE_RESULT') &&
-      !isCompletedAnswers(answers)
-    ) {
+    if (validStep === 'QUOTE_RESULT' && !isCompletedAnswers(answers)) {
       return {
         step: 'QUESTIONS',
         activeQuestionIndex: 0,
-        answers,
-        lead: null,
-      };
-    }
-
-    if (validStep === 'QUOTE_RESULT' && !lead) {
-      return {
-        step: 'LEAD_CAPTURE',
-        activeQuestionIndex: OPTICAL_WIZARD_QUESTIONS.length - 1,
         answers,
         lead: null,
       };
@@ -139,6 +127,12 @@ function loadInitialSnapshot(): PersistedWizardSnapshot {
   }
 }
 
+export interface ClaimBenefitParams {
+  readonly fullName: string;
+  readonly whatsapp: string;
+  readonly selectedTier: 'PRIMARY' | 'ALTERNATIVE';
+}
+
 export interface UseOpticalWizardParams {
   readonly catalogItems: readonly LensCatalogItem[];
   readonly activeTheme: BrandThemeId;
@@ -151,26 +145,23 @@ export interface UseOpticalWizardReturn {
   readonly progressPercentage: number;
   readonly canGoBack: boolean;
   readonly isSubmittingLead: boolean;
-  readonly startWizard: () => void;
   readonly selectQuestionOption: (
     questionId: QuestionId,
     value: QuestionOptionValue
   ) => void;
-  readonly goToPreviousStep: () => void;
-  readonly submitLeadAndGenerateQuote: (leadData: LeadContactData) => Promise<void>;
-  readonly resetWizard: () => void;
-  readonly registerWhatsAppContactConversion: (
-    selectedTier: 'PRIMARY' | 'ALTERNATIVE'
+  readonly confirmBudgetPreferencesStep: () => void;
+  readonly attachPrescriptionPhotoAndAdvance: (
+    fileName: string,
+    dataUrl: string
   ) => void;
+  readonly goToPreviousStep: () => void;
+  readonly goToQuestionIndex: (index: number) => void;
+  readonly claimBenefitAndOpenWhatsApp: (
+    params: ClaimBenefitParams
+  ) => Promise<void>;
+  readonly resetWizard: () => void;
 }
 
-/**
- * Máquina de estados del Cotizador Óptico:
- * - Abre directamente en el Paso 1 ('QUESTIONS') sin pantalla intermedia de inicio.
- * - Calcula el porcentaje de avance del flujo.
- * - Persiste automáticamente en `sessionStorage` para resistir recargas en navegadores móviles (Instagram in-app browser).
- * - Dispara los eventos de conversión `ViewContent`, `Lead` y `Contact` hacia Meta Pixel.
- */
 export function useOpticalWizard({
   catalogItems,
   activeTheme,
@@ -180,7 +171,6 @@ export function useOpticalWizard({
   );
   const [isSubmittingLead, setIsSubmittingLead] = useState<boolean>(false);
 
-  // Persistencia en sessionStorage en cada transición
   useEffect(() => {
     if (typeof window === 'undefined') {
       return;
@@ -191,7 +181,7 @@ export function useOpticalWizard({
         JSON.stringify(snapshot)
       );
     } catch {
-      // Ignorar restricciones de sessionStorage en webviews privados
+      // Ignorar si excede sessionStorage en navegador privado
     }
   }, [snapshot]);
 
@@ -202,7 +192,6 @@ export function useOpticalWizard({
     if (found) {
       return found;
     }
-    // Fallback garantizado a la primera pregunta
     return OPTICAL_WIZARD_QUESTIONS[0] as WizardQuestionDefinition;
   }, [snapshot.activeQuestionIndex]);
 
@@ -217,7 +206,6 @@ export function useOpticalWizard({
     if (
       snapshot.step === 'QUOTE_RESULT' &&
       isCompletedAnswers(snapshot.answers) &&
-      snapshot.lead &&
       recommendation
     ) {
       return {
@@ -226,18 +214,6 @@ export function useOpticalWizard({
         answers: snapshot.answers,
         lead: snapshot.lead,
         recommendation,
-      };
-    }
-
-    if (
-      snapshot.step === 'LEAD_CAPTURE' &&
-      isCompletedAnswers(snapshot.answers)
-    ) {
-      return {
-        step: 'LEAD_CAPTURE',
-        activeQuestionIndex: snapshot.activeQuestionIndex,
-        answers: snapshot.answers,
-        lead: snapshot.lead,
       };
     }
 
@@ -250,79 +226,87 @@ export function useOpticalWizard({
   }, [snapshot, recommendation]);
 
   const progressPercentage = useMemo(() => {
-    switch (wizardState.step) {
-      case 'QUESTIONS': {
-        const questionProgress =
-          ((wizardState.activeQuestionIndex + 1) / (totalQuestions + 1)) * 85;
-        return Math.round(Math.max(16, Math.min(82, questionProgress)));
-      }
-      case 'LEAD_CAPTURE':
-        return 90;
-      case 'QUOTE_RESULT':
-        return 100;
+    if (wizardState.step === 'QUOTE_RESULT') {
+      return 100;
     }
+    const questionProgress =
+      ((wizardState.activeQuestionIndex + 1) / (totalQuestions + 1)) * 92;
+    return Math.round(Math.max(16, Math.min(88, questionProgress)));
   }, [wizardState.step, wizardState.activeQuestionIndex, totalQuestions]);
 
   const canGoBack =
     wizardState.step !== 'QUESTIONS' || wizardState.activeQuestionIndex > 0;
 
-  const startWizard = useCallback(() => {
-    trackMetaPixelEvent('ViewContent', {
-      content_name: 'Inicio Diagnóstico Cotizador Óptico',
-      content_category: 'OpticalWizard',
-      status: 'started',
-    });
-
-    setSnapshot((prev) => ({
-      ...prev,
-      step: 'QUESTIONS',
-      activeQuestionIndex: 0,
-    }));
-  }, []);
-
   const selectQuestionOption = useCallback(
     (questionId: QuestionId, value: QuestionOptionValue) => {
       setSnapshot((prev) => {
-        const updatedAnswers: UserOpticalAnswers = {
-          ...prev.answers,
-          ...(questionId === 'visionNeed'
-            ? { visionNeed: value as VisionNeedAnswer }
-            : {}),
-          ...(questionId === 'screenExposure'
-            ? { screenExposure: value as ScreenExposureAnswer }
-            : {}),
-          ...(questionId === 'lightSensitivity'
-            ? { lightSensitivity: value as LightSensitivityAnswer }
-            : {}),
-          ...(questionId === 'graduationSeverity'
-            ? { graduationSeverity: value as GraduationSeverityAnswer }
-            : {}),
-          ...(questionId === 'framePreference'
-            ? { framePreference: value as FramePreferenceAnswer }
-            : {}),
-        };
-
-        const isLastQuestion = prev.activeQuestionIndex >= totalQuestions - 1;
-
-        if (isLastQuestion && isCompletedAnswers(updatedAnswers)) {
-          const previewRec = calculateOpticalRecommendation(
-            updatedAnswers,
-            catalogItems
-          );
-
-          trackMetaPixelEvent('ViewContent', {
-            content_name: `Pre-Diagnóstico Completado: ${previewRec.primaryOption.sku}`,
-            content_category: 'OpticalWizardQuestionsCompleted',
-            content_ids: [previewRec.primaryOption.sku],
-            value: previewRec.primaryOption.priceStockARS,
-            currency: 'ARS',
-          });
+        // Paso 4: Selección múltiple (se puede elegir más de una opción)
+        if (questionId === 'budgetPreferences') {
+          const item = value as BudgetPreferenceAnswer;
+          const currentList = prev.answers.budgetPreferences ?? [];
+          const exists = currentList.includes(item);
+          const nextList = exists
+            ? currentList.filter((v) => v !== item)
+            : [...currentList, item];
 
           return {
             ...prev,
-            step: 'LEAD_CAPTURE',
-            answers: updatedAnswers,
+            answers: {
+              ...prev.answers,
+              budgetPreferences: nextList,
+            },
           };
+        }
+
+        const updatedAnswers: UserOpticalAnswers = {
+          ...prev.answers,
+          ...(questionId === 'improvementGoal'
+            ? { improvementGoal: value as ImprovementGoalAnswer }
+            : {}),
+          ...(questionId === 'activityContext'
+            ? { activityContext: value as ActivityContextAnswer }
+            : {}),
+          ...(questionId === 'clientPriority'
+            ? { clientPriority: value as ClientPriorityAnswer }
+            : {}),
+          ...(questionId === 'prescriptionAttachment'
+            ? { prescriptionAttachment: value as PrescriptionAttachmentAnswer }
+            : {}),
+        };
+
+        // Paso 5: Si elige "Aún no la tengo", pasamos directo al Paso 6 (RESULTADO)
+        if (questionId === 'prescriptionAttachment') {
+          const ensuredAnswers: UserOpticalAnswers = {
+            ...updatedAnswers,
+            budgetPreferences:
+              updatedAnswers.budgetPreferences &&
+              updatedAnswers.budgetPreferences.length > 0
+                ? updatedAnswers.budgetPreferences
+                : ['soy_particular'],
+          };
+
+          if (isCompletedAnswers(ensuredAnswers)) {
+            const previewRec = calculateOpticalRecommendation(
+              ensuredAnswers,
+              catalogItems
+            );
+            trackMetaPixelEvent('ViewContent', {
+              content_name: `Asesor Virtual Resultado: ${previewRec.primaryOption.sku}`,
+              content_category: 'OpticalWizardCompleted',
+              content_ids: [
+                previewRec.primaryOption.sku,
+                previewRec.alternativeOption.sku,
+              ],
+              value: previewRec.primaryOption.priceStockARS,
+              currency: 'ARS',
+            });
+
+            return {
+              ...prev,
+              step: 'QUOTE_RESULT',
+              answers: ensuredAnswers,
+            };
+          }
         }
 
         return {
@@ -339,16 +323,72 @@ export function useOpticalWizard({
     [totalQuestions, catalogItems]
   );
 
+  const confirmBudgetPreferencesStep = useCallback(() => {
+    setSnapshot((prev) => {
+      const currentList = prev.answers.budgetPreferences ?? [];
+      const ensuredList: readonly BudgetPreferenceAnswer[] =
+        currentList.length > 0 ? currentList : ['soy_particular'];
+
+      return {
+        ...prev,
+        step: 'QUESTIONS',
+        activeQuestionIndex: Math.min(
+          prev.activeQuestionIndex + 1,
+          totalQuestions - 1
+        ),
+        answers: {
+          ...prev.answers,
+          budgetPreferences: ensuredList,
+        },
+      };
+    });
+  }, [totalQuestions]);
+
+  const attachPrescriptionPhotoAndAdvance = useCallback(
+    (fileName: string, dataUrl: string) => {
+      setSnapshot((prev) => {
+        const updatedAnswers: UserOpticalAnswers = {
+          ...prev.answers,
+          budgetPreferences:
+            prev.answers.budgetPreferences &&
+            prev.answers.budgetPreferences.length > 0
+              ? prev.answers.budgetPreferences
+              : ['soy_particular'],
+          prescriptionAttachment: 'cargar_foto_receta',
+          prescriptionPhotoName: fileName,
+          prescriptionPhotoDataUrl: dataUrl,
+        };
+
+        if (isCompletedAnswers(updatedAnswers)) {
+          const previewRec = calculateOpticalRecommendation(
+            updatedAnswers,
+            catalogItems
+          );
+          trackMetaPixelEvent('ViewContent', {
+            content_name: `Receta Cargada + Resultado: ${previewRec.primaryOption.sku}`,
+            content_category: 'OpticalWizardCompletedWithRx',
+            content_ids: [
+              previewRec.primaryOption.sku,
+              previewRec.alternativeOption.sku,
+            ],
+            value: previewRec.primaryOption.priceStockARS,
+            currency: 'ARS',
+          });
+        }
+
+        return {
+          ...prev,
+          step: 'QUOTE_RESULT',
+          answers: updatedAnswers,
+        };
+      });
+    },
+    [catalogItems]
+  );
+
   const goToPreviousStep = useCallback(() => {
     setSnapshot((prev) => {
       if (prev.step === 'QUOTE_RESULT') {
-        return {
-          ...prev,
-          step: 'LEAD_CAPTURE',
-        };
-      }
-
-      if (prev.step === 'LEAD_CAPTURE') {
         return {
           ...prev,
           step: 'QUESTIONS',
@@ -356,85 +396,104 @@ export function useOpticalWizard({
         };
       }
 
-      if (prev.step === 'QUESTIONS') {
-        if (prev.activeQuestionIndex > 0) {
-          return {
-            ...prev,
-            activeQuestionIndex: prev.activeQuestionIndex - 1,
-          };
-        }
-        return prev;
+      if (prev.step === 'QUESTIONS' && prev.activeQuestionIndex > 0) {
+        return {
+          ...prev,
+          activeQuestionIndex: prev.activeQuestionIndex - 1,
+        };
       }
 
       return prev;
     });
   }, [totalQuestions]);
 
-  const submitLeadAndGenerateQuote = useCallback(
-    async (leadData: LeadContactData) => {
-      if (!isCompletedAnswers(snapshot.answers)) {
+  const goToQuestionIndex = useCallback(
+    (index: number) => {
+      const clamped = Math.max(0, Math.min(index, totalQuestions - 1));
+      setSnapshot((prev) => ({
+        ...prev,
+        step: 'QUESTIONS',
+        activeQuestionIndex: clamped,
+      }));
+    },
+    [totalQuestions]
+  );
+
+  const claimBenefitAndOpenWhatsApp = useCallback(
+    async ({ fullName, whatsapp, selectedTier }: ClaimBenefitParams) => {
+      if (!isCompletedAnswers(snapshot.answers) || !recommendation) {
         return;
       }
 
       setIsSubmittingLead(true);
-      const computedRec = calculateOpticalRecommendation(
-        snapshot.answers,
-        catalogItems
-      );
-      const leadId = generateLeadId();
-
-      trackMetaPixelEvent('Lead', {
-        content_name: computedRec.primaryOption.commercialName,
-        content_category: computedRec.primaryOption.family,
-        content_ids: [
-          computedRec.primaryOption.sku,
-          computedRec.alternativeOption.sku,
-        ],
-        value: computedRec.primaryOption.priceStockARS,
-        currency: 'ARS',
-        status: leadData.prescriptionStatus,
-      });
-
-      // Envío resiliente a Google Sheets (no bloquea el resultado si la red tarda)
-      await submitLeadToGoogleSheets({
-        leadId,
-        lead: leadData,
-        answers: snapshot.answers,
-        recommendation: computedRec,
-        activeTheme,
-      });
-
-      setIsSubmittingLead(false);
-
-      setSnapshot((prev) => ({
-        ...prev,
-        step: 'QUOTE_RESULT',
-        lead: leadData,
-      }));
-    },
-    [snapshot.answers, catalogItems, activeTheme]
-  );
-
-  const registerWhatsAppContactConversion = useCallback(
-    (selectedTier: 'PRIMARY' | 'ALTERNATIVE') => {
-      if (!recommendation) {
-        return;
-      }
-      const chosen =
+      const leadId = snapshot.lead?.passportCode ?? generateLeadId();
+      const chosenOption =
         selectedTier === 'ALTERNATIVE'
           ? recommendation.alternativeOption
           : recommendation.primaryOption;
 
+      trackMetaPixelEvent('Lead', {
+        content_name: chosenOption.commercialName,
+        content_category: chosenOption.family,
+        content_ids: [chosenOption.sku],
+        value: chosenOption.priceStockARS,
+        currency: 'ARS',
+        status: snapshot.answers.prescriptionAttachment,
+      });
+
+      const leadData: LeadContactData = {
+        fullName,
+        whatsapp,
+        passportCode: leadId,
+        prescriptionPhotoName: snapshot.answers.prescriptionPhotoName,
+      };
+
+      const submitResult = await submitLeadToGoogleSheets({
+        leadId,
+        lead: leadData,
+        answers: snapshot.answers,
+        recommendation,
+        selectedTier,
+        activeTheme,
+      });
+
+      const finalLead: LeadContactData = {
+        ...leadData,
+        prescriptionPhotoRemoteUrl: submitResult.uploadedPhotoUrl,
+      };
+
+      const finalAnswers: CompletedOpticalAnswers = {
+        ...snapshot.answers,
+        prescriptionPhotoRemoteUrl: submitResult.uploadedPhotoUrl,
+      };
+
+      setSnapshot((prev) => ({
+        ...prev,
+        lead: finalLead,
+        answers: finalAnswers,
+      }));
+
+      setIsSubmittingLead(false);
+
       trackMetaPixelEvent('Contact', {
-        content_name: `WhatsApp Cierre: ${chosen.commercialName}`,
-        content_category: chosen.family,
-        content_ids: [chosen.sku],
-        value: chosen.priceStockARS,
+        content_name: `Beneficio 12 Meses: ${chosenOption.commercialName}`,
+        content_category: chosenOption.family,
+        content_ids: [chosenOption.sku],
+        value: chosenOption.priceStockARS,
         currency: 'ARS',
         status: selectedTier,
       });
+
+      const whatsappUrl = buildWhatsAppDeepLink({
+        lead: finalLead,
+        answers: finalAnswers,
+        recommendation,
+        selectedLensType: selectedTier,
+      });
+
+      window.location.href = whatsappUrl;
     },
-    [recommendation]
+    [snapshot.answers, snapshot.lead, recommendation, activeTheme]
   );
 
   const resetWizard = useCallback(() => {
@@ -460,11 +519,12 @@ export function useOpticalWizard({
     progressPercentage,
     canGoBack,
     isSubmittingLead,
-    startWizard,
     selectQuestionOption,
+    confirmBudgetPreferencesStep,
+    attachPrescriptionPhotoAndAdvance,
     goToPreviousStep,
-    submitLeadAndGenerateQuote,
+    goToQuestionIndex,
+    claimBenefitAndOpenWhatsApp,
     resetWizard,
-    registerWhatsAppContactConversion,
   };
 }

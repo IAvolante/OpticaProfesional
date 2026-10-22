@@ -1,184 +1,205 @@
 import type { WizardQuestionDefinition } from '../types/optical.types';
 
 /**
- * Árbol de preguntas desacoplado de los componentes UI.
- * Diseñado para actualizar textos o ponderaciones luego de la entrevista con Solana
- * sin modificar la vista `QuestionStep.tsx`.
+ * Árbol de preguntas oficial de Óptica Profesional (5 pasos definidos por Solana en PREGUNTAS .pdf).
  */
 export const OPTICAL_WIZARD_QUESTIONS: readonly WizardQuestionDefinition[] = [
   {
-    id: 'visionNeed',
+    id: 'improvementGoal',
     stepNumber: 1,
-    categoryBadge: 'Paso 1 de 5 · Distancia Visual',
-    title: '¿Para qué distancia necesitás principalmente tus nuevos cristales?',
+    categoryBadge: 'Paso 1 de 5 · Material y Mejora Visual',
+    title: '¿Qué es lo principal que querés mejorar con tus nuevos anteojos?',
     subtitle:
-      'Elegí la opción que mejor describa tu receta oftalmológica o tu necesidad cotidiana.',
+      'Seleccioná el aspecto principal que querés lograr con tus nuevos cristales.',
     options: [
       {
-        value: 'single_distance',
-        label: 'Visión Sencilla (Lejos o Cerca)',
+        value: 'organico_ar',
+        label: 'Ver con mayor nitidez',
         description:
-          'Necesito ver nítido a una sola distancia principal (para usar todo el día, manejar o leer de cerca).',
-        clinicalHint: 'Familia Monofocal',
-        badgeText: 'Más elegido',
+          'Visión clara y definida eliminando los reflejos molestos de las luces.',
+        clinicalHint: 'Orgánico con Antirreflejo (AR)',
+        badgeText: 'ORGÁNICO AR',
       },
       {
-        value: 'near_and_far',
-        label: 'Lejos y Cerca en el mismo anteojo (Multifocal)',
+        value: 'organico_blue_ar',
+        label: 'Sentir mayor comodidad visual cuando uso pantallas',
         description:
-          'Quiero ver bien de lejos, a distancia intermedia (PC/tablero) y leer el celular sin cambiar de lentes.',
-        clinicalHint: 'Multifocal Progresivo Digital',
-        badgeText: 'Todo en uno',
+          'Alivio frente al cansancio visual por uso de computadora, celular o tablet.',
+        clinicalHint: 'Filtro de Luz Azul + Antirreflejo',
+        badgeText: 'ORGÁNICO BLUE AR',
       },
       {
-        value: 'visual_rest',
-        label: 'Descanso Visual y Protección Digital',
+        value: 'alto_indice',
+        label: 'Tener cristales más finos y livianos',
         description:
-          'No tengo aumento fuerte o son mis primeros lentes para aliviar fatiga ocular, ardor o dolor de cabeza.',
-        clinicalHint: 'Descanso / Neutro o Bajas Dioptrías',
+          'Reducción de espesor y peso para una estética superior en tu armazón.',
+        clinicalHint: 'Ultradelgados Índices 1.67 y 1.74',
+        badgeText: 'ORGÁNICOS ALTO ÍNDICE (1.67 Y 1.74)',
+      },
+      {
+        value: 'bifocal_multifocal',
+        label: 'Evitar cambiar de anteojos para distintas distancias',
+        description:
+          'Ver bien de lejos, intermedia y cerca con un único par de anteojos.',
+        clinicalHint: 'Progresivos Multifocales y Bifocales',
+        badgeText: 'BIFOCAL Y MULTIFOCALES',
+      },
+      {
+        value: 'filtro_fotocromatico',
+        label: 'Manejar mejor, reflejos o molestias del sol',
+        description:
+          'Mayor confort al aire libre, reducción de encandilamiento y adaptación solar.',
+        clinicalHint: 'Filtro UV400 / Fotocromático Inteligente',
+        badgeText: 'ORGÁNICO CON FILTRO O FOTOCROMÁTICO',
       },
     ],
   },
   {
-    id: 'screenExposure',
+    id: 'activityContext',
     stepNumber: 2,
-    categoryBadge: 'Paso 2 de 5 · Exposición Digital',
-    title: '¿Cuántas horas al día usás pantallas (celular, computadora o tablet)?',
+    categoryBadge: 'Paso 2 de 5 · Tu Rutina Diaria',
+    title: '¿En qué actividades necesitás mayor comodidad visual?',
     subtitle:
-      'La luz azul-violeta de las pantallas LED y la iluminación de oficina influyen directamente en el tratamiento ideal.',
+      'Contanos en qué momento del día sentís que más necesitás tus cristales.',
     options: [
       {
-        value: 'intensive_6h_plus',
-        label: 'Uso Intensivo (Más de 6 horas por día)',
+        value: 'computadora_celular',
+        label: 'Trabajando con la computadora o usando el celular.',
         description:
-          'Trabajo o estudio frente a monitores y celular gran parte del día; siento cansancio visual al final de la tarde.',
-        clinicalHint: 'Prioridad Filtro Blue Cut + Antirreflex',
-        badgeText: 'Alta protección',
+          'Jornadas de oficina, estudio o uso continuo de dispositivos digitales.',
+        clinicalHint: 'Confort Digital y Enfoque Intermedio',
       },
       {
-        value: 'moderate_3_to_6h',
-        label: 'Uso Moderado (Entre 3 y 6 horas por día)',
+        value: 'lectura_cerca',
+        label: 'Leyendo o realizando tareas de cerca.',
         description:
-          'Alterno momentos de pantalla con otras tareas cotidianas o atención al público.',
-        clinicalHint: 'Filtro Azul Preventivo + Antirreflex',
+          'Lectura prolongada, estudio o actividades manuales de precisión.',
+        clinicalHint: 'Nitidez en Visión Próxima',
       },
       {
-        value: 'low_under_3h',
-        label: 'Uso Bajo (Menos de 3 horas por día)',
+        value: 'manejando_aire_libre',
+        label: 'Manejando o realizando actividades al aire libre.',
         description:
-          'Uso poco la computadora; priorizo máxima transparencia óptica y fácil limpieza.',
-        clinicalHint: 'Antirreflex Multicapa Hidrofóbico',
+          'Conducción en ciudad o ruta, exposición al sol y cambios de luz.',
+        clinicalHint: 'Protección Exterior y Antirreflejo Vial',
+      },
+      {
+        value: 'actividades_diarias',
+        label: 'En todas mis actividades diarias.',
+        description:
+          'Uso permanente durante todo el día tanto en interiores como al salir.',
+        clinicalHint: 'Solución Integral para Todo el Día',
       },
     ],
   },
   {
-    id: 'lightSensitivity',
+    id: 'clientPriority',
     stepNumber: 3,
-    categoryBadge: 'Paso 3 de 5 · Sol y Conducción en Salta',
-    title: '¿Cómo te afecta el sol de Salta o las luces al manejar?',
+    categoryBadge: 'Paso 3 de 5 · Tu Prioridad',
+    title: '¿Cuál es tu prioridad a la hora de elegir tus anteojos?',
     subtitle:
-      'La radiación UV en nuestra región es elevada durante todo el año y puede requerir adaptación automática a la luz.',
+      'Así personalizamos las 2 alternativas que mejor se ajustan a lo que buscás.',
     options: [
       {
-        value: 'outdoor_commute',
-        label: 'Me molesta el sol al salir y quiero que se oscurezcan solos',
+        value: 'precio',
+        label: 'Encontrar un buen equilibrio entre calidad y precio',
         description:
-          'Entro y salgo frecuentemente; busco cristales claros adentro que se oscurezcan automáticamente al sol.',
-        clinicalHint: 'Tecnología Fotocromática UV400',
-        badgeText: '2 en 1 Inteligente',
+          'Busco cuidar mi presupuesto sin resignar calidad óptica ni durabilidad.',
+        clinicalHint: 'Mejor Relación Calidad / Precio',
+        badgeText: 'PRECIO',
       },
       {
-        value: 'day_night_driving',
-        label: 'Manejo frecuentemente (de día o de noche)',
+        value: 'tecnologia',
+        label: 'Priorizo cristales con las últimas tecnologías del mercado',
         description:
-          'Busco reducir los reflejos de los faros LED en ruta/ciudad y descansar la vista al conducir.',
-        clinicalHint: 'Antirreflex de Alta Definición + UV',
+          'Quiero la máxima protección visual, filtros avanzados y precisión digital.',
+        clinicalHint: 'Innovación y Tratamientos Premium',
+        badgeText: 'TECNOLOGÍA',
       },
       {
-        value: 'mostly_indoors',
-        label: 'Los uso principalmente en interiores',
+        value: 'moda',
+        label: 'Que mis anteojos combinen con mi estilo y se vean bien estéticamente.',
         description:
-          'Trabajo bajo luz artificial o en casa y prefiero cristales totalmente transparentes todo el tiempo.',
-        clinicalHint: 'Cristal Claro con Filtro Selectivo',
+          'Priorizo cristales delgados, sin reflejos y con terminación estética impecable.',
+        clinicalHint: 'Estética, Delgadez y Transparencia',
+        badgeText: 'MODA',
+      },
+      {
+        value: 'solucion',
+        label: 'Resolver mi necesidad visual de forma práctica, sin complicaciones.',
+        description:
+          'Quiero una recomendación clara, rápida y lista para usar cuanto antes.',
+        clinicalHint: 'Practicidad y Rapidez de Entrega',
+        badgeText: 'SOLUCIÓN',
       },
     ],
   },
   {
-    id: 'graduationSeverity',
+    id: 'budgetPreferences',
     stepNumber: 4,
-    categoryBadge: 'Paso 4 de 5 · Graduación y Espesor',
-    title: '¿Cómo describirías el aumento de tu receta médica?',
+    categoryBadge: 'Paso 4 de 5 · Beneficios para tu Presupuesto',
+    title: '¿Datos útiles para tu presupuesto?',
     subtitle:
-      'Esto nos permite calcular el índice de delgadez ideal y distinguir entre Rango de Stock y Rango de Laboratorio.',
+      'Podés seleccionar más de una opción para sumar todos tus beneficios en el cierre.',
+    isMultiSelect: true,
     options: [
       {
-        value: 'neutral_or_low',
-        label: 'Aumento Bajo o Descanso (Hasta ±2.00 dioptrías)',
+        value: 'tengo_obra_social',
+        label: 'Tengo obra social',
         description:
-          'Mis cristales suelen ser livianos y delgados, o busco lentes de descanso.',
-        clinicalHint: 'Ingresa en Rango Stock Estándar',
+          'Si está en nuestra lista de prestadores, contás con un armazón estándar sin cargo al venir a probártelo.',
+        clinicalHint: 'Beneficio Armazón Estándar Sin Cargo',
+        badgeText: 'OBRA SOCIAL',
       },
       {
-        value: 'moderate_up_to_4',
-        label: 'Aumento Intermedio (Entre ±2.25 y ±4.00 dioptrías)',
+        value: 'soy_particular',
+        label: 'Soy particular',
         description:
-          'Tengo miopía, hipermetropía o astigmatismo moderado y busco buen equilibrio entre estética y precio.',
-        clinicalHint: 'Índice 1.56 / Policarbonato 1.59',
+          'Cotización directa con el precio más competitivo y entrega rápida.',
+        clinicalHint: 'Atención Directa Particular',
+        badgeText: 'PARTICULAR',
       },
       {
-        value: 'high_plus_4',
-        label: 'Aumento Alto (Más de ±4.00 D o astigmatismo fuerte)',
+        value: 'interes_cuotas_tarjeta',
+        label: 'Me interesa conocer cuotas según mi tarjeta',
         description:
-          'Quiero evitar el efecto de cristal grueso o pesado; priorizo cristales extra delgados y ultralivianos.',
-        clinicalHint: 'Policarbonato 1.59 / Alto Índice 1.67 · Rango Lab',
-        badgeText: 'Estética Ultradelgada',
+          'Opciones de financiación en cuotas según tu tarjeta bancaria.',
+        clinicalHint: 'Financiación con Tarjeta',
+        badgeText: 'CUOTAS',
       },
       {
-        value: 'unknown_recipe',
-        label: 'Tengo la receta médica pero no sé leer los valores',
+        value: 'beneficio_pago_contado',
+        label: 'Beneficio pago contado',
         description:
-          'Quiero ver el estimado en pantalla y enviarles la foto de mi receta por WhatsApp para que la verifiquen.',
-        clinicalHint: 'Revisión Óptica Personalizada',
+          'Bonificación especial abonando de contado en efectivo o transferencia.',
+        clinicalHint: 'Descuento Especial Contado',
+        badgeText: 'PAGO CONTADO',
       },
     ],
   },
   {
-    id: 'framePreference',
+    id: 'prescriptionAttachment',
     stepNumber: 5,
-    categoryBadge: 'Paso 5 de 5 · Armazón y Montura',
-    title: '¿Necesitás también el armazón o ya tenés uno propio?',
+    categoryBadge: 'Paso 5 de 5 · Tu Receta',
+    title: '¿Querés adjuntarnos tu receta?',
     subtitle:
-      'Informanos si querés ver modelos de armazones nuevos junto con tus cristales o si traés tu propia montura.',
+      'Si la tenés a mano, tocá para subir la foto ahora mismo y que se adjunte a tu consulta.',
     options: [
       {
-        value: 'need_new_frame',
-        label: 'Busco Armazón Nuevo + Cristales Completos',
+        value: 'cargar_foto_receta',
+        label: 'Cargar la foto de la receta',
         description:
-          'Quiero que el equipo de ventas me envíe catálogo o fotos de armazones (acetato, metal o titanio) acordes a mi rostro y aumento.',
-        clinicalHint: 'Cotización Integral: Cristales + Armazón Recetado',
-        badgeText: 'Anteojo Completo',
+          'Tocá acá para sacar una foto o elegirla de tu galería en un solo paso.',
+        clinicalHint: 'Subida Directa desde tu Celular',
+        badgeText: 'ADJUNTAR FOTO',
       },
       {
-        value: 'need_clip_on',
-        label: 'Busco Armazón con Clip-On Magnético (Receta + Sol)',
+        value: 'aun_no_la_tengo',
+        label: 'Aún no la tengo',
         description:
-          'Quiero un armazón recetado con frente imantado polarizado para convertirlo en lente de sol en un segundo.',
-        clinicalHint: 'Línea Clip-On Magnético Polarizado UV400',
-        badgeText: 'Tendencia 2 en 1',
-      },
-      {
-        value: 'own_frame',
-        label: 'Ya tengo mi propio armazón (Solo Cristales)',
-        description:
-          'Quiero conservar mi montura actual y encargar únicamente el tallado y calibración de los cristales nuevos.',
-        clinicalHint: 'Adaptación y Biselado en Armazón del Cliente',
-      },
-      {
-        value: 'undecided_frame',
-        label: 'Quiero comparar ambas opciones con el asesor',
-        description:
-          'Tengo un armazón pero me gustaría conocer las promociones de armazón nuevo + cristales.',
-        clinicalHint: 'Asesoramiento de Montura en Mostrador / WhatsApp',
+          'Ver directamente mis 2 opciones recomendadas y mi certificado de garantía de 12 meses.',
+        clinicalHint: 'Ver Resultado Ahora',
+        badgeText: 'CONTINUAR SIN RECETA',
       },
     ],
   },

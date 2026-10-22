@@ -1,103 +1,106 @@
 /**
  * ============================================================================
- * CONTRATOS DE DOMINIO ESTRICTOS — ÓPTICA PROFESIONAL (B2C) & SMART OPTICAL (B2B)
+ * CONTRATOS DE DOMINIO ESTRICTOS — ÓPTICA PROFESIONAL (2026)
  * ============================================================================
  * Tipado estricto (strict: true, noUncheckedIndexedAccess: true, cero any).
+ * Alineado 100% con el flujo definido por Solana (PREGUNTAS .pdf + LOGO 2026).
  */
 
-/**
- * Presets del Sistema de Diseño Semántico para la sesión de Discovery con Solana.
- */
 export type BrandThemeId = 'theme-neutral' | 'theme-boutique' | 'theme-clinical';
 
-/**
- * Unidad de negocio dentro del ecosistema en Salta.
- */
 export type BusinessUnit = 'B2C_OPTICA_PROFESIONAL' | 'B2B_SMART_OPTICAL';
 
 /**
- * Identificadores estrictos de las preguntas del Wizard.
+ * Identificadores estrictos de los 5 pasos del carrusel definidos en PREGUNTAS .pdf.
  */
 export type QuestionId =
-  | 'visionNeed'
-  | 'screenExposure'
-  | 'lightSensitivity'
-  | 'graduationSeverity'
-  | 'framePreference';
+  | 'improvementGoal' // 1. ¿Qué es lo principal que querés mejorar con tus nuevos anteojos? (material)
+  | 'activityContext' // 2. ¿En qué actividades necesitás mayor comodidad visual? (solución)
+  | 'clientPriority' // 3. ¿Cuál es tu prioridad a la hora de elegir tus anteojos? (Tipo de cliente)
+  | 'budgetPreferences' // 4. ¿Datos útiles para tu presupuesto? (se puede seleccionar más de una)
+  | 'prescriptionAttachment'; // 5. ¿Querés adjuntarnos tu receta?
 
 /**
- * Respuestas literales para la Pregunta 1: Necesidad / Distancia Visual.
+ * 1. ¿Qué es lo principal que querés mejorar con tus nuevos anteojos? (material)
  */
-export type VisionNeedAnswer =
-  | 'single_distance' // Visión Sencilla (Lejos o Cerca por separado)
-  | 'near_and_far' // Multifocal / Progresivo o Bifocal (Lejos y Cerca a la vez)
-  | 'visual_rest'; // Descanso visual / Sin aumento previo
+export type ImprovementGoalAnswer =
+  | 'organico_ar' // Ver con mayor nitidez (ORGÁNICO AR)
+  | 'organico_blue_ar' // Sentir mayor comodidad visual cuando uso pantallas (ORGÁNICO BLUE AR)
+  | 'alto_indice' // Tener cristales más finos y livianos (ORGÁNICOS ALTO ÍNDICE (1,67 Y 1,74))
+  | 'bifocal_multifocal' // Evitar cambiar de anteojos para distintas distancias (BIFOCAL Y MULTIFOCALES)
+  | 'filtro_fotocromatico'; // Manejar mejor, reflejos o molestias del sol (ORGÁNICO CON FILTRO O FOTOCROMÁTICO)
 
 /**
- * Respuestas literales para la Pregunta 2: Exposición diaria a pantallas.
+ * 2. ¿En qué actividades necesitás mayor comodidad visual? (solución)
  */
-export type ScreenExposureAnswer =
-  | 'low_under_3h' // Menos de 3 horas diarias
-  | 'moderate_3_to_6h' // De 3 a 6 horas diarias (Oficina / Estudio)
-  | 'intensive_6h_plus'; // Más de 6 horas diarias (Uso intensivo digital)
+export type ActivityContextAnswer =
+  | 'computadora_celular' // Trabajando con la computadora o usando el celular.
+  | 'lectura_cerca' // Leyendo o realizando tareas de cerca.
+  | 'manejando_aire_libre' // Manejando o realizando actividades al aire libre.
+  | 'actividades_diarias'; // En todas mis actividades diarias.
 
 /**
- * Respuestas literales para la Pregunta 3: Exposición al sol y conducción en Salta.
+ * 3. ¿Cuál es tu prioridad a la hora de elegir tus anteojos? (Tipo de cliente)
  */
-export type LightSensitivityAnswer =
-  | 'mostly_indoors' // Mayormente en interiores
-  | 'outdoor_commute' // Salidas frecuentes al sol / Molestia al caminar al aire libre
-  | 'day_night_driving'; // Conducción frecuente de día (sol fuerte) y noche (encandilamiento)
+export type ClientPriorityAnswer =
+  | 'precio' // Encontrar un buen equilibrio entre calidad y precio (PRECIO)
+  | 'tecnologia' // Priorizo cristales con las últimas tecnologías del mercado (TECNOLOGÍA)
+  | 'moda' // Que mis anteojos combinen con mi estilo y se vean bien estéticamente. (MODA)
+  | 'solucion'; // Resolver mi necesidad visual de forma práctica, sin complicaciones. (SOLUCIÓN)
 
 /**
- * Respuestas literales para la Pregunta 4: Magnitud de graduación estimada / espesor.
+ * 4. ¿Datos útiles para tu presupuesto? (se puede seleccionar más de una, cierre de venta)
  */
-export type GraduationSeverityAnswer =
-  | 'neutral_or_low' // Sin aumento o graduación baja (Esf hasta ±2.00 D)
-  | 'moderate_up_to_4' // Graduación intermedia (Esf entre ±2.25 y ±4.00 D)
-  | 'high_plus_4' // Graduación alta (Mayor a ±4.00 D o astigmatismo alto > -2.00 D)
-  | 'unknown_recipe'; // Tengo mi receta pero no sé leer los números
+export type BudgetPreferenceAnswer =
+  | 'tengo_obra_social' // Tengo obra social
+  | 'soy_particular' // Soy particular
+  | 'interes_cuotas_tarjeta' // Me interesa conocer cuotas según mi tarjeta
+  | 'beneficio_pago_contado'; // Beneficio pago contado
 
 /**
- * Respuestas literales para la Pregunta 5: Necesidad de Armazón / Montura (Calificación Ventas).
+ * 5. ¿Querés adjuntarnos tu receta?
  */
-export type FramePreferenceAnswer =
-  | 'need_new_frame' // Busco armazón nuevo + cristales
-  | 'need_clip_on' // Busco armazón con Clip-On magnético (Sol + Receta)
-  | 'own_frame' // Ya tengo mi propio armazón (solo cristales)
-  | 'undecided_frame'; // Quiero ver opciones de armazones con el asesor
-
-/**
- * Mapa tipado de respuestas del usuario durante el flujo de preguntas.
- */
-export interface UserOpticalAnswers {
-  readonly visionNeed?: VisionNeedAnswer;
-  readonly screenExposure?: ScreenExposureAnswer;
-  readonly lightSensitivity?: LightSensitivityAnswer;
-  readonly graduationSeverity?: GraduationSeverityAnswer;
-  readonly framePreference?: FramePreferenceAnswer;
-}
-
-/**
- * Respuestas completas validadas (requeridas para ejecutar el motor determinístico).
- */
-export interface CompletedOpticalAnswers {
-  readonly visionNeed: VisionNeedAnswer;
-  readonly screenExposure: ScreenExposureAnswer;
-  readonly lightSensitivity: LightSensitivityAnswer;
-  readonly graduationSeverity: GraduationSeverityAnswer;
-  readonly framePreference: FramePreferenceAnswer;
-}
+export type PrescriptionAttachmentAnswer =
+  | 'cargar_foto_receta' // Cargar la foto de la receta
+  | 'aun_no_la_tengo'; // Aún no la tengo
 
 /**
  * Valor literal válido de cualquier opción de pregunta.
  */
 export type QuestionOptionValue =
-  | VisionNeedAnswer
-  | ScreenExposureAnswer
-  | LightSensitivityAnswer
-  | GraduationSeverityAnswer
-  | FramePreferenceAnswer;
+  | ImprovementGoalAnswer
+  | ActivityContextAnswer
+  | ClientPriorityAnswer
+  | BudgetPreferenceAnswer
+  | PrescriptionAttachmentAnswer;
+
+/**
+ * Mapa tipado de respuestas del usuario durante el flujo de los 5 pasos.
+ */
+export interface UserOpticalAnswers {
+  readonly improvementGoal?: ImprovementGoalAnswer;
+  readonly activityContext?: ActivityContextAnswer;
+  readonly clientPriority?: ClientPriorityAnswer;
+  readonly budgetPreferences?: readonly BudgetPreferenceAnswer[];
+  readonly prescriptionAttachment?: PrescriptionAttachmentAnswer;
+  readonly prescriptionPhotoName?: string;
+  readonly prescriptionPhotoDataUrl?: string;
+  readonly prescriptionPhotoRemoteUrl?: string;
+}
+
+/**
+ * Respuestas completas validadas de los 5 pasos (requeridas para el Paso 6: RESULTADO).
+ */
+export interface CompletedOpticalAnswers {
+  readonly improvementGoal: ImprovementGoalAnswer;
+  readonly activityContext: ActivityContextAnswer;
+  readonly clientPriority: ClientPriorityAnswer;
+  readonly budgetPreferences: readonly BudgetPreferenceAnswer[];
+  readonly prescriptionAttachment: PrescriptionAttachmentAnswer;
+  readonly prescriptionPhotoName?: string;
+  readonly prescriptionPhotoDataUrl?: string;
+  readonly prescriptionPhotoRemoteUrl?: string;
+}
 
 /**
  * Estructura de una opción individual dentro de una pregunta del Wizard.
@@ -119,21 +122,16 @@ export interface WizardQuestionDefinition {
   readonly categoryBadge: string;
   readonly title: string;
   readonly subtitle: string;
+  readonly isMultiSelect?: boolean;
   readonly options: readonly WizardQuestionOption[];
 }
 
-/**
- * Familias de cristales ópticos comercializados.
- */
 export type LensFamily = 'DESCANSO' | 'MONOFOCAL' | 'BIFOCAL' | 'MULTIFOCAL';
 
-/**
- * Índices de refracción estándar del catálogo óptico.
- */
-export type RefractiveIndex = '1.50' | '1.56' | '1.59' | '1.67';
+export type RefractiveIndex = '1.50' | '1.56' | '1.59' | '1.67' | '1.74';
 
 /**
- * Estructura dual de precios (Rango Stock vs. Rango Laboratorio) para cada cristal.
+ * Ítem del catálogo de cristales sincronizado con Google Sheets.
  */
 export interface LensCatalogItem {
   readonly sku: string;
@@ -153,9 +151,6 @@ export interface LensCatalogItem {
   readonly warrantyMonths: number;
 }
 
-/**
- * Etiqueta clínica de justificación mostrada en la cotización.
- */
 export interface ClinicalTag {
   readonly id: string;
   readonly label: string;
@@ -163,11 +158,15 @@ export interface ClinicalTag {
 }
 
 /**
- * Salida determinística del motor `calculateOpticalRecommendation()`.
+ * Salida determinística del motor `calculateOpticalRecommendation()` para el Paso 6 (RESULTADO).
  */
 export interface OpticalRecommendationResult {
   readonly primaryOption: LensCatalogItem;
+  readonly primaryCardTagline: string;
   readonly alternativeOption: LensCatalogItem;
+  readonly alternativeCardTagline: string;
+  readonly advisorObservationParagraph: string;
+  readonly advisorClosingParagraph: string;
   readonly alternativeUpgradeReason: string;
   readonly personalizedReasoning: readonly string[];
   readonly clinicalTags: readonly ClinicalTag[];
@@ -175,43 +174,26 @@ export interface OpticalRecommendationResult {
   readonly estimatedRangeNote: string;
 }
 
-/**
- * Estado de la receta médica del paciente.
- */
 export type PrescriptionStatus = 'HAS_RECENT_RX' | 'NEEDS_CHECKUP' | 'REST_NO_RX';
 
-/**
- * Modalidad de pago o cobertura seleccionada en el simulador de ahorro en vivo.
- */
 export type PaymentBenefitMode = 'CASH_TRANSFER' | 'LIST_INSTALLMENTS' | 'HEALTH_INSURANCE';
 
-/**
- * Datos de contacto y calificación comercial/clínica capturados para transferir a Ventas.
- */
 export interface LeadContactData {
   readonly fullName: string;
   readonly whatsapp: string;
-  readonly locality: string;
-  readonly prescriptionStatus: PrescriptionStatus;
+  readonly locality?: string;
+  readonly prescriptionStatus?: PrescriptionStatus;
   readonly preferredPayment?: PaymentBenefitMode;
   readonly healthInsuranceName?: string;
   readonly clinicalNotes?: string;
   readonly prescriptionPhotoName?: string;
+  readonly prescriptionPhotoRemoteUrl?: string;
   readonly passportCode?: string;
 }
 
-/**
- * Unión discriminada estricta para los 4 estados del Wizard.
- */
 export type WizardStepType = 'WELCOME' | 'QUESTIONS' | 'LEAD_CAPTURE' | 'QUOTE_RESULT';
 
 export type WizardStateDiscriminated =
-  | {
-      readonly step: 'WELCOME';
-      readonly activeQuestionIndex: 0;
-      readonly answers: UserOpticalAnswers;
-      readonly lead: LeadContactData | null;
-    }
   | {
       readonly step: 'QUESTIONS';
       readonly activeQuestionIndex: number;
@@ -219,22 +201,13 @@ export type WizardStateDiscriminated =
       readonly lead: LeadContactData | null;
     }
   | {
-      readonly step: 'LEAD_CAPTURE';
-      readonly activeQuestionIndex: number;
-      readonly answers: CompletedOpticalAnswers;
-      readonly lead: LeadContactData | null;
-    }
-  | {
       readonly step: 'QUOTE_RESULT';
       readonly activeQuestionIndex: number;
       readonly answers: CompletedOpticalAnswers;
-      readonly lead: LeadContactData;
+      readonly lead: LeadContactData | null;
       readonly recommendation: OpticalRecommendationResult;
     };
 
-/**
- * Estado de sincronización del catálogo de precios (Google Sheets + Cache + Fallback).
- */
 export interface CatalogSyncState {
   readonly items: readonly LensCatalogItem[];
   readonly source: 'LIVE_SHEETS' | 'LOCAL_CACHE' | 'STATIC_FALLBACK';

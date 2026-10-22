@@ -1,21 +1,25 @@
-import { useEffect, useRef } from 'react';
-import * as RadioGroupPrimitive from '@radix-ui/react-radio-group';
+import { useEffect, useRef, useState, type ChangeEvent } from 'react';
 import {
   motion,
   useReducedMotion,
   type PanInfo,
   type Variants,
 } from 'framer-motion';
-import { Check } from 'lucide-react';
+import { ArrowRight, Camera, Check, ImagePlus } from 'lucide-react';
 import type {
+  BudgetPreferenceAnswer,
   QuestionId,
   QuestionOptionValue,
   UserOpticalAnswers,
   WizardQuestionDefinition,
 } from '../../types/optical.types';
 import { cn } from '../../utils/cn';
-import { triggerHapticFeedback } from '../../utils/formatters';
+import {
+  compressPrescriptionImageToDataUrl,
+  triggerHapticFeedback,
+} from '../../utils/formatters';
 import { Badge } from '../ui/Badge';
+import { Button } from '../ui/Button';
 import { Card, CardDescription, CardHeader, CardTitle } from '../ui/Card';
 import { OpticalOptionDiagram } from './OpticalOptionDiagram';
 
@@ -26,7 +30,13 @@ export interface QuestionStepProps {
     questionId: QuestionId,
     value: QuestionOptionValue
   ) => void;
+  readonly onConfirmBudgetStep: () => void;
+  readonly onAttachPrescriptionPhoto: (
+    fileName: string,
+    dataUrl: string
+  ) => void;
   readonly onSwipeBack?: () => void;
+  readonly onJumpToStep?: (index: number) => void;
 }
 
 const STEP_PILLS: readonly {
@@ -34,11 +44,11 @@ const STEP_PILLS: readonly {
   readonly code: string;
   readonly shortLabel: string;
 }[] = [
-  { id: 'visionNeed', code: '01', shortLabel: 'Visión' },
-  { id: 'screenExposure', code: '02', shortLabel: 'Pantallas' },
-  { id: 'lightSensitivity', code: '03', shortLabel: 'Sol/Luz' },
-  { id: 'graduationSeverity', code: '04', shortLabel: 'Receta' },
-  { id: 'framePreference', code: '05', shortLabel: 'Armazón' },
+  { id: 'improvementGoal', code: '01', shortLabel: 'Material' },
+  { id: 'activityContext', code: '02', shortLabel: 'Solución' },
+  { id: 'clientPriority', code: '03', shortLabel: 'Prioridad' },
+  { id: 'budgetPreferences', code: '04', shortLabel: 'Beneficios' },
+  { id: 'prescriptionAttachment', code: '05', shortLabel: 'Receta' },
 ];
 
 const BASE_URL = import.meta.env.BASE_URL;
@@ -72,35 +82,35 @@ const QUESTION_VIDEO_SHOWCASE: Record<
     readonly code: string;
   }
 > = {
-  visionNeed: {
+  improvementGoal: {
     poolId: 'hero',
     poster: `${BASE_URL}videos/optical-hero-flow-poster.jpg`,
-    caption: 'Laboratorio Óptico Digital · Salta',
-    code: 'OPT-01',
+    caption: 'Tecnología en Cristales · Óptica Profesional',
+    code: 'PASO 01',
   },
-  screenExposure: {
+  activityContext: {
     poolId: 'titanium',
     poster: `${BASE_URL}videos/optical-titanium-bluecut-flow-poster.jpg`,
-    caption: 'Tratamiento Blue Cut + Antirreflex HD',
-    code: 'OPT-02',
+    caption: 'Comodidad Visual en tu Rutina Diaria',
+    code: 'PASO 02',
   },
-  lightSensitivity: {
+  clientPriority: {
     poolId: 'photochromic',
     poster: `${BASE_URL}videos/optical-photochromic-flow-poster.jpg`,
-    caption: 'Transición Fotocromática Solar UV400',
-    code: 'OPT-03',
+    caption: 'Calidad, Tecnología yMejor Precio',
+    code: 'PASO 03',
   },
-  graduationSeverity: {
-    poolId: 'hero',
-    poster: `${BASE_URL}videos/optical-hero-flow-poster.jpg`,
-    caption: 'Cálculo de Índice y Espesor Asférico',
-    code: 'OPT-04',
-  },
-  framePreference: {
+  budgetPreferences: {
     poolId: 'titanium',
     poster: `${BASE_URL}videos/optical-titanium-bluecut-flow-poster.jpg`,
-    caption: 'Calibración de Montura y Biselado Digital',
-    code: 'OPT-05',
+    caption: 'Obras Sociales · Cuotas · Beneficio Contado',
+    code: 'PASO 04',
+  },
+  prescriptionAttachment: {
+    poolId: 'hero',
+    poster: `${BASE_URL}videos/optical-hero-flow-poster.jpg`,
+    caption: 'Adjuntá tu Receta en 1 Toque',
+    code: 'PASO 05',
   },
 };
 
@@ -128,27 +138,27 @@ const optionCardVariants: Variants = {
   },
 };
 
-/**
- * Paso 1..5 ('QUESTIONS') con Pool de Video Pre-Cargado Persistente:
- * - La cabecera de video NUNCA se desmonta entre las 5 preguntas (`key` estable),
- *   por lo que los 3 videos quedan decodificados en memoria desde el Paso 1 y cambian
- *   en 0ms mediante crossfade de opacidad + poster instantáneo.
- */
 export function QuestionStep({
   question,
   answers,
   onSelectOption,
+  onConfirmBudgetStep,
+  onAttachPrescriptionPhoto,
   onSwipeBack,
+  onJumpToStep,
 }: QuestionStepProps) {
   const prefersReducedMotion = useReducedMotion();
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [isProcessingPhoto, setIsProcessingPhoto] = useState<boolean>(false);
+
   const videoRefs = useRef<Record<ShowcasePoolId, HTMLVideoElement | null>>({
     hero: null,
     titanium: null,
     photochromic: null,
   });
 
-  const selectedValue = answers[question.id];
   const showcase = QUESTION_VIDEO_SHOWCASE[question.id];
+  const selectedBudgetList = answers.budgetPreferences ?? [];
 
   useEffect(() => {
     for (const item of SHOWCASE_POOL) {
@@ -160,7 +170,7 @@ export function QuestionStep({
 
       if (item.poolId === showcase.poolId) {
         void el.play().catch(() => {
-          // Ignorar si el navegador difiere la reproducción
+          // Ignorar si el navegador difiere reproducción
         });
       } else {
         el.pause();
@@ -178,30 +188,90 @@ export function QuestionStep({
     }
   };
 
-  const handleSelect = (value: QuestionOptionValue) => {
+  const handleFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    triggerHapticFeedback(18);
+    setIsProcessingPhoto(true);
+    try {
+      const compressedDataUrl = await compressPrescriptionImageToDataUrl(file);
+      onAttachPrescriptionPhoto(file.name, compressedDataUrl);
+    } catch {
+      onAttachPrescriptionPhoto(file.name, '');
+    } finally {
+      setIsProcessingPhoto(false);
+    }
+  };
+
+  const handleOptionPress = (value: QuestionOptionValue) => {
     triggerHapticFeedback(12);
+
+    // En el Paso 5, tocar "Cargar la foto de la receta" abre directamente la cámara/galería
+    if (
+      question.id === 'prescriptionAttachment' &&
+      value === 'cargar_foto_receta'
+    ) {
+      fileInputRef.current?.click();
+      return;
+    }
+
     onSelectOption(question.id, value);
   };
 
+  const isOptionSelected = (value: QuestionOptionValue): boolean => {
+    if (question.id === 'budgetPreferences') {
+      return selectedBudgetList.includes(value as BudgetPreferenceAnswer);
+    }
+    return answers[question.id] === value;
+  };
+
   return (
-    <div className="space-y-3 pb-8 touch-pan-y">
-      {/* 1. Tira Visual de los 5 Pasos del Configurador Óptico (Persistente, 0ms) */}
+    <div className="space-y-3 pb-10 touch-pan-y">
+      {/* Input oculto para carga directa de foto de receta en el Paso 5 */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        onChange={(e) => void handleFileChange(e)}
+        className="hidden"
+      />
+
+      {/* 1. Tira Visual de los 5 Pasos con paleta Bicolor 2026 (#336699 + #99CC99) */}
       <div className="grid grid-cols-5 gap-1.5">
         {STEP_PILLS.map((pill, idx) => {
           const isCurrent = pill.id === question.id;
-          const isCompleted = Boolean(answers[pill.id]);
+          const isCompleted =
+            pill.id === 'budgetPreferences'
+              ? Boolean(
+                  answers.budgetPreferences &&
+                    answers.budgetPreferences.length > 0
+                )
+              : Boolean(answers[pill.id]);
           const isPast = idx + 1 < question.stepNumber;
+          const canClickPill = (isCompleted || isPast) && onJumpToStep;
 
           return (
-            <div
+            <button
               key={pill.id}
+              type="button"
+              disabled={!canClickPill}
+              onClick={() => {
+                if (canClickPill) {
+                  triggerHapticFeedback(8);
+                  onJumpToStep(idx);
+                }
+              }}
               className={cn(
                 'flex flex-col items-center justify-center rounded-xl py-1.5 px-1 border text-center transition-all duration-200',
+                canClickPill ? 'cursor-pointer' : 'cursor-default',
                 isCurrent
-                  ? 'border-[var(--brand-primary)] bg-[var(--brand-primary)] text-[var(--brand-primary-foreground)] shadow-2xs'
+                  ? 'border-[#336699] bg-[#336699] text-white shadow-2xs'
                   : isCompleted || isPast
-                    ? 'border-[var(--brand-accent-border)] bg-[var(--brand-accent)] text-[var(--brand-accent-foreground)]'
-                    : 'border-[var(--brand-border)] bg-[var(--brand-surface)]/80 text-[var(--brand-text-muted)]'
+                    ? 'border-[#99CC99] bg-[#EFF7EF] text-[#264F78]'
+                    : 'border-[var(--brand-border)] bg-[var(--brand-surface)]/85 text-[var(--brand-text-muted)]'
               )}
             >
               <span className="font-mono text-[9px] font-bold uppercase tracking-wider leading-none">
@@ -210,7 +280,7 @@ export function QuestionStep({
               <span className="text-[10px] font-semibold truncate max-w-full mt-0.5 leading-tight">
                 {pill.shortLabel}
               </span>
-            </div>
+            </button>
           );
         })}
       </div>
@@ -238,18 +308,20 @@ export function QuestionStep({
                 preload="auto"
                 className={cn(
                   'absolute inset-0 h-full w-full object-cover object-center transition-opacity duration-200',
-                  isActiveVideo ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'
+                  isActiveVideo
+                    ? 'opacity-100 z-10'
+                    : 'opacity-0 z-0 pointer-events-none'
                 )}
               />
             );
           })}
-          <div className="absolute inset-0 z-20 bg-gradient-to-t from-slate-950/80 via-slate-950/20 to-transparent" />
+          <div className="absolute inset-0 z-20 bg-gradient-to-t from-[#102336]/85 via-[#102336]/25 to-transparent" />
           <div className="absolute bottom-2.5 left-3.5 right-3.5 z-30 flex items-center justify-between gap-2">
-            <span className="inline-flex items-center gap-2 rounded-md bg-slate-950/75 backdrop-blur-md border border-white/15 px-2.5 py-1 text-[11px] font-medium text-white">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+            <span className="inline-flex items-center gap-2 rounded-md bg-[#102336]/80 backdrop-blur-md border border-white/15 px-2.5 py-1 text-[11px] font-medium text-white">
+              <span className="h-2 w-2 rounded-full bg-[#99CC99]" />
               <span>{showcase.caption}</span>
             </span>
-            <span className="font-mono text-[10px] font-semibold uppercase tracking-widest text-white/80">
+            <span className="font-mono text-[10px] font-semibold uppercase tracking-widest text-[#99CC99]">
               {showcase.code}
             </span>
           </div>
@@ -257,11 +329,13 @@ export function QuestionStep({
 
         <CardHeader className="p-4 space-y-1.5">
           <div className="flex items-center justify-between gap-2">
-            <span className="font-mono text-[11px] font-semibold uppercase tracking-wider text-[var(--brand-primary)]">
+            <span className="font-mono text-[11px] font-semibold uppercase tracking-wider text-[#336699]">
               {question.categoryBadge}
             </span>
-            <span className="font-mono text-[10px] font-medium text-[var(--brand-text-muted)]">
-              Tocá una opción
+            <span className="font-mono text-[10px] font-semibold text-[#2E6F40] bg-[#EFF7EF] border border-[#99CC99]/70 rounded-md px-2 py-0.5">
+              {question.isMultiSelect
+                ? 'Podés elegir varias'
+                : 'Tocá una opción'}
             </span>
           </div>
 
@@ -274,7 +348,7 @@ export function QuestionStep({
         </CardHeader>
       </Card>
 
-      {/* 3. Tarjetas de Opciones con Transición Táctil y Diagramas SVG */}
+      {/* 3. Opciones del Paso Actual */}
       <motion.div
         key={question.id}
         drag={prefersReducedMotion ? false : 'x'}
@@ -285,104 +359,138 @@ export function QuestionStep({
         animate={{ opacity: 1, x: 0 }}
         transition={{ type: 'spring', stiffness: 400, damping: 32 }}
       >
-        <RadioGroupPrimitive.Root
-          value={selectedValue ?? ''}
-          onValueChange={(val) => {
-            if (val) {
-              handleSelect(val as QuestionOptionValue);
-            }
-          }}
-          aria-label={question.title}
-          asChild
+        <motion.div
+          variants={prefersReducedMotion ? undefined : listContainerVariants}
+          initial="hidden"
+          animate="visible"
+          className="space-y-2.5"
         >
-          <motion.div
-            variants={prefersReducedMotion ? undefined : listContainerVariants}
-            initial="hidden"
-            animate="visible"
-            className="space-y-2.5"
-          >
-            {question.options.map((option) => {
-              const isSelected = selectedValue === option.value;
+          {question.options.map((option) => {
+            const isSelected = isOptionSelected(option.value);
+            const isUploadRxButton =
+              question.id === 'prescriptionAttachment' &&
+              option.value === 'cargar_foto_receta';
 
-              return (
-                <motion.div
-                  key={option.value}
-                  variants={prefersReducedMotion ? undefined : optionCardVariants}
+            return (
+              <motion.div
+                key={option.value}
+                variants={prefersReducedMotion ? undefined : optionCardVariants}
+              >
+                <button
+                  type="button"
+                  disabled={isProcessingPhoto}
+                  onClick={() => handleOptionPress(option.value)}
+                  className={cn(
+                    'optical-glass-card group relative w-full text-left rounded-2xl p-3.5 transition-all duration-200 cursor-pointer select-none block',
+                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#336699]',
+                    'active:scale-[0.99]',
+                    isSelected
+                      ? 'optical-glass-card-active'
+                      : 'hover:border-[#336699]/50'
+                  )}
                 >
-                  <RadioGroupPrimitive.Item
-                    value={option.value}
-                    onClick={() => {
-                      if (isSelected) {
-                        handleSelect(option.value);
-                      }
-                    }}
-                    className={cn(
-                      'optical-glass-card group relative w-full text-left rounded-2xl p-3.5 transition-all duration-200 cursor-pointer select-none block',
-                      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-ring)]',
-                      'active:scale-[0.99]',
-                      isSelected
-                        ? 'optical-glass-card-active'
-                        : 'hover:border-[var(--brand-primary)]/50'
-                    )}
-                  >
-                    <div className="flex items-start gap-3.5">
-                      {/* Esquema Óptico SVG a medida */}
-                      <OpticalOptionDiagram
-                        value={option.value}
-                        isSelected={isSelected}
-                      />
+                  <div className="flex items-start gap-3.5">
+                    <OpticalOptionDiagram
+                      value={option.value}
+                      isSelected={isSelected}
+                    />
 
-                      {/* Contenido Técnico Conciso y Escaneable */}
-                      <div className="min-w-0 flex-1 space-y-1">
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="space-y-1 min-w-0">
-                            {option.badgeText ? (
-                              <Badge variant="brand" className="mb-0.5">
-                                {option.badgeText}
-                              </Badge>
-                            ) : null}
-                            <p className="font-brand-heading text-[15px] font-semibold text-[var(--brand-text)] leading-snug">
-                              {option.label}
-                            </p>
-                          </div>
-
-                          {/* Indicador de Selección Táctil */}
-                          <div
-                            className={cn(
-                              'mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition-colors',
-                              isSelected
-                                ? 'border-[var(--brand-primary)] bg-[var(--brand-primary)] text-white'
-                                : 'border-[var(--brand-border)] bg-[var(--brand-surface)] group-hover:border-[var(--brand-primary)]'
-                            )}
-                          >
-                            {isSelected ? (
-                              <Check className="h-3 w-3 stroke-[3]" />
-                            ) : (
-                              <span className="h-1.5 w-1.5 rounded-full bg-transparent" />
-                            )}
-                          </div>
+                    <div className="min-w-0 flex-1 space-y-1">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="space-y-1 min-w-0">
+                          {option.badgeText ? (
+                            <Badge variant="brand" className="mb-0.5">
+                              {option.badgeText}
+                            </Badge>
+                          ) : null}
+                          <p className="font-brand-heading text-[15px] font-semibold text-[var(--brand-text)] leading-snug">
+                            {isUploadRxButton && isProcessingPhoto
+                              ? 'Cargando imagen de tu receta...'
+                              : option.label}
+                          </p>
                         </div>
 
-                        <p className="text-[12.5px] text-[var(--brand-text-muted)] leading-relaxed">
-                          {option.description}
-                        </p>
+                        {/* Indicador de Selección (Checkbox en Paso 4, Radio/Cámara en los demás) */}
+                        <div
+                          className={cn(
+                            'mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center border transition-colors',
+                            question.isMultiSelect ? 'rounded-md' : 'rounded-full',
+                            isSelected
+                              ? 'border-[#336699] bg-[#336699] text-white'
+                              : 'border-[var(--brand-border)] bg-[var(--brand-surface)] group-hover:border-[#336699]'
+                          )}
+                        >
+                          {isSelected ? (
+                            <Check className="h-3 w-3 stroke-[3]" />
+                          ) : isUploadRxButton ? (
+                            <Camera className="h-3 w-3 text-[#336699]" />
+                          ) : (
+                            <span className="h-1.5 w-1.5 rounded-full bg-transparent" />
+                          )}
+                        </div>
+                      </div>
 
-                        {/* Píldora de Especificación de Laboratorio */}
+                      <p className="text-[12.5px] text-[var(--brand-text-muted)] leading-relaxed">
+                        {option.description}
+                      </p>
+
+                      {isUploadRxButton && answers.prescriptionPhotoDataUrl ? (
+                        <div className="pt-2 flex items-center gap-2.5 rounded-xl bg-[#EFF7EF] border border-[#99CC99] p-2">
+                          <img
+                            src={answers.prescriptionPhotoDataUrl}
+                            alt="Receta adjunta"
+                            className="h-10 w-10 rounded-lg object-cover border border-[#336699]/30 shrink-0"
+                          />
+                          <div className="min-w-0 flex-1">
+                            <p className="text-xs font-semibold text-[#183D22]">
+                              Receta cargada correctamente
+                            </p>
+                            <p className="font-mono text-[10px] text-[#4A637C] truncate">
+                              {answers.prescriptionPhotoName ?? 'receta.jpg'}
+                            </p>
+                          </div>
+                        </div>
+                      ) : (
                         <div className="pt-1 flex items-center gap-1.5">
-                          <span className="inline-flex items-center gap-1.5 rounded-md bg-[var(--brand-surface-elevated)]/90 border border-[var(--brand-border)] px-2 py-0.5 font-mono text-[10px] font-semibold text-[var(--brand-primary)]">
-                            <span className="h-1.5 w-1.5 rounded-full bg-[var(--brand-primary)]" />
+                          <span className="inline-flex items-center gap-1.5 rounded-md bg-[var(--brand-surface-elevated)]/90 border border-[var(--brand-border)] px-2 py-0.5 font-mono text-[10px] font-semibold text-[#336699]">
+                            {isUploadRxButton ? (
+                              <ImagePlus className="h-3 w-3 text-[#336699]" />
+                            ) : (
+                              <span className="h-1.5 w-1.5 rounded-full bg-[#99CC99]" />
+                            )}
                             {option.clinicalHint}
                           </span>
                         </div>
-                      </div>
+                      )}
                     </div>
-                  </RadioGroupPrimitive.Item>
-                </motion.div>
-              );
-            })}
-          </motion.div>
-        </RadioGroupPrimitive.Root>
+                  </div>
+                </button>
+              </motion.div>
+            );
+          })}
+        </motion.div>
       </motion.div>
+
+      {/* 4. En el Paso 4 (Selección Múltiple), botón claro para avanzar al Paso 5 */}
+      {question.isMultiSelect && (
+        <div className="pt-2">
+          <Button
+            type="button"
+            variant="primary"
+            size="lg"
+            fullWidth
+            onClick={() => {
+              triggerHapticFeedback(15);
+              onConfirmBudgetStep();
+            }}
+            rightIcon={<ArrowRight className="h-4 w-4" />}
+          >
+            {selectedBudgetList.length > 0
+              ? `Continuar con ${selectedBudgetList.length} ${selectedBudgetList.length === 1 ? 'opción seleccionada' : 'opciones seleccionadas'}`
+              : 'Continuar al último paso'}
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

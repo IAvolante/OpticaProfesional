@@ -27,7 +27,7 @@ export function sanitizeArgentinePhone(rawPhone: string): string {
 }
 
 /**
- * Genera un ID corto determinístico/único para el Pasaporte Óptico Digital.
+ * Genera un ID corto determinístico/único para el Certificado 12 Meses / Pasaporte Óptico.
  */
 export function generateLeadId(): string {
   const randomPart = Math.random().toString(36).substring(2, 6).toUpperCase();
@@ -37,7 +37,6 @@ export function generateLeadId(): string {
 
 /**
  * Dispara una micro-vibración háptica (10ms) en dispositivos móviles compatibles.
- * Falla silenciosamente en escritorio o iOS donde navigator.vibrate no existe.
  */
 export function triggerHapticFeedback(durationMs = 10): void {
   if (
@@ -50,4 +49,59 @@ export function triggerHapticFeedback(durationMs = 10): void {
       // Ignorar si el navegador restringe vibración
     }
   }
+}
+
+/**
+ * Comprime la foto de la receta en el navegador del cliente (máx 1200px, JPEG 0.78)
+ * para lograr vista previa instantánea y subida rápida a Google Drive / Google Sheets.
+ */
+export function compressPrescriptionImageToDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('No se pudo leer la imagen'));
+    reader.onload = () => {
+      const resultStr = typeof reader.result === 'string' ? reader.result : '';
+      if (!resultStr) {
+        reject(new Error('Imagen vacía'));
+        return;
+      }
+
+      const img = new Image();
+      img.onerror = () => resolve(resultStr);
+      img.onload = () => {
+        try {
+          const maxDim = 1200;
+          let width = img.width;
+          let height = img.height;
+
+          if (width > maxDim || height > maxDim) {
+            if (width >= height) {
+              height = Math.round((height * maxDim) / width);
+              width = maxDim;
+            } else {
+              width = Math.round((width * maxDim) / height);
+              height = maxDim;
+            }
+          }
+
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            resolve(resultStr);
+            return;
+          }
+
+          ctx.drawImage(img, 0, 0, width, height);
+          const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.78);
+          resolve(compressedDataUrl);
+        } catch {
+          resolve(resultStr);
+        }
+      };
+      img.src = resultStr;
+    };
+    reader.readAsDataURL(file);
+  });
 }

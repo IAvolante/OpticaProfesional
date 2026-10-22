@@ -29,12 +29,12 @@ export function ProgressBar({
         max={100}
         aria-label={label ?? 'Progreso del diagnóstico óptico'}
         className={cn(
-          'relative h-1 w-full overflow-hidden bg-[var(--brand-surface-elevated)]/60',
+          'relative h-1.5 w-full overflow-hidden bg-[var(--brand-surface-elevated)]/80',
           className
         )}
       >
         <ProgressPrimitive.Indicator
-          className="h-full w-full flex-1 bg-[var(--brand-primary)] transition-transform duration-500 ease-out"
+          className="h-full w-full flex-1 bg-gradient-to-r from-[#99CC99] via-[#5A9499] to-[#336699] transition-transform duration-500 ease-out"
           style={{ transform: `translateX(-${100 - clamped}%)` }}
         />
       </ProgressPrimitive.Root>

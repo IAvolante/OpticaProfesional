@@ -1,638 +1,491 @@
-import { useState } from 'react';
-import * as TabsPrimitive from '@radix-ui/react-tabs';
+import { useRef, useState, type ChangeEvent, type FormEvent } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import {
-  AlertCircle,
+  ArrowRight,
+  Camera,
   Check,
-  ClipboardCheck,
-  Clock,
-  Copy,
-  CreditCard,
-  FileSearch,
-  HeartHandshake,
-  Info,
-  MessageCircle,
-  QrCode,
+  Phone,
   RotateCcw,
   ShieldCheck,
-  Wallet,
+  User,
 } from 'lucide-react';
 import type {
+  BudgetPreferenceAnswer,
   CompletedOpticalAnswers,
   LeadContactData,
-  LensCatalogItem,
   OpticalRecommendationResult,
-  PaymentBenefitMode,
 } from '../../types/optical.types';
 import { cn } from '../../utils/cn';
-import { formatCurrencyARS, triggerHapticFeedback } from '../../utils/formatters';
 import {
-  buildWhatsAppDeepLink,
-  buildWhatsAppQuoteMessage,
-} from '../../utils/whatsapp.encoder';
-import { Badge } from '../ui/Badge';
-import { Button } from '../ui/Button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '../ui/Card';
-import { MobileSheet } from '../ui/MobileSheet';
-import { Separator } from '../ui/Separator';
-import { LensVisualSimulator } from './LensVisualSimulator';
+  compressPrescriptionImageToDataUrl,
+  formatCurrencyARS,
+  sanitizeArgentinePhone,
+  triggerHapticFeedback,
+} from '../../utils/formatters';
+import type { ClaimBenefitParams } from '../../hooks/useOpticalWizard';
 
 export interface QuoteResultStepProps {
-  readonly lead: LeadContactData;
+  readonly lead: LeadContactData | null;
   readonly answers: CompletedOpticalAnswers;
   readonly recommendation: OpticalRecommendationResult;
   readonly catalogSourceLabel: string;
+  readonly isSubmitting: boolean;
+  readonly onClaimBenefit: (params: ClaimBenefitParams) => Promise<void>;
+  readonly onUpdatePrescriptionPhoto: (
+    fileName: string,
+    dataUrl: string
+  ) => void;
   readonly onResetWizard: () => void;
-  readonly onWhatsAppClick: (selectedTier: 'PRIMARY' | 'ALTERNATIVE') => void;
 }
 
-interface LensDualPriceBreakdownProps {
-  readonly lens: LensCatalogItem;
-  readonly highlightLabWarning: boolean;
-  readonly paymentMode: PaymentBenefitMode;
-}
+const BUDGET_BADGE_LABELS: Record<BudgetPreferenceAnswer, string> = {
+  tengo_obra_social: 'Tengo obra social',
+  soy_particular: 'Soy particular',
+  interes_cuotas_tarjeta: 'Cuotas con tarjeta',
+  beneficio_pago_contado: 'Beneficio pago contado',
+};
 
 /**
- * Grilla comparativa lado a lado (2 columnas en móvil) con cálculo en tiempo real
- * y tipografía monoespaciada tabular (`JetBrains Mono`) para precios y rangos.
- */
-function LensDualPriceBreakdown({
-  lens,
-  highlightLabWarning,
-  paymentMode,
-}: LensDualPriceBreakdownProps) {
-  const isCashDiscount = paymentMode === 'CASH_TRANSFER';
-  const stockDisplayPrice = isCashDiscount
-    ? Math.round(lens.priceStockARS * 0.85)
-    : lens.priceStockARS;
-  const labDisplayPrice = isCashDiscount
-    ? Math.round(lens.priceLabARS * 0.85)
-    : lens.priceLabARS;
-
-  const stockSavings = lens.priceStockARS - stockDisplayPrice;
-
-  return (
-    <div className="space-y-2.5 pt-1">
-      <div className="grid grid-cols-2 gap-2.5">
-        {/* Columna 1: Rango Stock */}
-        <div
-          className={cn(
-            'rounded-xl p-3 border flex flex-col justify-between transition-colors',
-            !highlightLabWarning
-              ? 'border-emerald-600/40 bg-[var(--brand-badge-stock-bg)]/85'
-              : 'border-[var(--brand-border)] bg-[var(--brand-surface)]'
-          )}
-        >
-          <div className="space-y-1">
-            <div className="flex items-center justify-between gap-1">
-              <Badge variant="stock">Rango Stock</Badge>
-              {isCashDiscount && (
-                <span className="font-mono text-[10px] font-bold text-emerald-700">
-                  -15%
-                </span>
-              )}
-            </div>
-
-            {isCashDiscount && (
-              <p className="font-mono text-[11px] line-through text-[var(--brand-text-muted)] leading-none pt-1">
-                {formatCurrencyARS(lens.priceStockARS)}
-              </p>
-            )}
-
-            <p className="font-mono tabular-nums text-xl font-bold tracking-tight text-[var(--brand-text)]">
-              {formatCurrencyARS(stockDisplayPrice)}
-            </p>
-            <p className="text-[11px] font-medium text-[var(--brand-text)] leading-snug">
-              {lens.stockRangeDescription}
-            </p>
-          </div>
-
-          <p className="mt-2.5 inline-flex items-center gap-1 text-[10px] text-[var(--brand-text-muted)]">
-            <Clock className="h-3 w-3 shrink-0 text-[var(--brand-primary)]" />
-            <span className="truncate">{lens.deliveryTimeStock}</span>
-          </p>
-        </div>
-
-        {/* Columna 2: Rango Laboratorio */}
-        <div
-          className={cn(
-            'rounded-xl p-3 border flex flex-col justify-between transition-colors',
-            highlightLabWarning
-              ? 'border-amber-500/60 bg-[var(--brand-badge-lab-bg)]/90'
-              : 'border-[var(--brand-border)] bg-[var(--brand-surface)]'
-          )}
-        >
-          <div className="space-y-1">
-            <div className="flex items-center justify-between gap-1">
-              <Badge variant="lab">Rango Lab</Badge>
-              {isCashDiscount && (
-                <span className="font-mono text-[10px] font-bold text-emerald-700">
-                  -15%
-                </span>
-              )}
-            </div>
-
-            {isCashDiscount && (
-              <p className="font-mono text-[11px] line-through text-[var(--brand-text-muted)] leading-none pt-1">
-                {formatCurrencyARS(lens.priceLabARS)}
-              </p>
-            )}
-
-            <p className="font-mono tabular-nums text-xl font-bold tracking-tight text-[var(--brand-text)]">
-              {formatCurrencyARS(labDisplayPrice)}
-            </p>
-            <p className="text-[11px] font-medium text-[var(--brand-text)] leading-snug">
-              {lens.labRangeDescription}
-            </p>
-          </div>
-
-          <p className="mt-2.5 inline-flex items-center gap-1 text-[10px] text-[var(--brand-text-muted)]">
-            <Clock className="h-3 w-3 shrink-0 text-[var(--brand-primary)]" />
-            <span className="truncate">{lens.deliveryTimeLab}</span>
-          </p>
-        </div>
-      </div>
-
-      {/* Cinta informativa dinámica según el medio de pago / cobertura elegido */}
-      {paymentMode === 'CASH_TRANSFER' && (
-        <div className="rounded-lg bg-emerald-500/12 border border-emerald-600/25 px-3 py-2 flex items-center justify-between text-xs font-medium text-emerald-950">
-          <span>Bonificación Contado / Transferencia:</span>
-          <span className="font-mono font-bold text-emerald-800">
-            -{formatCurrencyARS(stockSavings)}
-          </span>
-        </div>
-      )}
-
-      {paymentMode === 'HEALTH_INSURANCE' && (
-        <div className="rounded-lg bg-[var(--brand-accent)] border border-[var(--brand-accent-border)] px-3 py-2 text-xs font-medium text-[var(--brand-accent-foreground)]">
-          Convenios activos en Salta (Obras Sociales, Mutuales y Coseguro). Enviá tu carnet por WhatsApp para descontar tu cobertura.
-        </div>
-      )}
-    </div>
-  );
-}
-
-/**
- * Paso Final ('QUOTE_RESULT') construido con primitivas shadcn/ui (`Card`, `TabsPrimitive`, `Separator`, `MobileSheet`):
- * - Cero iconos artificiales de IA ni emotes.
- * - Tipografía clínica Inter + DM Sans + JetBrains Mono.
+ * Paso 6 ('QUOTE_RESULT') — Cierre del Asesor Virtual + Precios en Vivo de Google Sheets
+ * + Cupón de Garantía de Recambio 12 Meses Gratis + Registro de Nombre y Teléfono.
  */
 export function QuoteResultStep({
   lead,
   answers,
   recommendation,
   catalogSourceLabel,
+  isSubmitting,
+  onClaimBenefit,
+  onUpdatePrescriptionPhoto,
   onResetWizard,
-  onWhatsAppClick,
 }: QuoteResultStepProps) {
   const prefersReducedMotion = useReducedMotion();
+  const nameInputRef = useRef<HTMLInputElement | null>(null);
+  const phoneInputRef = useRef<HTMLInputElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
   const [selectedTier, setSelectedTier] = useState<'PRIMARY' | 'ALTERNATIVE'>(
     'PRIMARY'
   );
-  const [paymentMode, setPaymentMode] = useState<PaymentBenefitMode>(
-    lead.preferredPayment ?? 'CASH_TRANSFER'
-  );
-  const [copiedFicha, setCopiedFicha] = useState<boolean>(false);
+  const [fullName, setFullName] = useState<string>(lead?.fullName ?? '');
+  const [whatsapp, setWhatsapp] = useState<string>(lead?.whatsapp ?? '');
+  const [nameError, setNameError] = useState<string>('');
+  const [phoneError, setPhoneError] = useState<string>('');
 
   const {
     primaryOption,
+    primaryCardTagline,
     alternativeOption,
-    alternativeUpgradeReason,
-    personalizedReasoning,
-    clinicalTags,
-    requiresLabRangeWarning,
-    estimatedRangeNote,
+    alternativeCardTagline,
+    advisorObservationParagraph,
+    advisorClosingParagraph,
   } = recommendation;
 
-  const activeLens =
-    selectedTier === 'ALTERNATIVE' ? alternativeOption : primaryOption;
-
-  const activeDisplayPriceStock =
-    paymentMode === 'CASH_TRANSFER'
-      ? Math.round(activeLens.priceStockARS * 0.85)
-      : activeLens.priceStockARS;
-
-  const passportCode = lead.passportCode ?? 'OP-SALTA';
-  const hasPhotochromic =
-    activeLens.sku.includes('PHOTO') ||
-    answers.lightSensitivity === 'outdoor_commute';
-
-  const whatsappUrl = buildWhatsAppDeepLink({
-    lead,
-    answers,
-    recommendation,
-    selectedLensType: selectedTier,
-    paymentMode,
-  });
-
-  const whatsappPreviewText = buildWhatsAppQuoteMessage({
-    lead,
-    answers,
-    recommendation,
-    selectedLensType: selectedTier,
-    paymentMode,
-  });
-
-  const handleCopyFicha = async () => {
-    triggerHapticFeedback(12);
+  const handlePhotoChange = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    triggerHapticFeedback(15);
     try {
-      await navigator.clipboard.writeText(whatsappPreviewText);
-      setCopiedFicha(true);
-      window.setTimeout(() => setCopiedFicha(false), 2500);
+      const dataUrl = await compressPrescriptionImageToDataUrl(file);
+      onUpdatePrescriptionPhoto(file.name, dataUrl);
     } catch {
-      // Ignorar si clipboard no está disponible
+      // Ignorar error de lectura
     }
   };
 
-  return (
-    <>
-      <motion.div
-        initial={prefersReducedMotion ? false : { opacity: 0, y: 14 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ type: 'spring', stiffness: 360, damping: 28 }}
-        className="space-y-3.5 pb-36"
-      >
-        {/* 1. CREDENCIAL DE ORDEN Y PASAPORTE ÓPTICO */}
-        <div className="rounded-2xl bg-slate-950 text-white p-4 shadow-md border border-slate-800 space-y-2.5">
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2.5">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-                <QrCode className="h-4 w-4" />
-              </div>
-              <div>
-                <p className="font-mono text-[10px] font-semibold uppercase tracking-widest text-emerald-400">
-                  Pasaporte Óptico · Salta
-                </p>
-                <p className="text-[13px] font-semibold tracking-tight text-white">
-                  Titular: {lead.fullName}
-                </p>
-              </div>
-            </div>
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
 
-            <div className="text-right">
-              <span className="inline-block rounded-md bg-slate-900 px-2.5 py-0.5 font-mono text-xs font-semibold text-white border border-slate-700">
-                #{passportCode}
-              </span>
-              <p className="text-[10px] text-slate-400 mt-0.5">
-                Reserva 7 días
-              </p>
-            </div>
+    const trimmedName = fullName.trim();
+    const cleanDigits = sanitizeArgentinePhone(whatsapp);
+
+    let firstInvalidInput: HTMLInputElement | null = null;
+
+    if (trimmedName.length < 2) {
+      setNameError('Completá tu nombre para emitir tu certificado de 12 meses.');
+      firstInvalidInput = nameInputRef.current;
+    } else {
+      setNameError('');
+    }
+
+    if (cleanDigits.length < 8) {
+      setPhoneError(
+        'Completá tu número de WhatsApp sin 0 ni 15 (ej: 3875123456).'
+      );
+      if (!firstInvalidInput) {
+        firstInvalidInput = phoneInputRef.current;
+      }
+    } else {
+      setPhoneError('');
+    }
+
+    if (firstInvalidInput) {
+      triggerHapticFeedback(25);
+      firstInvalidInput.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+      });
+      window.setTimeout(() => {
+        firstInvalidInput?.focus({ preventScroll: true });
+      }, 280);
+      return;
+    }
+
+    triggerHapticFeedback(18);
+    await onClaimBenefit({
+      fullName: trimmedName,
+      whatsapp: cleanDigits,
+      selectedTier,
+    });
+  };
+
+  return (
+    <motion.div
+      initial={prefersReducedMotion ? false : { opacity: 0, y: 14 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ type: 'spring', stiffness: 360, damping: 28 }}
+      className="space-y-4 pb-10"
+    >
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        onChange={(e) => void handlePhotoChange(e)}
+        className="hidden"
+      />
+
+      {/* =====================================================================
+       * 1. TARJETA DEL ASESOR VIRTUAL + LAS 2 OPCIONES CON PRECIOS EN VIVO
+       * ===================================================================== */}
+      <div className="optical-glass-card rounded-3xl p-5 space-y-4 border border-[#336699]/25">
+        {/* Encabezado con el Nuevo Logo 2026 */}
+        <div className="flex items-center justify-between gap-2 border-b border-[var(--brand-border)] pb-3">
+          <div className="flex items-center gap-2.5">
+            <img
+              src={`${import.meta.env.BASE_URL}logo-op-icon.png`}
+              alt="Óptica Profesional"
+              className="h-7 w-auto object-contain select-none"
+            />
+            <span className="font-brand-heading text-base tracking-tight text-[#102336]">
+              <span className="font-light text-[#68A868]">Optica </span>
+              <span className="font-semibold text-[#336699]">Profesional</span>
+            </span>
           </div>
 
-          {lead.prescriptionPhotoName ? (
-            <div className="flex items-center justify-between rounded-lg bg-emerald-950/80 border border-emerald-700/50 px-3 py-1.5 text-xs text-emerald-200">
-              <span className="font-medium">
-                Receta vinculada para adjuntar en WhatsApp
-              </span>
-              <span className="font-mono text-[10px] truncate max-w-[120px]">
-                {lead.prescriptionPhotoName}
-              </span>
-            </div>
-          ) : null}
+          <span className="rounded-full bg-[#EFF7EF] border border-[#99CC99] px-2.5 py-0.5 font-mono text-[10px] font-semibold text-[#183D22]">
+            Asesor Virtual
+          </span>
         </div>
 
-        {/* 2. CONMUTADOR DE BENEFICIO EN VIVO */}
-        <Card className="p-2.5">
-          <p className="px-1 pb-2 font-mono text-[10px] font-semibold uppercase tracking-wider text-[var(--brand-text-muted)]">
-            Modalidad de pago o cobertura aplicada:
+        {/* Devolución personalizada tal cual el PDF de Solana */}
+        <div className="space-y-2 text-[14px] leading-relaxed text-[#102336]">
+          <p>{advisorObservationParagraph}</p>
+          <p className="text-[var(--brand-text-muted)]">
+            {advisorClosingParagraph}
           </p>
-          <div className="grid grid-cols-3 gap-1.5">
-            <button
-              type="button"
-              onClick={() => {
-                triggerHapticFeedback(10);
-                setPaymentMode('CASH_TRANSFER');
-              }}
-              className={cn(
-                'flex flex-col items-center justify-center rounded-xl py-2 px-1.5 text-center transition-all cursor-pointer border',
-                paymentMode === 'CASH_TRANSFER'
-                  ? 'bg-[var(--brand-primary)] text-[var(--brand-primary-foreground)] border-[var(--brand-primary)] shadow-2xs'
-                  : 'bg-[var(--brand-surface)] text-[var(--brand-text-muted)] border-[var(--brand-border)]'
-              )}
-            >
-              <Wallet className="h-3.5 w-3.5 mb-1" />
-              <span className="text-[11px] font-semibold leading-tight">
-                Transf. / Efvo
-              </span>
-              <span className="font-mono text-[10px] opacity-90">-15% OFF</span>
-            </button>
+        </div>
 
-            <button
-              type="button"
-              onClick={() => {
-                triggerHapticFeedback(10);
-                setPaymentMode('LIST_INSTALLMENTS');
-              }}
-              className={cn(
-                'flex flex-col items-center justify-center rounded-xl py-2 px-1.5 text-center transition-all cursor-pointer border',
-                paymentMode === 'LIST_INSTALLMENTS'
-                  ? 'bg-[var(--brand-primary)] text-[var(--brand-primary-foreground)] border-[var(--brand-primary)] shadow-2xs'
-                  : 'bg-[var(--brand-surface)] text-[var(--brand-text-muted)] border-[var(--brand-border)]'
-              )}
-            >
-              <CreditCard className="h-3.5 w-3.5 mb-1" />
-              <span className="text-[11px] font-semibold leading-tight">
-                Lista / Tarjeta
-              </span>
-              <span className="font-mono text-[10px] opacity-90">Cuotas</span>
-            </button>
+        {/* Grilla de 2 Opciones lado a lado con precios exactos en vivo de Google Sheets */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+          {(
+            [
+              {
+                tier: 'PRIMARY' as const,
+                stepTitle: 'Opción 1',
+                lens: primaryOption,
+                tagline: primaryCardTagline,
+              },
+              {
+                tier: 'ALTERNATIVE' as const,
+                stepTitle: 'Opción 2',
+                lens: alternativeOption,
+                tagline: alternativeCardTagline,
+              },
+            ] as const
+          ).map(({ tier, stepTitle, lens, tagline }) => {
+            const isSelected = selectedTier === tier;
 
-            <button
-              type="button"
-              onClick={() => {
-                triggerHapticFeedback(10);
-                setPaymentMode('HEALTH_INSURANCE');
-              }}
-              className={cn(
-                'flex flex-col items-center justify-center rounded-xl py-2 px-1.5 text-center transition-all cursor-pointer border',
-                paymentMode === 'HEALTH_INSURANCE'
-                  ? 'bg-[var(--brand-primary)] text-[var(--brand-primary-foreground)] border-[var(--brand-primary)] shadow-2xs'
-                  : 'bg-[var(--brand-surface)] text-[var(--brand-text-muted)] border-[var(--brand-border)]'
-              )}
-            >
-              <HeartHandshake className="h-3.5 w-3.5 mb-1" />
-              <span className="text-[11px] font-semibold leading-tight">
-                Obra Social
-              </span>
-              <span className="font-mono text-[10px] opacity-90">Convenios</span>
-            </button>
-          </div>
-        </Card>
-
-        {/* 3. RADIX TABS ENTRE 1ª OPCIÓN Y 2ª OPCIÓN */}
-        <TabsPrimitive.Root
-          value={selectedTier}
-          onValueChange={(val) => {
-            if (val === 'PRIMARY' || val === 'ALTERNATIVE') {
-              triggerHapticFeedback(12);
-              setSelectedTier(val);
-            }
-          }}
-          className="space-y-3"
-        >
-          <TabsPrimitive.List
-            aria-label="Opciones de cristales recomendados"
-            className="optical-glass-card relative grid grid-cols-2 gap-1.5 rounded-xl p-1.5"
-          >
-            {(['PRIMARY', 'ALTERNATIVE'] as const).map((tier) => {
-              const isSelected = selectedTier === tier;
-              const lens =
-                tier === 'PRIMARY' ? primaryOption : alternativeOption;
-              const displayPrice =
-                paymentMode === 'CASH_TRANSFER'
-                  ? Math.round(lens.priceStockARS * 0.85)
-                  : lens.priceStockARS;
-              const title =
-                tier === 'PRIMARY'
-                  ? '01 · Opción Principal'
-                  : '02 · Alternativa';
-
-              return (
-                <TabsPrimitive.Trigger
-                  key={tier}
-                  value={tier}
-                  className={cn(
-                    'relative z-10 min-h-[46px] rounded-lg px-3 py-2 text-left transition-colors cursor-pointer focus-visible:outline-none',
-                    isSelected
-                      ? 'text-[var(--brand-primary-foreground)]'
-                      : 'text-[var(--brand-text-muted)] hover:text-[var(--brand-text)]'
-                  )}
-                >
-                  {isSelected && (
-                    <motion.div
-                      layoutId="active-quote-tab-pill"
-                      transition={{
-                        type: 'spring',
-                        stiffness: 420,
-                        damping: 32,
-                      }}
-                      className="absolute inset-0 -z-10 rounded-lg bg-[var(--brand-primary)] shadow-xs"
-                    />
-                  )}
-                  <p className="font-mono text-[10px] font-semibold uppercase tracking-wider opacity-85">
-                    {title}
-                  </p>
-                  <p className="font-mono tabular-nums text-xs font-bold truncate">
-                    {formatCurrencyARS(displayPrice)}
-                  </p>
-                </TabsPrimitive.Trigger>
-              );
-            })}
-          </TabsPrimitive.List>
-
-          {/* Tarjeta del Cristal Seleccionado */}
-          <Card variant="highlighted">
-            <CardHeader className="pb-2">
-              <div className="flex items-center justify-between gap-2 pb-1">
-                <Badge variant="brand">
-                  {selectedTier === 'PRIMARY'
-                    ? 'Recomendación Clínica Principal'
-                    : 'Alternativa Comparativa'}
-                </Badge>
-                <span className="font-mono text-[11px] font-medium text-[var(--brand-text-muted)]">
-                  {activeLens.sku}
-                </span>
-              </div>
-
-              <CardTitle className="text-lg">
-                {activeLens.commercialName}
-              </CardTitle>
-              <CardDescription>
-                {selectedTier === 'ALTERNATIVE'
-                  ? alternativeUpgradeReason
-                  : `${activeLens.materialDescription} · Índice ${activeLens.refractiveIndex}`}
-              </CardDescription>
-            </CardHeader>
-
-            <CardContent className="space-y-3">
-              {/* Desglose Lado a Lado Stock vs Laboratorio */}
-              <LensDualPriceBreakdown
-                lens={activeLens}
-                highlightLabWarning={requiresLabRangeWarning}
-                paymentMode={paymentMode}
-              />
-
-              <Separator />
-
-              {/* Tratamientos incluidos */}
-              <div className="space-y-2">
-                <p className="font-mono text-[10px] font-semibold uppercase tracking-wider text-[var(--brand-text-muted)]">
-                  Tratamientos certificados incluidos:
-                </p>
-                <div className="grid grid-cols-1 gap-1.5">
-                  {activeLens.treatments.map((treatment) => (
+            return (
+              <button
+                key={tier}
+                type="button"
+                onClick={() => {
+                  triggerHapticFeedback(10);
+                  setSelectedTier(tier);
+                }}
+                className={cn(
+                  'group relative flex flex-col justify-between rounded-2xl p-4 text-left transition-all duration-200 cursor-pointer border',
+                  isSelected
+                    ? 'border-2 border-[#336699] bg-gradient-to-b from-[#EFF7EF]/90 to-white shadow-md'
+                    : 'border-[var(--brand-border)] bg-white/90 hover:border-[#336699]/50'
+                )}
+              >
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs font-bold uppercase tracking-wider text-[#336699]">
+                      {stepTitle}
+                    </span>
                     <div
-                      key={treatment}
-                      className="flex items-center gap-2 text-xs text-[var(--brand-text)]"
+                      className={cn(
+                        'flex h-5 w-5 items-center justify-center rounded-full border transition-colors',
+                        isSelected
+                          ? 'border-[#336699] bg-[#336699] text-white'
+                          : 'border-[var(--brand-border)] bg-white'
+                      )}
                     >
-                      <ShieldCheck className="h-3.5 w-3.5 shrink-0 text-[var(--brand-primary)]" />
-                      <span>{treatment}</span>
+                      {isSelected && <Check className="h-3 w-3 stroke-[3]" />}
                     </div>
-                  ))}
+                  </div>
+
+                  <p className="font-brand-heading text-[15px] font-semibold text-[#102336] leading-snug">
+                    {lens.commercialName}
+                  </p>
+
+                  <p className="font-mono tabular-nums text-2xl font-bold tracking-tight text-[#102336] pt-1">
+                    {formatCurrencyARS(lens.priceStockARS)}
+                  </p>
+                </div>
+
+                <div className="mt-3 pt-2.5 border-t border-[var(--brand-border)]/70 flex items-center justify-between gap-1">
+                  <span className="text-xs font-medium text-[var(--brand-text-muted)]">
+                    {tagline}
+                  </span>
+                  <span className="h-2 w-2 rounded-full bg-[#99CC99] shrink-0" />
+                </div>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Resumen compacto de lo elegido en el Paso 4 + Foto de Receta del Paso 5 */}
+        <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+          <div className="flex flex-wrap gap-1.5">
+            {answers.budgetPreferences.map((pref) => (
+              <span
+                key={pref}
+                className="inline-flex items-center gap-1 rounded-lg bg-[var(--brand-surface-elevated)] border border-[var(--brand-border)] px-2.5 py-1 text-[11px] font-medium text-[#264F78]"
+              >
+                <ShieldCheck className="h-3 w-3 text-[#336699]" />
+                {BUDGET_BADGE_LABELS[pref]}
+              </span>
+            ))}
+          </div>
+
+          {answers.prescriptionPhotoDataUrl ? (
+            <div className="flex items-center gap-2 rounded-xl bg-[#EFF7EF] border border-[#99CC99] px-2.5 py-1.5 w-full sm:w-auto justify-between">
+              <div className="flex items-center gap-2 min-w-0">
+                <img
+                  src={answers.prescriptionPhotoDataUrl}
+                  alt="Receta adjunta"
+                  className="h-8 w-8 rounded-md object-cover border border-[#336699]/30 shrink-0"
+                />
+                <div className="min-w-0">
+                  <p className="text-[11px] font-semibold text-[#183D22]">
+                    Foto de receta cargada
+                  </p>
+                  <p className="font-mono text-[10px] text-[#4A637C] truncate max-w-[150px]">
+                    {answers.prescriptionPhotoName ?? 'receta.jpg'}
+                  </p>
                 </div>
               </div>
-            </CardContent>
-          </Card>
-        </TabsPrimitive.Root>
-
-        {/* 4. LABORATORIO VISUAL INTERACTIVO */}
-        <LensVisualSimulator
-          refractiveIndex={activeLens.refractiveIndex}
-          hasPhotochromic={hasPhotochromic}
-          commercialName={activeLens.commercialName}
-        />
-
-        {/* 5. FICHA DE DERIVACIÓN A VENTAS (Visible en pantalla + Copiar o Abrir Sheet) */}
-        <Card className="border-l-4 border-l-[var(--brand-primary)] p-4 space-y-3">
-          <div className="flex items-start justify-between gap-2">
-            <div className="flex items-start gap-2">
-              {requiresLabRangeWarning ? (
-                <AlertCircle className="h-4 w-4 shrink-0 text-amber-600 mt-0.5" />
-              ) : (
-                <Info className="h-4 w-4 shrink-0 text-[var(--brand-primary)] mt-0.5" />
-              )}
-              <div className="space-y-1">
-                <p className="text-[13px] font-semibold text-[var(--brand-text)]">
-                  Ficha Técnica Lista para Transferir a Ventas
-                </p>
-                <p className="text-xs text-[var(--brand-text-muted)] leading-relaxed">
-                  {estimatedRangeNote}
-                </p>
-              </div>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => void handleCopyFicha()}
-              className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-[var(--brand-border)] bg-[var(--brand-surface)] px-2.5 py-1.5 text-xs font-semibold text-[var(--brand-primary)] active:scale-95 transition-transform cursor-pointer"
-            >
-              {copiedFicha ? (
-                <>
-                  <ClipboardCheck className="h-3.5 w-3.5 text-emerald-600" />
-                  <span className="text-emerald-700">Copiada</span>
-                </>
-              ) : (
-                <>
-                  <Copy className="h-3.5 w-3.5" />
-                  <span>Copiar Ficha</span>
-                </>
-              )}
-            </button>
-          </div>
-
-          {/* Vista previa directa de la Ficha que recibe Ventas en WhatsApp */}
-          <div className="rounded-xl border border-[var(--brand-border)] bg-[var(--brand-surface)] p-3">
-            <p className="font-mono text-[10px] font-semibold uppercase tracking-wider text-[var(--brand-primary)] mb-1.5">
-              Dossier comercial que recibe el asesor en WhatsApp:
-            </p>
-            <pre className="max-h-40 overflow-y-auto whitespace-pre-wrap font-mono text-[11px] leading-relaxed text-[var(--brand-text)]">
-              {whatsappPreviewText}
-            </pre>
-          </div>
-
-          <MobileSheet
-            title="Ficha Clínica & Dossier para Ventas"
-            description="Relevamiento completo que se transfiere al mostrador de Óptica Profesional"
-            trigger={
               <button
                 type="button"
-                onClick={() => triggerHapticFeedback(10)}
-                className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl border border-[var(--brand-border)] bg-[var(--brand-surface)] px-3 py-2.5 text-xs font-semibold text-[var(--brand-primary)] active:scale-[0.99] transition-transform cursor-pointer"
+                onClick={() => fileInputRef.current?.click()}
+                className="text-[11px] font-semibold text-[#336699] underline cursor-pointer shrink-0 ml-2"
               >
-                <FileSearch className="h-3.5 w-3.5" />
-                <span>Ampliar Justificación Clínica y Ficha Completa</span>
+                Cambiar
               </button>
-            }
-          >
-            <div className="space-y-4 text-xs">
-              <div className="space-y-2">
-                <p className="font-mono font-semibold uppercase tracking-wider text-[var(--brand-primary)]">
-                  Criterio Clínico Aplicado:
-                </p>
-                <div className="flex flex-wrap gap-1.5">
-                  {clinicalTags.map((tag) => (
-                    <Badge
-                      key={tag.id}
-                      variant={tag.category === 'range' ? 'neutral' : 'brand'}
-                    >
-                      {tag.label}
-                    </Badge>
-                  ))}
-                </div>
-                <ul className="space-y-1.5 text-[var(--brand-text)] pt-1">
-                  {personalizedReasoning.map((reason, idx) => (
-                    <li key={idx} className="flex items-start gap-2">
-                      <Check className="h-3.5 w-3.5 shrink-0 text-[var(--brand-primary)] mt-0.5" />
-                      <span>{reason}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              <div className="space-y-1.5 border-t border-[var(--brand-border)] pt-3">
-                <p className="font-mono font-semibold uppercase tracking-wider text-[var(--brand-text-muted)]">
-                  Ficha Completa de Derivación a Ventas:
-                </p>
-                <pre className="whitespace-pre-wrap rounded-xl border border-[var(--brand-border)] bg-[var(--brand-canvas)] p-3 font-mono text-[11px] leading-relaxed text-[var(--brand-text)]">
-                  {whatsappPreviewText}
-                </pre>
-              </div>
             </div>
-          </MobileSheet>
-        </Card>
+          ) : (
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-dashed border-[#336699]/60 bg-white px-2.5 py-1 text-[11px] font-semibold text-[#336699] hover:bg-[#EBF2F8] transition-colors cursor-pointer"
+            >
+              <Camera className="h-3.5 w-3.5" />
+              <span>¿Querés sumar foto de tu receta?</span>
+            </button>
+          )}
+        </div>
+      </div>
 
-        {/* Pie compacto de reinicio */}
-        <Card className="px-4 py-2.5 flex items-center justify-between">
-          <span className="font-mono text-[11px] text-[var(--brand-text-muted)]">
-            {catalogSourceLabel}
-          </span>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onResetWizard}
-            leftIcon={<RotateCcw className="h-3.5 w-3.5" />}
-          >
-            Nueva consulta
-          </Button>
-        </Card>
-      </motion.div>
+      {/* =====================================================================
+       * 2. CUPÓN / CERTIFICADO EXCLUSIVO 12 MESES GRATIS + REGISTRO Y CIERRE
+       * ===================================================================== */}
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-b from-[#0E2033] via-[#0B1929] to-[#081320] text-white p-5 sm:p-6 shadow-xl border border-[#336699]/40">
+        {/* Halo luminoso verde salvia y azul profesional detrás del cupón */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -top-16 left-1/2 -translate-x-1/2 h-36 w-72 rounded-full bg-[#99CC99]/20 blur-3xl"
+        />
 
-      {/* Barra Inferior Fija de Conversión a WhatsApp (Thumb-Zone) */}
-      <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-[var(--brand-border)] bg-[var(--brand-surface)]/95 backdrop-blur-xl px-4 pt-2.5 pb-safe-bottom shadow-xl">
-        <div className="mx-auto max-w-[480px] space-y-1.5">
-          <div className="flex items-center justify-between text-xs">
-            <span className="font-mono font-medium text-[var(--brand-text)] truncate max-w-[215px]">
-              #{passportCode} · {activeLens.sku}
-            </span>
-            <span className="font-mono tabular-nums font-bold text-[var(--brand-primary)]">
-              Stock {formatCurrencyARS(activeDisplayPriceStock)}
+        <div className="relative z-10 space-y-4 text-center">
+          {/* Píldora BENEFICIO EXCLUSIVO idéntica al PDF de Solana */}
+          <div className="flex justify-center">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-[#99CC99]/20 border border-[#99CC99]/60 px-3.5 py-1 font-mono text-[11px] font-bold uppercase tracking-widest text-[#99CC99]">
+              BENEFICIO EXCLUSIVO
             </span>
           </div>
 
-          <Button
-            asChild
-            variant="whatsapp"
-            size="lg"
-            fullWidth
-            onClick={() => {
-              triggerHapticFeedback(18);
-              onWhatsAppClick(selectedTier);
-            }}
+          <div className="space-y-1.5">
+            <h2 className="font-brand-heading text-xl sm:text-2xl font-extrabold tracking-tight text-white">
+              ¡RENOVÁ TUS CRISTALES GRATIS!
+            </h2>
+            <p className="text-sm sm:text-[15px] font-semibold text-[#99CC99]">
+              Comprá hoy y tenés un recambio sin cargo durante los próximos 12
+              meses.
+            </p>
+          </div>
+
+          <div className="space-y-2 text-xs leading-relaxed text-slate-300 max-w-[410px] mx-auto">
+            <p>
+              Con la compra de tus anteojos con cristales incluidos, te llevás
+              un certificado para realizar un recambio de cristales de la misma
+              categoría y características, por única vez, dentro de los 12 meses
+              posteriores a tu compra.
+            </p>
+            <p className="text-[11px] text-slate-400">
+              Beneficio personal, no transferible. Sujeto a las condiciones del
+              certificado.
+            </p>
+          </div>
+
+          {/* Separador tipo línea de troquel de cupón */}
+          <div className="border-t border-dashed border-white/20 my-2" />
+
+          {/* Registro de Nombre y WhatsApp en el último paso para emitir el cupón */}
+          <form
+            onSubmit={(e) => void handleSubmit(e)}
+            noValidate
+            className="space-y-3 text-left pt-1"
           >
-            <a href={whatsappUrl} target="_blank" rel="noopener noreferrer">
-              <MessageCircle className="h-4 w-4 shrink-0" />
-              <span>Transferir Ficha Completa a Ventas (WhatsApp)</span>
-            </a>
-          </Button>
+            <p className="text-xs font-semibold text-center text-slate-200">
+              Completá tu nombre y WhatsApp para activar tu certificado:
+            </p>
+
+            <div className="space-y-2.5">
+              <div className="scroll-mt-24">
+                <label
+                  htmlFor="coupon-fullname"
+                  className={cn(
+                    'block text-[11px] font-semibold mb-1',
+                    nameError ? 'text-rose-300' : 'text-slate-300'
+                  )}
+                >
+                  Tu Nombre y Apellido *
+                </label>
+                <div className="relative">
+                  <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
+                    <User className="h-4 w-4" />
+                  </div>
+                  <input
+                    ref={nameInputRef}
+                    id="coupon-fullname"
+                    type="text"
+                    value={fullName}
+                    onChange={(e) => {
+                      setFullName(e.target.value);
+                      if (nameError) setNameError('');
+                    }}
+                    placeholder="Ej: Mariana Gómez"
+                    autoComplete="name"
+                    enterKeyHint="next"
+                    className={cn(
+                      'min-h-[46px] w-full rounded-xl bg-white/10 pl-10 pr-3.5 py-2.5 text-base text-white placeholder:text-slate-400 transition-all focus:outline-none',
+                      nameError
+                        ? 'border-2 border-rose-400 bg-rose-950/40'
+                        : 'border border-white/20 focus:border-[#99CC99] focus:bg-white/15'
+                    )}
+                  />
+                </div>
+                {nameError ? (
+                  <p
+                    role="alert"
+                    className="mt-1 rounded-lg bg-rose-500/20 border border-rose-400/50 px-2.5 py-1 text-xs font-medium text-rose-200"
+                  >
+                    {nameError}
+                  </p>
+                ) : null}
+              </div>
+
+              <div className="scroll-mt-24">
+                <label
+                  htmlFor="coupon-whatsapp"
+                  className={cn(
+                    'block text-[11px] font-semibold mb-1',
+                    phoneError ? 'text-rose-300' : 'text-slate-300'
+                  )}
+                >
+                  Tu Número de WhatsApp *
+                </label>
+                <div className="relative">
+                  <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
+                    <Phone className="h-4 w-4" />
+                  </div>
+                  <input
+                    ref={phoneInputRef}
+                    id="coupon-whatsapp"
+                    type="tel"
+                    inputMode="tel"
+                    value={whatsapp}
+                    onChange={(e) => {
+                      setWhatsapp(e.target.value);
+                      if (phoneError) setPhoneError('');
+                    }}
+                    placeholder="Ej: 387 5123456"
+                    autoComplete="tel"
+                    enterKeyHint="done"
+                    className={cn(
+                      'min-h-[46px] w-full rounded-xl bg-white/10 pl-10 pr-3.5 py-2.5 text-base text-white placeholder:text-slate-400 transition-all focus:outline-none',
+                      phoneError
+                        ? 'border-2 border-rose-400 bg-rose-950/40'
+                        : 'border border-white/20 focus:border-[#99CC99] focus:bg-white/15'
+                    )}
+                  />
+                </div>
+                {phoneError ? (
+                  <p
+                    role="alert"
+                    className="mt-1 rounded-lg bg-rose-500/20 border border-rose-400/50 px-2.5 py-1 text-xs font-medium text-rose-200"
+                  >
+                    {phoneError}
+                  </p>
+                ) : null}
+              </div>
+            </div>
+
+            {/* Botón píldora blanco exacto al diseño del PDF de Solana */}
+            <div className="pt-2">
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="flex min-h-[52px] w-full items-center justify-center gap-2 rounded-full bg-white px-6 py-3 text-[15px] font-bold text-[#0E2033] shadow-lg hover:bg-[#EFF7EF] active:scale-[0.99] transition-all cursor-pointer disabled:opacity-60"
+              >
+                <span>
+                  {isSubmitting
+                    ? 'Activando tu certificado...'
+                    : 'Quiero aprovechar mi beneficio'}
+                </span>
+                <ArrowRight className="h-4 w-4 text-[#336699]" />
+              </button>
+            </div>
+          </form>
         </div>
       </div>
-    </>
+
+      {/* Pie discreto para volver a consultar */}
+      <div className="flex items-center justify-between px-2 pt-1 text-xs text-[var(--brand-text-muted)]">
+        <span className="font-mono text-[11px]">{catalogSourceLabel}</span>
+        <button
+          type="button"
+          onClick={onResetWizard}
+          className="inline-flex items-center gap-1.5 font-semibold text-[#336699] hover:underline cursor-pointer"
+        >
+          <RotateCcw className="h-3.5 w-3.5" />
+          <span>Volver a empezar</span>
+        </button>
+      </div>
+    </motion.div>
   );
 }
 

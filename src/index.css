@@ -16,26 +16,28 @@
 
 :root,
 [data-theme="theme-clinical"] {
-  --brand-canvas: #F8FAFC;
+  --brand-canvas: #F4F8FB;
   --brand-surface: #FFFFFF;
-  --brand-surface-elevated: #F1F5F9;
-  --brand-primary: #0D9488;
-  --brand-primary-hover: #0F766E;
+  --brand-surface-elevated: #EBF2F8;
+  --brand-primary: #336699;
+  --brand-primary-hover: #264F78;
   --brand-primary-foreground: #FFFFFF;
-  --brand-accent: #F0FDFA;
-  --brand-accent-border: #99F6E4;
-  --brand-accent-foreground: #115E59;
-  --brand-text: #0F172A;
-  --brand-text-muted: #475569;
-  --brand-border: #E2E8F0;
-  --brand-ring: #14B8A6;
-  --brand-glow: rgba(13, 148, 136, 0.22);
-  --brand-gradient-start: #0F766E;
-  --brand-gradient-end: #0D9488;
-  --brand-badge-stock-bg: #ECFDF5;
-  --brand-badge-stock-text: #065F46;
-  --brand-badge-lab-bg: #F0F9FF;
-  --brand-badge-lab-text: #075985;
+  --brand-secondary: #99CC99;
+  --brand-secondary-foreground: #183D22;
+  --brand-accent: #EFF7EF;
+  --brand-accent-border: #99CC99;
+  --brand-accent-foreground: #255078;
+  --brand-text: #102336;
+  --brand-text-muted: #4A637C;
+  --brand-border: #D5E2EE;
+  --brand-ring: #336699;
+  --brand-glow: rgba(51, 102, 153, 0.20);
+  --brand-gradient-start: #264F78;
+  --brand-gradient-end: #336699;
+  --brand-badge-stock-bg: #EFF7EF;
+  --brand-badge-stock-text: #225B30;
+  --brand-badge-lab-bg: #EBF2F8;
+  --brand-badge-lab-text: #264F78;
 }
 
 [data-theme="theme-boutique"] {

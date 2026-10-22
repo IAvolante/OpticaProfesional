@@ -15,10 +15,6 @@ import { ProgressBar } from './components/ui/ProgressBar';
 import { WizardStepSkeleton } from './components/ui/WizardStepSkeleton';
 import { QuestionStep } from './components/wizard/QuestionStep';
 
-// Lazy UI Code-Splitting: Los pasos posteriores se cargan bajo demanda con Suspense
-const LeadCaptureStep = lazy(
-  () => import('./components/wizard/LeadCaptureStep')
-);
 const QuoteResultStep = lazy(
   () => import('./components/wizard/QuoteResultStep')
 );
@@ -55,10 +51,12 @@ export function App() {
     canGoBack,
     isSubmittingLead,
     selectQuestionOption,
+    confirmBudgetPreferencesStep,
+    attachPrescriptionPhotoAndAdvance,
     goToPreviousStep,
-    submitLeadAndGenerateQuote,
+    goToQuestionIndex,
+    claimBenefitAndOpenWhatsApp,
     resetWizard,
-    registerWhatsAppContactConversion,
   } = useOpticalWizard({
     catalogItems: catalogState.items,
     activeTheme,
@@ -66,17 +64,15 @@ export function App() {
 
   const catalogSourceLabel =
     catalogState.source === 'LIVE_SHEETS'
-      ? 'Google Sheets en vivo'
+      ? 'Precios actualizados en vivo'
       : catalogState.source === 'LOCAL_CACHE'
-        ? 'Caché sincronizado'
-        : 'Catálogo Base Punto 0';
+        ? 'Precios sincronizados'
+        : 'Precios vigentes · Óptica Profesional';
 
   const stepIndicatorLabel =
     wizardState.step === 'QUESTIONS'
       ? `Paso ${wizardState.activeQuestionIndex + 1} de ${totalQuestions}`
-      : wizardState.step === 'LEAD_CAPTURE'
-        ? 'Tus Datos'
-        : 'Tu Cotización';
+      : 'Tu Resultado';
 
   const activeTransitionKey =
     wizardState.step === 'QUESTIONS'
@@ -96,11 +92,11 @@ export function App() {
         activeQuestionId={currentQuestion.id}
       />
 
-      {/* Sello de Agua Sutil en el Fondo */}
+      {/* Sello de Agua Sutil con el Isotipo 2026 "op" */}
       <OpticalBrandTransition stepKey={activeTransitionKey} />
 
-      {/* Header Sticky Nativo (Pegado al tope `top-0`, sin botón de Inicio ni botón de Volumen) */}
-      <header className="sticky top-0 z-30 w-full border-b border-[var(--brand-border)]/80 bg-[var(--brand-surface)]/88 backdrop-blur-xl">
+      {/* Header Sticky con el Nuevo Logo 2026 (op Optica Profesional) */}
+      <header className="sticky top-0 z-30 w-full border-b border-[var(--brand-border)]/85 bg-white/90 backdrop-blur-xl">
         <div className="mx-auto flex h-14 w-full max-w-[480px] items-center justify-between gap-2 px-4">
           <div className="flex items-center gap-2.5 min-w-0">
             {canGoBack ? (
@@ -108,7 +104,7 @@ export function App() {
                 type="button"
                 onClick={goToPreviousStep}
                 aria-label="Volver al paso anterior"
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-[var(--brand-border)] bg-[var(--brand-surface)] text-[var(--brand-text)] hover:bg-[var(--brand-surface-elevated)] active:scale-95 transition-all cursor-pointer"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-[var(--brand-border)] bg-white text-[#336699] hover:bg-[#EBF2F8] active:scale-95 transition-all cursor-pointer"
               >
                 <ArrowLeft className="h-4 w-4" />
               </button>
@@ -121,7 +117,7 @@ export function App() {
             />
           </div>
 
-          <span className="font-mono rounded-lg bg-[var(--brand-accent)] px-2.5 py-1 text-[11px] font-semibold tracking-wide text-[var(--brand-accent-foreground)] border border-[var(--brand-accent-border)] shrink-0">
+          <span className="font-mono rounded-lg bg-[#EFF7EF] px-2.5 py-1 text-[11px] font-semibold tracking-wide text-[#264F78] border border-[#99CC99] shrink-0">
             {stepIndicatorLabel}
           </span>
         </div>
@@ -135,7 +131,7 @@ export function App() {
         </div>
       </header>
 
-      {/* Contenedor Responsive Mobile-First (100% en smartphone, 480px centrado en pantallas grandes) */}
+      {/* Contenedor Responsive Mobile-First (100% en smartphone, 480px centrado en desktop) */}
       <main className="relative z-10 mx-auto w-full max-w-[480px] flex-1 flex flex-col px-4 pt-3.5 pb-6">
         <Suspense fallback={<WizardStepSkeleton />}>
           <AnimatePresence mode="wait">
@@ -145,16 +141,10 @@ export function App() {
                 question={currentQuestion}
                 answers={wizardState.answers}
                 onSelectOption={selectQuestionOption}
+                onConfirmBudgetStep={confirmBudgetPreferencesStep}
+                onAttachPrescriptionPhoto={attachPrescriptionPhotoAndAdvance}
                 onSwipeBack={goToPreviousStep}
-              />
-            )}
-
-            {wizardState.step === 'LEAD_CAPTURE' && (
-              <LeadCaptureStep
-                key="step-lead-capture"
-                initialLead={wizardState.lead}
-                isSubmitting={isSubmittingLead}
-                onSubmitLead={submitLeadAndGenerateQuote}
+                onJumpToStep={goToQuestionIndex}
               />
             )}
 
@@ -165,8 +155,10 @@ export function App() {
                 answers={wizardState.answers}
                 recommendation={wizardState.recommendation}
                 catalogSourceLabel={catalogSourceLabel}
+                isSubmitting={isSubmittingLead}
+                onClaimBenefit={claimBenefitAndOpenWhatsApp}
+                onUpdatePrescriptionPhoto={attachPrescriptionPhotoAndAdvance}
                 onResetWizard={resetWizard}
-                onWhatsAppClick={registerWhatsAppContactConversion}
               />
             )}
           </AnimatePresence>

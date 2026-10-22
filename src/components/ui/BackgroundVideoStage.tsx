@@ -39,20 +39,16 @@ function resolveStageVideoId(
   }
 
   if (currentStep === 'QUESTIONS') {
-    if (activeQuestionId === 'lightSensitivity') {
+    if (activeQuestionId === 'activityContext') {
       return 'photochromic';
     }
     if (
-      activeQuestionId === 'screenExposure' ||
-      activeQuestionId === 'framePreference'
+      activeQuestionId === 'clientPriority' ||
+      activeQuestionId === 'budgetPreferences'
     ) {
       return 'titanium';
     }
     return 'hero';
-  }
-
-  if (currentStep === 'LEAD_CAPTURE') {
-    return 'titanium';
   }
 
   return 'photochromic';

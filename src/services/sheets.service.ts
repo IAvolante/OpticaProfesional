@@ -8,7 +8,7 @@ import type {
   OpticalRecommendationResult,
 } from '../types/optical.types';
 
-const CATALOG_CACHE_STORAGE_KEY = 'optica_profesional_catalog_cache_v1';
+const CATALOG_CACHE_STORAGE_KEY = 'optica_profesional_catalog_cache_v2';
 
 interface CachedCatalogEnvelope {
   readonly savedAtMs: number;
@@ -33,6 +33,11 @@ interface RemoteSheetsGetResponse {
   readonly items?: unknown;
 }
 
+interface RemoteSheetsPostResponse {
+  readonly ok?: unknown;
+  readonly photoUrl?: unknown;
+}
+
 export interface FetchCatalogResult {
   readonly items: readonly LensCatalogItem[];
   readonly source: 'LIVE_SHEETS' | 'LOCAL_CACHE' | 'STATIC_FALLBACK';
@@ -44,12 +49,26 @@ export interface SubmitLeadToSheetsPayload {
   readonly lead: LeadContactData;
   readonly answers: CompletedOpticalAnswers;
   readonly recommendation: OpticalRecommendationResult;
+  readonly selectedTier: 'PRIMARY' | 'ALTERNATIVE';
   readonly activeTheme: BrandThemeId;
 }
 
-/**
- * Lee el catálogo cacheado en `localStorage` si es válido.
- */
+export interface SubmitLeadToSheetsResult {
+  readonly ok: boolean;
+  readonly uploadedPhotoUrl?: string;
+}
+
+const LEGACY_SKU_ALIAS_MAP: Readonly<Record<string, string>> = {
+  'MONO-AR-150': 'ORGANICO-AR',
+  'MONO-BLUE-156': 'ORGANICO-BLUE-AR',
+  'DESC-BLUE-156': 'ORGANICO-BLUE-AR',
+  'MONO-HI-167': 'ALTO-INDICE-167',
+  'MONO-POLY-159': 'ALTO-INDICE-167',
+  'MULTI-DIG-156': 'MULTIFOCAL-AR',
+  'MULTI-PHOTO-159': 'MULTIFOCAL-AR',
+  'MONO-PHOTO-156': 'ORGANICO-FOTOCROMATICO',
+};
+
 export function readCachedCatalog(): {
   readonly items: readonly LensCatalogItem[];
   readonly updatedAtISO: string;
@@ -116,14 +135,10 @@ function saveCatalogToCache(
       JSON.stringify(envelope)
     );
   } catch {
-    // Ignorar quota exceeded en modo incógnito
+    // Ignorar en modo incógnito
   }
 }
 
-/**
- * Fusiona los precios dinámicos de la hoja `Precios_Cristales` de Google Sheets
- * sobre la estructura clínica del catálogo base, garantizando integridad de tipos.
- */
 function mergeRemotePricesIntoCatalog(
   remoteItems: readonly RemoteSheetItemRaw[]
 ): readonly LensCatalogItem[] {
@@ -131,7 +146,12 @@ function mergeRemotePricesIntoCatalog(
 
   for (const rawItem of remoteItems) {
     if (typeof rawItem.sku === 'string' && rawItem.sku.trim().length > 0) {
-      remoteMap.set(rawItem.sku.trim(), rawItem);
+      const cleanSku = rawItem.sku.trim().toUpperCase();
+      remoteMap.set(cleanSku, rawItem);
+      const mappedNewSku = LEGACY_SKU_ALIAS_MAP[cleanSku];
+      if (mappedNewSku && !remoteMap.has(mappedNewSku)) {
+        remoteMap.set(mappedNewSku, rawItem);
+      }
     }
   }
 
@@ -183,11 +203,6 @@ function mergeRemotePricesIntoCatalog(
   });
 }
 
-/**
- * Obtiene el catálogo de precios con estrategia Cache-First y timeout controlado.
- * Si no hay URL de Google Sheets configurada aún (Etapa Discovery), devuelve
- * instantáneamente `FALLBACK_LENS_CATALOG`.
- */
 export async function fetchOpticalCatalogWithCache(
   forceRefresh = false
 ): Promise<FetchCatalogResult> {
@@ -275,12 +290,12 @@ export async function fetchOpticalCatalogWithCache(
 }
 
 /**
- * Envía de forma asíncrona y resiliente los datos del Lead a la pestaña `Leads_Campañas`
- * del Google Sheet mediante `doPost`. Nunca bloquea la navegación del usuario a WhatsApp.
+ * Envía los datos del Lead y la foto de la receta en Base64 (si el usuario la cargó en el Paso 5)
+ * al Google Apps Script para guardarla en Google Drive/Sheets y obtener el link directo de la imagen.
  */
 export async function submitLeadToGoogleSheets(
   payload: SubmitLeadToSheetsPayload
-): Promise<boolean> {
+): Promise<SubmitLeadToSheetsResult> {
   const endpoint = ENV_CONFIG.googleSheetsWebAppUrl;
   if (!endpoint) {
     if (ENV_CONFIG.isDevelopment) {
@@ -289,32 +304,43 @@ export async function submitLeadToGoogleSheets(
         payload
       );
     }
-    return true;
+    return { ok: true };
   }
 
   const controller = new AbortController();
   const timeoutId = window.setTimeout(() => {
     controller.abort();
-  }, ENV_CONFIG.fetchTimeoutMs);
+  }, Math.max(ENV_CONFIG.fetchTimeoutMs, 6500));
 
   try {
+    const chosenOption =
+      payload.selectedTier === 'ALTERNATIVE'
+        ? payload.recommendation.alternativeOption
+        : payload.recommendation.primaryOption;
+
     const body = JSON.stringify({
       leadId: payload.leadId,
-      passportCode: payload.lead.passportCode,
+      passportCode: payload.lead.passportCode ?? payload.leadId,
       fullName: payload.lead.fullName,
       whatsapp: payload.lead.whatsapp,
-      locality: payload.lead.locality,
-      preferredPayment: payload.lead.preferredPayment ?? 'CASH_TRANSFER',
-      healthInsuranceName: payload.lead.healthInsuranceName ?? '',
-      prescriptionStatus: payload.lead.prescriptionStatus,
-      prescriptionPhotoName: payload.lead.prescriptionPhotoName ?? '',
-      clinicalNotes: payload.lead.clinicalNotes ?? '',
+      selectedTier: payload.selectedTier,
+      selectedSku: chosenOption.sku,
+      selectedCommercialName: chosenOption.commercialName,
+      selectedPriceARS: chosenOption.priceStockARS,
       primarySku: payload.recommendation.primaryOption.sku,
       primaryName: payload.recommendation.primaryOption.commercialName,
       priceStockARS: payload.recommendation.primaryOption.priceStockARS,
-      priceLabARS: payload.recommendation.primaryOption.priceLabARS,
       alternativeSku: payload.recommendation.alternativeOption.sku,
-      answers: payload.answers,
+      alternativeName: payload.recommendation.alternativeOption.commercialName,
+      alternativePriceARS: payload.recommendation.alternativeOption.priceStockARS,
+      improvementGoal: payload.answers.improvementGoal,
+      activityContext: payload.answers.activityContext,
+      clientPriority: payload.answers.clientPriority,
+      budgetPreferences: payload.answers.budgetPreferences.join(', '),
+      prescriptionAttachment: payload.answers.prescriptionAttachment,
+      prescriptionPhotoName: payload.answers.prescriptionPhotoName ?? '',
+      prescriptionPhotoBase64: payload.answers.prescriptionPhotoDataUrl ?? '',
+      warrantyBenefit: 'CERTIFICADO RECAMBIO 12 MESES GRATIS',
       activeTheme: payload.activeTheme,
       utmSource:
         typeof window !== 'undefined' && window.location.search
@@ -322,19 +348,35 @@ export async function submitLeadToGoogleSheets(
           : 'direct',
     });
 
-    await fetch(endpoint, {
+    const response = await fetch(endpoint, {
       method: 'POST',
       headers: {
-        // Content-Type text/plain evita preflight CORS en Google Apps Script
         'Content-Type': 'text/plain;charset=utf-8',
       },
       body,
       signal: controller.signal,
     });
 
-    return true;
+    try {
+      const json: unknown = await response.json();
+      const parsed = json as RemoteSheetsPostResponse;
+      if (
+        parsed &&
+        typeof parsed.photoUrl === 'string' &&
+        parsed.photoUrl.trim().length > 0
+      ) {
+        return {
+          ok: true,
+          uploadedPhotoUrl: parsed.photoUrl.trim(),
+        };
+      }
+    } catch {
+      // Si el Apps Script no devuelve JSON, igual damos por enviado
+    }
+
+    return { ok: true };
   } catch {
-    return false;
+    return { ok: false };
   } finally {
     window.clearTimeout(timeoutId);
   }
