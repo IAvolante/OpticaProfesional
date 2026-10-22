@@ -6,7 +6,13 @@
  * Alineado 100% con el flujo definido por Solana (PREGUNTAS .pdf + LOGO 2026).
  */
 
-export type BrandThemeId = 'theme-neutral' | 'theme-boutique' | 'theme-clinical';
+export type BrandThemeId =
+  | 'theme-clinical'
+  | 'theme-dark-glass'
+  | 'theme-neutral'
+  | 'theme-boutique';
+
+export type FontPairId = 'font-logo-match' | 'font-tech-optical' | 'font-boutique-editorial';
 
 export type BusinessUnit = 'B2C_OPTICA_PROFESIONAL' | 'B2B_SMART_OPTICAL';
 

@@ -68,6 +68,7 @@ export const OPTICAL_WIZARD_QUESTIONS: readonly WizardQuestionDefinition[] = [
         description:
           'Jornadas de oficina, estudio o uso continuo de dispositivos digitales.',
         clinicalHint: 'Confort Digital y Enfoque Intermedio',
+        badgeText: 'USO DIGITAL',
       },
       {
         value: 'lectura_cerca',
@@ -75,6 +76,7 @@ export const OPTICAL_WIZARD_QUESTIONS: readonly WizardQuestionDefinition[] = [
         description:
           'Lectura prolongada, estudio o actividades manuales de precisión.',
         clinicalHint: 'Nitidez en Visión Próxima',
+        badgeText: 'VISIÓN DE CERCA',
       },
       {
         value: 'manejando_aire_libre',
@@ -82,6 +84,7 @@ export const OPTICAL_WIZARD_QUESTIONS: readonly WizardQuestionDefinition[] = [
         description:
           'Conducción en ciudad o ruta, exposición al sol y cambios de luz.',
         clinicalHint: 'Protección Exterior y Antirreflejo Vial',
+        badgeText: 'MANEJO Y EXTERIOR',
       },
       {
         value: 'actividades_diarias',
@@ -89,6 +92,7 @@ export const OPTICAL_WIZARD_QUESTIONS: readonly WizardQuestionDefinition[] = [
         description:
           'Uso permanente durante todo el día tanto en interiores como al salir.',
         clinicalHint: 'Solución Integral para Todo el Día',
+        badgeText: 'TODO EL DÍA',
       },
     ],
   },

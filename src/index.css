@@ -1,24 +1,21 @@
 @import "tailwindcss";
 
 @theme {
-  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --font-heading: 'DM Sans', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-sans: 'DM Sans', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-heading: 'Plus Jakarta Sans', 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-price: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
 /* ============================================================================
- * SISTEMA VISUAL CLÍNICO-LUMINOSO (@opticaprofesionalsla — SALTA)
- * ============================================================================
- * Estética Light Liquid Glass (Zeiss / Apple Health / shadcn Light) con tarjetas
- * blancas translúcidas de alta pureza, bordes luminosos, botones con gradiente
- * esmeralda y tipografía clínica de precisión (Inter + DM Sans + JetBrains Mono).
- */
-
+ * 1. CLÍNICA LUMINOSA (LIGHT) — ESTÉTICA MÉDICA LUMINOSA (#F4F8FB + #336699 + #99CC99)
+ * ============================================================================ */
 :root,
 [data-theme="theme-clinical"] {
   --brand-canvas: #F4F8FB;
   --brand-surface: #FFFFFF;
   --brand-surface-elevated: #EBF2F8;
+  --brand-header-bg: rgba(255, 255, 255, 0.90);
   --brand-primary: #336699;
   --brand-primary-hover: #264F78;
   --brand-primary-foreground: #FFFFFF;
@@ -38,52 +35,61 @@
   --brand-badge-stock-text: #225B30;
   --brand-badge-lab-bg: #EBF2F8;
   --brand-badge-lab-text: #264F78;
+  --brand-icon-primary: #336699;
+  --brand-icon-secondary: #99CC99;
 }
 
-[data-theme="theme-boutique"] {
-  --brand-canvas: #FAF7F5;
-  --brand-surface: #FFFFFF;
-  --brand-surface-elevated: #F5EFEA;
-  --brand-primary: #881337;
-  --brand-primary-hover: #9F1239;
+/* ============================================================================
+ * 2. DARK GLASS ASESOR (DARK PDF) — ESTÉTICA NOCTURNA PREMIUM (#0A111A + #111C2A/90)
+ * ============================================================================ */
+[data-theme="theme-dark-glass"] {
+  --brand-canvas: #0A111A;
+  --brand-surface: #111C2A;
+  --brand-surface-elevated: #172638;
+  --brand-header-bg: rgba(10, 17, 26, 0.88);
+  --brand-primary: #336699;
+  --brand-primary-hover: #427DB8;
   --brand-primary-foreground: #FFFFFF;
-  --brand-accent: #FFF1F2;
-  --brand-accent-border: #FECDD3;
-  --brand-accent-foreground: #881337;
-  --brand-text: #1C1917;
-  --brand-text-muted: #57534E;
-  --brand-border: #E7E0DA;
-  --brand-ring: #BE123C;
-  --brand-glow: rgba(136, 19, 55, 0.22);
-  --brand-gradient-start: #881337;
-  --brand-gradient-end: #BE123C;
-  --brand-badge-stock-bg: #ECFDF5;
-  --brand-badge-stock-text: #065F46;
-  --brand-badge-lab-bg: #FFF1F2;
-  --brand-badge-lab-text: #9F1239;
+  --brand-secondary: #99CC99;
+  --brand-secondary-foreground: #0A111A;
+  --brand-accent: rgba(153, 204, 153, 0.14);
+  --brand-accent-border: rgba(153, 204, 153, 0.45);
+  --brand-accent-foreground: #99CC99;
+  --brand-text: #F1F5F9;
+  --brand-text-muted: #94A3B8;
+  --brand-border: rgba(148, 163, 184, 0.18);
+  --brand-ring: #99CC99;
+  --brand-glow: rgba(153, 204, 153, 0.22);
+  --brand-gradient-start: #336699;
+  --brand-gradient-end: #244B73;
+  --brand-badge-stock-bg: rgba(16, 185, 129, 0.16);
+  --brand-badge-stock-text: #6EE7B7;
+  --brand-badge-lab-bg: rgba(51, 102, 153, 0.25);
+  --brand-badge-lab-text: #93C5FD;
+  --brand-icon-primary: #639CD9;
+  --brand-icon-secondary: #99CC99;
 }
 
-[data-theme="theme-neutral"] {
-  --brand-canvas: #F9FAFB;
-  --brand-surface: #FFFFFF;
-  --brand-surface-elevated: #F3F4F6;
-  --brand-primary: #18181B;
-  --brand-primary-hover: #27272A;
-  --brand-primary-foreground: #FFFFFF;
-  --brand-accent: #EEF2FF;
-  --brand-accent-border: #C7D2FE;
-  --brand-accent-foreground: #3730A3;
-  --brand-text: #09090B;
-  --brand-text-muted: #52525B;
-  --brand-border: #E4E4E7;
-  --brand-ring: #4F46E5;
-  --brand-glow: rgba(79, 70, 229, 0.2);
-  --brand-gradient-start: #18181B;
-  --brand-gradient-end: #3F3F46;
-  --brand-badge-stock-bg: #F0FDF4;
-  --brand-badge-stock-text: #166534;
-  --brand-badge-lab-bg: #FEFCE8;
-  --brand-badge-lab-text: #854D0E;
+/* ============================================================================
+ * 3 COMBINACIONES TIPOGRÁFICAS DEL DESIGN LAB
+ * ============================================================================ */
+:root,
+[data-font-pair="font-logo-match"] {
+  --font-heading: 'Plus Jakarta Sans', 'DM Sans', sans-serif;
+  --font-sans: 'DM Sans', 'Inter', sans-serif;
+  --font-price: 'Plus Jakarta Sans', 'JetBrains Mono', sans-serif;
+}
+
+[data-font-pair="font-tech-optical"] {
+  --font-heading: 'Outfit', 'Inter', sans-serif;
+  --font-sans: 'Inter', -apple-system, sans-serif;
+  --font-price: 'Space Grotesk', 'JetBrains Mono', monospace;
+}
+
+[data-font-pair="font-boutique-editorial"] {
+  --font-heading: 'Fraunces', Georgia, serif;
+  --font-sans: 'Plus Jakarta Sans', 'DM Sans', sans-serif;
+  --font-price: 'Plus Jakarta Sans', 'JetBrains Mono', sans-serif;
 }
 
 @layer base {
@@ -105,7 +111,6 @@
     scroll-behavior: smooth;
     -webkit-text-size-adjust: 100%;
     overflow-x: hidden;
-    color-scheme: light;
   }
 
   body {
@@ -117,7 +122,7 @@
     min-height: 100dvh;
     overflow-x: hidden;
     touch-action: manipulation;
-    transition: background-color 250ms ease, color 250ms ease;
+    transition: background-color 220ms ease, color 220ms ease;
   }
 
   input,
@@ -134,27 +139,50 @@
     font-family: var(--font-heading);
     letter-spacing: -0.022em;
   }
+
+  .font-brand-price {
+    font-family: var(--font-price);
+  }
 }
 
-/* Superficie Light Liquid Glass Clínica con Borde Luminoso */
+/* ============================================================================
+ * COLORACIÓN BICOLOR DUOTONE (@phosphor-icons/react)
+ * Capa secundaria = #99CC99 (Verde Salvia) | Capa primaria = #336699 (Azul Profesional)
+ * ============================================================================ */
+.optical-duotone-icon svg [opacity="0.2"] {
+  fill: var(--brand-icon-secondary, #99CC99);
+  opacity: 0.48;
+}
+
+.optical-duotone-icon-selected svg [opacity="0.2"] {
+  fill: #99CC99;
+  opacity: 0.65;
+}
+
+/* Superficie Liquid Glass adaptable a Light y Dark Glass */
 .optical-glass-card {
   position: relative;
   background-color: color-mix(in srgb, var(--brand-surface) 90%, transparent);
   backdrop-filter: blur(20px) saturate(160%);
   -webkit-backdrop-filter: blur(20px) saturate(160%);
-  border: 1px solid color-mix(in srgb, var(--brand-border) 88%, #ffffff);
+  border: 1px solid var(--brand-border);
   box-shadow:
-    0 10px 30px -10px rgba(15, 23, 42, 0.08),
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.85);
+    0 10px 30px -10px rgba(15, 23, 42, 0.12),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.14);
 }
 
-/* Tarjeta Activa en Modo Claro con Halo Esmeralda Sutil */
+/* Tarjeta Activa con Halo Bicolor */
 .optical-glass-card-active {
-  background-color: color-mix(in srgb, var(--brand-accent) 92%, #ffffff);
+  background-color: color-mix(in srgb, var(--brand-accent) 92%, var(--brand-surface));
   border: 2px solid var(--brand-primary);
   box-shadow:
     0 10px 26px -6px var(--brand-glow),
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.9);
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.18);
+}
+
+[data-theme="theme-dark-glass"] .optical-glass-card-active {
+  background-color: rgba(23, 38, 56, 0.94);
+  border: 2px solid #99CC99;
 }
 
 /* Botón Principal con Gradiente Clínico y Brillo Superior */

@@ -45,6 +45,21 @@ const BUDGET_BADGE_LABELS: Record<BudgetPreferenceAnswer, string> = {
   beneficio_pago_contado: 'Beneficio pago contado',
 };
 
+function resolveDefaultSelectedTier(
+  answers: CompletedOpticalAnswers
+): 'PRIMARY' | 'ALTERNATIVE' {
+  // Si el usuario eligió uso de pantallas o prioridad tecnología/moda, preseleccionar Opción 2 (con el tratamiento específico / Blue Cut AR)
+  if (
+    answers.improvementGoal === 'organico_blue_ar' ||
+    answers.activityContext === 'computadora_celular' ||
+    answers.clientPriority === 'tecnologia' ||
+    answers.clientPriority === 'moda'
+  ) {
+    return 'ALTERNATIVE';
+  }
+  return 'PRIMARY';
+}
+
 /**
  * Paso 6 ('QUOTE_RESULT') — Cierre del Asesor Virtual + Precios en Vivo de Google Sheets
  * + Cupón de Garantía de Recambio 12 Meses Gratis + Registro de Nombre y Teléfono.
@@ -65,7 +80,7 @@ export function QuoteResultStep({
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const [selectedTier, setSelectedTier] = useState<'PRIMARY' | 'ALTERNATIVE'>(
-    'PRIMARY'
+    () => resolveDefaultSelectedTier(answers)
   );
   const [fullName, setFullName] = useState<string>(lead?.fullName ?? '');
   const [whatsapp, setWhatsapp] = useState<string>(lead?.whatsapp ?? '');
@@ -157,7 +172,7 @@ export function QuoteResultStep({
       {/* =====================================================================
        * 1. TARJETA DEL ASESOR VIRTUAL + LAS 2 OPCIONES CON PRECIOS EN VIVO
        * ===================================================================== */}
-      <div className="optical-glass-card rounded-3xl p-5 space-y-4 border border-[#336699]/25">
+      <div className="optical-glass-card rounded-3xl p-4 sm:p-5 space-y-4 border border-[var(--brand-border)]">
         {/* Encabezado con el Nuevo Logo 2026 */}
         <div className="flex items-center justify-between gap-2 border-b border-[var(--brand-border)] pb-3">
           <div className="flex items-center gap-2.5">
@@ -166,27 +181,29 @@ export function QuoteResultStep({
               alt="Óptica Profesional"
               className="h-7 w-auto object-contain select-none"
             />
-            <span className="font-brand-heading text-base tracking-tight text-[#102336]">
+            <span className="font-brand-heading text-base tracking-tight text-[var(--brand-text)]">
               <span className="font-light text-[#68A868]">Optica </span>
-              <span className="font-semibold text-[#336699]">Profesional</span>
+              <span className="font-semibold text-[var(--brand-accent-foreground)]">
+                Profesional
+              </span>
             </span>
           </div>
 
-          <span className="rounded-full bg-[#EFF7EF] border border-[#99CC99] px-2.5 py-0.5 font-mono text-[10px] font-semibold text-[#183D22]">
+          <span className="rounded-full bg-[var(--brand-accent)] border border-[var(--brand-accent-border)] px-2.5 py-0.5 font-mono text-[10px] font-semibold text-[var(--brand-accent-foreground)]">
             Asesor Virtual
           </span>
         </div>
 
         {/* Devolución personalizada tal cual el PDF de Solana */}
-        <div className="space-y-2 text-[14px] leading-relaxed text-[#102336]">
+        <div className="space-y-2 text-[13.5px] leading-relaxed text-[var(--brand-text)]">
           <p>{advisorObservationParagraph}</p>
           <p className="text-[var(--brand-text-muted)]">
             {advisorClosingParagraph}
           </p>
         </div>
 
-        {/* Grilla de 2 Opciones lado a lado con precios exactos en vivo de Google Sheets */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+        {/* Grilla de 2 Opciones lado a lado (grid-cols-2 gap-3) con precios exactos en vivo */}
+        <div className="grid grid-cols-2 gap-3 pt-1">
           {(
             [
               {
@@ -214,40 +231,40 @@ export function QuoteResultStep({
                   setSelectedTier(tier);
                 }}
                 className={cn(
-                  'group relative flex flex-col justify-between rounded-2xl p-4 text-left transition-all duration-200 cursor-pointer border',
+                  'group relative flex flex-col justify-between rounded-2xl p-3.5 text-left transition-all duration-200 cursor-pointer border',
                   isSelected
-                    ? 'border-2 border-[#336699] bg-gradient-to-b from-[#EFF7EF]/90 to-white shadow-md'
-                    : 'border-[var(--brand-border)] bg-white/90 hover:border-[#336699]/50'
+                    ? 'optical-glass-card-active'
+                    : 'border-[var(--brand-border)] bg-[var(--brand-surface)]/85 hover:border-[#336699]/60'
                 )}
               >
                 <div className="space-y-1.5">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-xs font-bold uppercase tracking-wider text-[#336699]">
+                  <div className="flex items-center justify-between gap-1.5">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--brand-accent-foreground)]">
                       {stepTitle}
                     </span>
                     <div
                       className={cn(
-                        'flex h-5 w-5 items-center justify-center rounded-full border transition-colors',
+                        'flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition-colors',
                         isSelected
                           ? 'border-[#336699] bg-[#336699] text-white'
-                          : 'border-[var(--brand-border)] bg-white'
+                          : 'border-[var(--brand-border)] bg-[var(--brand-surface)]'
                       )}
                     >
                       {isSelected && <Check className="h-3 w-3 stroke-[3]" />}
                     </div>
                   </div>
 
-                  <p className="font-brand-heading text-[15px] font-semibold text-[#102336] leading-snug">
+                  <p className="font-brand-heading text-[13.5px] sm:text-[14.5px] font-semibold text-[var(--brand-text)] leading-snug">
                     {lens.commercialName}
                   </p>
 
-                  <p className="font-mono tabular-nums text-2xl font-bold tracking-tight text-[#102336] pt-1">
+                  <p className="font-brand-price tabular-nums text-xl sm:text-2xl font-bold tracking-tight text-[var(--brand-text)] pt-0.5">
                     {formatCurrencyARS(lens.priceStockARS)}
                   </p>
                 </div>
 
-                <div className="mt-3 pt-2.5 border-t border-[var(--brand-border)]/70 flex items-center justify-between gap-1">
-                  <span className="text-xs font-medium text-[var(--brand-text-muted)]">
+                <div className="mt-2.5 pt-2 border-t border-[var(--brand-border)]/70 flex items-center justify-between gap-1">
+                  <span className="text-[11px] font-medium text-[var(--brand-text-muted)] leading-tight">
                     {tagline}
                   </span>
                   <span className="h-2 w-2 rounded-full bg-[#99CC99] shrink-0" />
@@ -263,7 +280,7 @@ export function QuoteResultStep({
             {answers.budgetPreferences.map((pref) => (
               <span
                 key={pref}
-                className="inline-flex items-center gap-1 rounded-lg bg-[var(--brand-surface-elevated)] border border-[var(--brand-border)] px-2.5 py-1 text-[11px] font-medium text-[#264F78]"
+                className="inline-flex items-center gap-1 rounded-lg bg-[var(--brand-surface-elevated)] border border-[var(--brand-border)] px-2.5 py-1 text-[11px] font-medium text-[var(--brand-accent-foreground)]"
               >
                 <ShieldCheck className="h-3 w-3 text-[#336699]" />
                 {BUDGET_BADGE_LABELS[pref]}
@@ -272,7 +289,7 @@ export function QuoteResultStep({
           </div>
 
           {answers.prescriptionPhotoDataUrl ? (
-            <div className="flex items-center gap-2 rounded-xl bg-[#EFF7EF] border border-[#99CC99] px-2.5 py-1.5 w-full sm:w-auto justify-between">
+            <div className="flex items-center gap-2 rounded-xl bg-[var(--brand-accent)] border border-[var(--brand-accent-border)] px-2.5 py-1.5 w-full sm:w-auto justify-between">
               <div className="flex items-center gap-2 min-w-0">
                 <img
                   src={answers.prescriptionPhotoDataUrl}
@@ -280,10 +297,10 @@ export function QuoteResultStep({
                   className="h-8 w-8 rounded-md object-cover border border-[#336699]/30 shrink-0"
                 />
                 <div className="min-w-0">
-                  <p className="text-[11px] font-semibold text-[#183D22]">
+                  <p className="text-[11px] font-semibold text-[var(--brand-text)]">
                     Foto de receta cargada
                   </p>
-                  <p className="font-mono text-[10px] text-[#4A637C] truncate max-w-[150px]">
+                  <p className="font-mono text-[10px] text-[var(--brand-text-muted)] truncate max-w-[150px]">
                     {answers.prescriptionPhotoName ?? 'receta.jpg'}
                   </p>
                 </div>
@@ -291,7 +308,7 @@ export function QuoteResultStep({
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="text-[11px] font-semibold text-[#336699] underline cursor-pointer shrink-0 ml-2"
+                className="text-[11px] font-semibold text-[var(--brand-accent-foreground)] underline cursor-pointer shrink-0 ml-2"
               >
                 Cambiar
               </button>
@@ -300,7 +317,7 @@ export function QuoteResultStep({
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-dashed border-[#336699]/60 bg-white px-2.5 py-1 text-[11px] font-semibold text-[#336699] hover:bg-[#EBF2F8] transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-dashed border-[#336699]/60 bg-[var(--brand-surface)] px-2.5 py-1 text-[11px] font-semibold text-[var(--brand-accent-foreground)] hover:bg-[var(--brand-surface-elevated)] transition-colors cursor-pointer"
             >
               <Camera className="h-3.5 w-3.5" />
               <span>¿Querés sumar foto de tu receta?</span>

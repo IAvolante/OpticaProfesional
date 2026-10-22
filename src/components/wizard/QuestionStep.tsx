@@ -5,7 +5,7 @@ import {
   type PanInfo,
   type Variants,
 } from 'framer-motion';
-import { ArrowRight, Camera, Check, ImagePlus } from 'lucide-react';
+import { ArrowRight, Camera, Check } from 'lucide-react';
 import type {
   BudgetPreferenceAnswer,
   QuestionId,
@@ -270,7 +270,7 @@ export function QuestionStep({
                 isCurrent
                   ? 'border-[#336699] bg-[#336699] text-white shadow-2xs'
                   : isCompleted || isPast
-                    ? 'border-[#99CC99] bg-[#EFF7EF] text-[#264F78]'
+                    ? 'border-[var(--brand-accent-border)] bg-[var(--brand-accent)] text-[var(--brand-accent-foreground)]'
                     : 'border-[var(--brand-border)] bg-[var(--brand-surface)]/85 text-[var(--brand-text-muted)]'
               )}
             >
@@ -329,10 +329,10 @@ export function QuestionStep({
 
         <CardHeader className="p-4 space-y-1.5">
           <div className="flex items-center justify-between gap-2">
-            <span className="font-mono text-[11px] font-semibold uppercase tracking-wider text-[#336699]">
+            <span className="font-mono text-[11px] font-semibold uppercase tracking-wider text-[var(--brand-accent-foreground)]">
               {question.categoryBadge}
             </span>
-            <span className="font-mono text-[10px] font-semibold text-[#2E6F40] bg-[#EFF7EF] border border-[#99CC99]/70 rounded-md px-2 py-0.5">
+            <span className="font-mono text-[10px] font-semibold text-[var(--brand-accent-foreground)] bg-[var(--brand-accent)] border border-[var(--brand-accent-border)] rounded-md px-2 py-0.5">
               {question.isMultiSelect
                 ? 'Podés elegir varias'
                 : 'Tocá una opción'}
@@ -435,33 +435,22 @@ export function QuestionStep({
                       </p>
 
                       {isUploadRxButton && answers.prescriptionPhotoDataUrl ? (
-                        <div className="pt-2 flex items-center gap-2.5 rounded-xl bg-[#EFF7EF] border border-[#99CC99] p-2">
+                        <div className="pt-2 flex items-center gap-2.5 rounded-xl bg-[var(--brand-accent)] border border-[var(--brand-accent-border)] p-2">
                           <img
                             src={answers.prescriptionPhotoDataUrl}
                             alt="Receta adjunta"
                             className="h-10 w-10 rounded-lg object-cover border border-[#336699]/30 shrink-0"
                           />
                           <div className="min-w-0 flex-1">
-                            <p className="text-xs font-semibold text-[#183D22]">
+                            <p className="text-xs font-semibold text-[var(--brand-text)]">
                               Receta cargada correctamente
                             </p>
-                            <p className="font-mono text-[10px] text-[#4A637C] truncate">
+                            <p className="font-mono text-[10px] text-[var(--brand-text-muted)] truncate">
                               {answers.prescriptionPhotoName ?? 'receta.jpg'}
                             </p>
                           </div>
                         </div>
-                      ) : (
-                        <div className="pt-1 flex items-center gap-1.5">
-                          <span className="inline-flex items-center gap-1.5 rounded-md bg-[var(--brand-surface-elevated)]/90 border border-[var(--brand-border)] px-2 py-0.5 font-mono text-[10px] font-semibold text-[#336699]">
-                            {isUploadRxButton ? (
-                              <ImagePlus className="h-3 w-3 text-[#336699]" />
-                            ) : (
-                              <span className="h-1.5 w-1.5 rounded-full bg-[#99CC99]" />
-                            )}
-                            {option.clinicalHint}
-                          </span>
-                        </div>
-                      )}
+                      ) : null}
                     </div>
                   </div>
                 </button>

@@ -1,0 +1,132 @@
+{
+  "auditedAt": "2026-10-22T19:25:57.320Z",
+  "liveUrl": "https://iavolante.github.io/OpticaProfesional/",
+  "viewport": "393x852 (iPhone 14 Pro, deviceScaleFactor: 2)",
+  "initialStepInfo": {
+    "title": "Óptica Profesional | Cotizador de Cristales",
+    "url": "https://iavolante.github.io/OpticaProfesional/",
+    "brandPrimary": "#369",
+    "brandSecondary": "#9c9",
+    "brandCanvas": "#f4f8fb",
+    "brandSurface": "#fff",
+    "bodyFont": "Inter, -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, sans-serif",
+    "bodyBg": "rgb(244, 248, 251)",
+    "bodyColor": "rgb(16, 35, 54)",
+    "headerText": "Paso 1 de 5",
+    "headingText": "¿Qué es lo principal que querés mejorar con tus nuevos anteojos?",
+    "visibleButtons": [
+      "01Material",
+      "02Solución",
+      "03Prioridad",
+      "04Beneficios",
+      "05Receta",
+      "ORGÁNICO ARVer con mayor nitidezVisión clara y definida eliminando los reflejos molestos de las luces.Orgánico con Antirreflejo (AR)",
+      "ORGÁNICO BLUE ARSentir mayor comodidad visual cuando uso pantallasAlivio frente al cansancio visual por uso de computadora, celular o tablet.Filtro de Luz Azul + Antirreflejo",
+      "ORGÁNICOS ALTO ÍNDICE (1.67 Y 1.74)Tener cristales más finos y livianosReducción de espesor y peso para una estética superior en tu armazón.Ultradelgados Índices 1.67 y 1.74",
+      "BIFOCAL Y MULTIFOCALESEvitar cambiar de anteojos para distintas distanciasVer bien de lejos, intermedia y cerca con un único par de anteojos.Progresivos Multifocales y Bifocales",
+      "ORGÁNICO CON FILTRO O FOTOCROMÁTICOManejar mejor, reflejos o molestias del solMayor confort al aire libre, reducción de encandilamiento y adaptación solar.Filtro UV400 / Fotocromático Inteligente"
+    ]
+  },
+  "stepsLog": [
+    {
+      "step": "00_hero_inicio",
+      "title": "Óptica Profesional | Cotizador de Cristales",
+      "url": "https://iavolante.github.io/OpticaProfesional/",
+      "brandPrimary": "#369",
+      "brandSecondary": "#9c9",
+      "brandCanvas": "#f4f8fb",
+      "brandSurface": "#fff",
+      "bodyFont": "Inter, -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, sans-serif",
+      "bodyBg": "rgb(244, 248, 251)",
+      "bodyColor": "rgb(16, 35, 54)",
+      "headerText": "Paso 1 de 5",
+      "headingText": "¿Qué es lo principal que querés mejorar con tus nuevos anteojos?",
+      "visibleButtons": [
+        "01Material",
+        "02Solución",
+        "03Prioridad",
+        "04Beneficios",
+        "05Receta",
+        "ORGÁNICO ARVer con mayor nitidezVisión clara y definida eliminando los reflejos molestos de las luces.Orgánico con Antirreflejo (AR)",
+        "ORGÁNICO BLUE ARSentir mayor comodidad visual cuando uso pantallasAlivio frente al cansancio visual por uso de computadora, celular o tablet.Filtro de Luz Azul + Antirreflejo",
+        "ORGÁNICOS ALTO ÍNDICE (1.67 Y 1.74)Tener cristales más finos y livianosReducción de espesor y peso para una estética superior en tu armazón.Ultradelgados Índices 1.67 y 1.74",
+        "BIFOCAL Y MULTIFOCALESEvitar cambiar de anteojos para distintas distanciasVer bien de lejos, intermedia y cerca con un único par de anteojos.Progresivos Multifocales y Bifocales",
+        "ORGÁNICO CON FILTRO O FOTOCROMÁTICOManejar mejor, reflejos o molestias del solMayor confort al aire libre, reducción de encandilamiento y adaptación solar.Filtro UV400 / Fotocromático Inteligente"
+      ]
+    },
+    {
+      "step": "01_paso1_material",
+      "headerBadge": "Paso 1 de 5",
+      "mainText": "01\nMaterial\n02\nSolución\n03\nPrioridad\n04\nBeneficios\n05\nReceta\nTecnología en Cristales · Óptica Profesional\nPASO 01\nPASO 1 DE 5 · MATERIAL Y MEJORA VISUAL\nTocá una opción\n¿Qué es lo principal que querés mejorar con tus nuevos anteojos?\n\nSeleccioná el aspecto principal que querés lograr con tus nuevos cristales.\n\nORGÁNICO AR\n\nVer con mayor nitidez\n\nVisión clara y definida eliminando los reflejos molestos de las luces.\n\nOrgánico con Antirreflejo (AR)\nORGÁNICO BLUE AR\n\nSentir mayor comodidad visual cuando uso pantallas\n\nAlivio frente al cansancio visual por uso de computadora, celular o tablet.\n\nFiltro de Luz Azul + Antirreflejo\nORGÁNICOS ALTO ÍNDICE (1.67 Y 1.74)\n\nTener cristales más finos y livianos\n\nReducción de espesor y peso para una estética superior en tu armazón.\n\nUltradelgados Índices 1.67 y 1.74\nBIFOCAL Y MULTIFOCALES\n\nEvitar cambiar de anteojos para distintas distancias\n\nVer bien de lejos, intermedia y cerca con un único par de anteojos.\n\nProgresivos Multifocales y Bifocales\nORGÁNICO CON FILTRO O FOTOCROMÁTICO\n\nManejar mejor, reflejos o molestias del sol\n\nMayor confort al aire libre, reducción de encandilamiento y adaptación solar.\n\nFiltro UV400 / Fotocromático Inteligente",
+      "cardStyles": {
+        "backgroundColor": "color(srgb 1 1 1 / 0.9)",
+        "borderColor": "color(srgb 0.855059 0.899922 0.941333)",
+        "borderRadius": "16px",
+        "boxShadow": "rgba(15, 23, 42, 0.08) 0px 10px 30px -10px, rgba(255, 255, 255, 0.85) 0px 1px 0px 0px inset"
+      }
+    },
+    {
+      "step": "02_paso2_solucion",
+      "headerBadge": "Paso 2 de 5",
+      "mainText": "01\nMaterial\n02\nSolución\n03\nPrioridad\n04\nBeneficios\n05\nReceta\nComodidad Visual en tu Rutina Diaria\nPASO 02\nPASO 2 DE 5 · TU RUTINA DIARIA\nTocá una opción\n¿En qué actividades necesitás mayor comodidad visual?\n\nContanos en qué momento del día sentís que más necesitás tus cristales.\n\nTrabajando con la computadora o usando el celular.\n\nJornadas de oficina, estudio o uso continuo de dispositivos digitales.\n\nConfort Digital y Enfoque Intermedio\n\nLeyendo o realizando tareas de cerca.\n\nLectura prolongada, estudio o actividades manuales de precisión.\n\nNitidez en Visión Próxima\n\nManejando o realizando actividades al aire libre.\n\nConducción en ciudad o ruta, exposición al sol y cambios de luz.\n\nProtección Exterior y Antirreflejo Vial\n\nEn todas mis actividades diarias.\n\nUso permanente durante todo el día tanto en interiores como al salir.\n\nSolución Integral para Todo el Día",
+      "cardStyles": {
+        "backgroundColor": "color(srgb 1 1 1 / 0.9)",
+        "borderColor": "color(srgb 0.855059 0.899922 0.941333)",
+        "borderRadius": "16px",
+        "boxShadow": "rgba(15, 23, 42, 0.08) 0px 10px 30px -10px, rgba(255, 255, 255, 0.85) 0px 1px 0px 0px inset"
+      }
+    },
+    {
+      "step": "03_paso3_prioridad",
+      "headerBadge": "Paso 3 de 5",
+      "mainText": "01\nMaterial\n02\nSolución\n03\nPrioridad\n04\nBeneficios\n05\nReceta\nCalidad, Tecnología yMejor Precio\nPASO 03\nPASO 3 DE 5 · TU PRIORIDAD\nTocá una opción\n¿Cuál es tu prioridad a la hora de elegir tus anteojos?\n\nAsí personalizamos las 2 alternativas que mejor se ajustan a lo que buscás.\n\nPRECIO\n\nEncontrar un buen equilibrio entre calidad y precio\n\nBusco cuidar mi presupuesto sin resignar calidad óptica ni durabilidad.\n\nMejor Relación Calidad / Precio\nTECNOLOGÍA\n\nPriorizo cristales con las últimas tecnologías del mercado\n\nQuiero la máxima protección visual, filtros avanzados y precisión digital.\n\nInnovación y Tratamientos Premium\nMODA\n\nQue mis anteojos combinen con mi estilo y se vean bien estéticamente.\n\nPriorizo cristales delgados, sin reflejos y con terminación estética impecable.\n\nEstética, Delgadez y Transparencia\nSOLUCIÓN\n\nResolver mi necesidad visual de forma práctica, sin complicaciones.\n\nQuiero una recomendación clara, rápida y lista para usar cuanto antes.\n\nPracticidad y Rapidez de Entrega",
+      "cardStyles": {
+        "backgroundColor": "color(srgb 1 1 1 / 0.9)",
+        "borderColor": "color(srgb 0.855059 0.899922 0.941333)",
+        "borderRadius": "16px",
+        "boxShadow": "rgba(15, 23, 42, 0.08) 0px 10px 30px -10px, rgba(255, 255, 255, 0.85) 0px 1px 0px 0px inset"
+      }
+    },
+    {
+      "step": "04_paso4_beneficios",
+      "headerBadge": "Paso 4 de 5",
+      "mainText": "01\nMaterial\n02\nSolución\n03\nPrioridad\n04\nBeneficios\n05\nReceta\nObras Sociales · Cuotas · Beneficio Contado\nPASO 04\nPASO 4 DE 5 · BENEFICIOS PARA TU PRESUPUESTO\nPodés elegir varias\n¿Datos útiles para tu presupuesto?\n\nPodés seleccionar más de una opción para sumar todos tus beneficios en el cierre.\n\nOBRA SOCIAL\n\nTengo obra social\n\nSi está en nuestra lista de prestadores, contás con un armazón estándar sin cargo al venir a probártelo.\n\nBeneficio Armazón Estándar Sin Cargo\nPARTICULAR\n\nSoy particular\n\nCotización directa con el precio más competitivo y entrega rápida.\n\nAtención Directa Particular\nCUOTAS\n\nMe interesa conocer cuotas según mi tarjeta\n\nOpciones de financiación en cuotas según tu tarjeta bancaria.\n\nFinanciación con Tarjeta\nPAGO CONTADO\n\nBeneficio pago contado\n\nBonificación especial abonando de contado en efectivo o transferencia.\n\nDescuento Especial Contado\nContinuar con 2 opciones seleccionadas",
+      "cardStyles": {
+        "backgroundColor": "color(srgb 1 1 1 / 0.9)",
+        "borderColor": "color(srgb 0.855059 0.899922 0.941333)",
+        "borderRadius": "16px",
+        "boxShadow": "rgba(15, 23, 42, 0.08) 0px 10px 30px -10px, rgba(255, 255, 255, 0.85) 0px 1px 0px 0px inset"
+      }
+    },
+    {
+      "step": "05_paso5_receta",
+      "headerBadge": "Paso 5 de 5",
+      "mainText": "01\nMaterial\n02\nSolución\n03\nPrioridad\n04\nBeneficios\n05\nReceta\nAdjuntá tu Receta en 1 Toque\nPASO 05\nPASO 5 DE 5 · TU RECETA\nTocá una opción\n¿Querés adjuntarnos tu receta?\n\nSi la tenés a mano, tocá para subir la foto ahora mismo y que se adjunte a tu consulta.\n\nADJUNTAR FOTO\n\nCargar la foto de la receta\n\nTocá acá para sacar una foto o elegirla de tu galería en un solo paso.\n\nSubida Directa desde tu Celular\nCONTINUAR SIN RECETA\n\nAún no la tengo\n\nVer directamente mis 2 opciones recomendadas y mi certificado de garantía de 12 meses.\n\nVer Resultado Ahora",
+      "cardStyles": {
+        "backgroundColor": "color(srgb 1 1 1 / 0.9)",
+        "borderColor": "color(srgb 0.855059 0.899922 0.941333)",
+        "borderRadius": "16px",
+        "boxShadow": "rgba(15, 23, 42, 0.08) 0px 10px 30px -10px, rgba(255, 255, 255, 0.85) 0px 1px 0px 0px inset"
+      }
+    },
+    {
+      "step": "06_resultado_cierre",
+      "headerBadge": "Tu Resultado",
+      "mainText": "Optica Profesional\nAsesor Virtual\n\nPor lo que nos contás, pasás muchas horas frente a la computadora o el celular y buscás mayor comodidad visual durante el día, sin gastar de más.\n\nPor eso, seleccionamos dos alternativas que se adaptan a tu rutina, para que puedas elegir la que mejor se ajuste a lo que necesitás.\n\nOPCIÓN 1\n\nOrgánico con antirreflejo\n\n$ 48.000\n\nPráctica y conveniente\nOPCIÓN 2\n\nOrgánico Blue Cut AR\n\n$ 68.000\n\nCon filtro adicional\nTengo obra social\nCuotas con tarjeta\n¿Querés sumar foto de tu receta?\nBENEFICIO EXCLUSIVO\n¡RENOVÁ TUS CRISTALES GRATIS!\n\nComprá hoy y tenés un recambio sin cargo durante los próximos 12 meses.\n\nCon la compra de tus anteojos con cristales incluidos, te llevás un certificado para realizar un recambio de cristales de la misma categoría y características, por única vez, dentro de los 12 meses posteriores a tu compra.\n\nBeneficio personal, no transferible. Sujeto a las condiciones del certificado.\n\nCompletá tu nombre y WhatsApp para activar tu certificado:\n\nTu Nombre y Apellido *\nTu Número de WhatsApp *\nQuiero aprovechar mi beneficio\nPrecios vigentes · Óptica Profesional\nVolver a empezar",
+      "cardStyles": {
+        "backgroundColor": "color(srgb 1 1 1 / 0.9)",
+        "borderColor": "color(srgb 0.855059 0.899922 0.941333)",
+        "borderRadius": "24px",
+        "boxShadow": "rgba(15, 23, 42, 0.08) 0px 10px 30px -10px, rgba(255, 255, 255, 0.85) 0px 1px 0px 0px inset"
+      }
+    }
+  ],
+  "extractedWhatsAppUrl": "https://wa.me/5493875164050?text=Hola%20*%C3%93ptica%20Profesional*!%20Quiero%20aprovechar%20mi%20beneficio%20exclusivo%20del%20cotizador%20online.%0A%0A*CERTIFICADO%20BENEFICIO%20EXCLUSIVO%20%23OP-MF69R48*%0A*%C2%A1RENOV%C3%81%20TUS%20CRISTALES%20GRATIS!*%20(1%20recambio%20sin%20cargo%20durante%20los%20pr%C3%B3ximos%2012%20meses)%0A------------------------------------%0A*DATOS%20DEL%20CLIENTE*%0A-%20Nombre%3A%20*Mariana%20G%C3%B3mez*%0A-%20WhatsApp%3A%203875123456%0A%0A*ALTERNATIVAS%20COTIZADAS*%0A-%20*Opci%C3%B3n%201%20(Elegida)%3A*%20Org%C3%A1nico%20con%20antirreflejo%20%E2%80%94%20*%24%C2%A048.000*%20(Pr%C3%A1ctica%20y%20conveniente)%0A-%20*Opci%C3%B3n%202%3A*%20Org%C3%A1nico%20Blue%20Cut%20AR%20%E2%80%94%20*%24%C2%A068.000*%20(Con%20filtro%20adicional)%0A-%20*Cristal%20Seleccionado%3A*%20*Org%C3%A1nico%20con%20antirreflejo*%20(*%24%C2%A048.000*)%0A%0A*RESPUESTAS%20DEL%20ASESOR%20VIRTUAL*%0A1.%20Mejora%20principal%3A%20Sentir%20mayor%20comodidad%20visual%20cuando%20uso%20pantallas%20(ORG%C3%81NICO%20BLUE%20AR)%0A2.%20Actividad%20principal%3A%20Trabajando%20con%20la%20computadora%20o%20usando%20el%20celular%0A3.%20Prioridad%3A%20Equilibrio%20entre%20calidad%20y%20precio%20(PRECIO)%0A4.%20Datos%20para%20presupuesto%3A%20*Tengo%20obra%20social%20%2F%20Me%20interesa%20conocer%20cuotas%20seg%C3%BAn%20mi%20tarjeta*%0A5.%20Receta%3A%20*A%C3%BAn%20no%20tengo%20la%20receta*",
+  "decodedWhatsAppMessage": "Hola *Óptica Profesional*! Quiero aprovechar mi beneficio exclusivo del cotizador online.\n\n*CERTIFICADO BENEFICIO EXCLUSIVO #OP-MF69R48*\n*¡RENOVÁ TUS CRISTALES GRATIS!* (1 recambio sin cargo durante los próximos 12 meses)\n------------------------------------\n*DATOS DEL CLIENTE*\n- Nombre: *Mariana Gómez*\n- WhatsApp: 3875123456\n\n*ALTERNATIVAS COTIZADAS*\n- *Opción 1 (Elegida):* Orgánico con antirreflejo — *$ 48.000* (Práctica y conveniente)\n- *Opción 2:* Orgánico Blue Cut AR — *$ 68.000* (Con filtro adicional)\n- *Cristal Seleccionado:* *Orgánico con antirreflejo* (*$ 48.000*)\n\n*RESPUESTAS DEL ASESOR VIRTUAL*\n1. Mejora principal: Sentir mayor comodidad visual cuando uso pantallas (ORGÁNICO BLUE AR)\n2. Actividad principal: Trabajando con la computadora o usando el celular\n3. Prioridad: Equilibrio entre calidad y precio (PRECIO)\n4. Datos para presupuesto: *Tengo obra social / Me interesa conocer cuotas según mi tarjeta*\n5. Receta: *Aún no tengo la receta*",
+  "consoleMessages": [],
+  "pageErrors": [],
+  "failedRequests": [
+    "GET https://wa.me/5493875164050?text=Hola%20*%C3%93ptica%20Profesional*!%20Quiero%20aprovechar%20mi%20beneficio%20exclusivo%20del%20cotizador%20online.%0A%0A*CERTIFICADO%20BENEFICIO%20EXCLUSIVO%20%23OP-MF69R48*%0A*%C2%A1RENOV%C3%81%20TUS%20CRISTALES%20GRATIS!*%20(1%20recambio%20sin%20cargo%20durante%20los%20pr%C3%B3ximos%2012%20meses)%0A------------------------------------%0A*DATOS%20DEL%20CLIENTE*%0A-%20Nombre%3A%20*Mariana%20G%C3%B3mez*%0A-%20WhatsApp%3A%203875123456%0A%0A*ALTERNATIVAS%20COTIZADAS*%0A-%20*Opci%C3%B3n%201%20(Elegida)%3A*%20Org%C3%A1nico%20con%20antirreflejo%20%E2%80%94%20*%24%C2%A048.000*%20(Pr%C3%A1ctica%20y%20conveniente)%0A-%20*Opci%C3%B3n%202%3A*%20Org%C3%A1nico%20Blue%20Cut%20AR%20%E2%80%94%20*%24%C2%A068.000*%20(Con%20filtro%20adicional)%0A-%20*Cristal%20Seleccionado%3A*%20*Org%C3%A1nico%20con%20antirreflejo*%20(*%24%C2%A048.000*)%0A%0A*RESPUESTAS%20DEL%20ASESOR%20VIRTUAL*%0A1.%20Mejora%20principal%3A%20Sentir%20mayor%20comodidad%20visual%20cuando%20uso%20pantallas%20(ORG%C3%81NICO%20BLUE%20AR)%0A2.%20Actividad%20principal%3A%20Trabajando%20con%20la%20computadora%20o%20usando%20el%20celular%0A3.%20Prioridad%3A%20Equilibrio%20entre%20calidad%20y%20precio%20(PRECIO)%0A4.%20Datos%20para%20presupuesto%3A%20*Tengo%20obra%20social%20%2F%20Me%20interesa%20conocer%20cuotas%20seg%C3%BAn%20mi%20tarjeta*%0A5.%20Receta%3A%20*A%C3%BAn%20no%20tengo%20la%20receta* -> net::ERR_FAILED",
+    "GET https://wa.me/5493875164050?text=Hola%20*%C3%93ptica%20Profesional*!%20Quiero%20aprovechar%20mi%20beneficio%20exclusivo%20del%20cotizador%20online.%0A%0A*CERTIFICADO%20BENEFICIO%20EXCLUSIVO%20%23OP-MF69R48*%0A*%C2%A1RENOV%C3%81%20TUS%20CRISTALES%20GRATIS!*%20(1%20recambio%20sin%20cargo%20durante%20los%20pr%C3%B3ximos%2012%20meses)%0A------------------------------------%0A*DATOS%20DEL%20CLIENTE*%0A-%20Nombre%3A%20*Mariana%20G%C3%B3mez*%0A-%20WhatsApp%3A%203875123456%0A%0A*ALTERNATIVAS%20COTIZADAS*%0A-%20*Opci%C3%B3n%201%20(Elegida)%3A*%20Org%C3%A1nico%20con%20antirreflejo%20%E2%80%94%20*%24%C2%A048.000*%20(Pr%C3%A1ctica%20y%20conveniente)%0A-%20*Opci%C3%B3n%202%3A*%20Org%C3%A1nico%20Blue%20Cut%20AR%20%E2%80%94%20*%24%C2%A068.000*%20(Con%20filtro%20adicional)%0A-%20*Cristal%20Seleccionado%3A*%20*Org%C3%A1nico%20con%20antirreflejo*%20(*%24%C2%A048.000*)%0A%0A*RESPUESTAS%20DEL%20ASESOR%20VIRTUAL*%0A1.%20Mejora%20principal%3A%20Sentir%20mayor%20comodidad%20visual%20cuando%20uso%20pantallas%20(ORG%C3%81NICO%20BLUE%20AR)%0A2.%20Actividad%20principal%3A%20Trabajando%20con%20la%20computadora%20o%20usando%20el%20celular%0A3.%20Prioridad%3A%20Equilibrio%20entre%20calidad%20y%20precio%20(PRECIO)%0A4.%20Datos%20para%20presupuesto%3A%20*Tengo%20obra%20social%20%2F%20Me%20interesa%20conocer%20cuotas%20seg%C3%BAn%20mi%20tarjeta*%0A5.%20Receta%3A%20*A%C3%BAn%20no%20tengo%20la%20receta* -> net::ERR_FAILED"
+  ]
+}

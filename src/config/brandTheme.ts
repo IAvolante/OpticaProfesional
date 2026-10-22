@@ -1,4 +1,4 @@
-import type { BrandThemeId } from '../types/optical.types';
+import type { BrandThemeId, FontPairId } from '../types/optical.types';
 
 /**
  * Definición de un preset visual del Design System.
@@ -13,52 +13,74 @@ export interface BrandThemePreset {
   readonly typographySummary: string;
 }
 
-export const BRAND_THEME_STORAGE_KEY = 'optica_profesional_active_theme_v2';
+export interface FontPairPreset {
+  readonly id: FontPairId;
+  readonly shortLabel: string;
+  readonly name: string;
+  readonly summary: string;
+}
 
-/**
- * 3 propuestas de diseño calibradas con la identidad real de @opticaprofesionalsla:
- * - theme-clinical: Identidad Oficial Logo (Teal Esmeralda #147A6E + Azul Marino Óptico #1A4B75)
- * - theme-boutique: Identidad Borgoña Web (#A7144C) + Crema Travertino (#FAF7F2) del video Google Flow
- * - theme-neutral: Wireframe limpio de ingeniería (Slate / Indigo)
- */
+export const BRAND_THEME_STORAGE_KEY = 'optica_profesional_active_theme_v3';
+export const FONT_PAIR_STORAGE_KEY = 'optica_profesional_active_font_pair_v1';
+
 export const BRAND_THEME_PRESETS: readonly BrandThemePreset[] = [
   {
     id: 'theme-clinical',
-    name: 'Identidad Logo Oficial (Teal & Azul Óptico)',
-    shortLabel: 'Oficial',
-    tagline: 'Colores exactos del isologo de Óptica Profesional Salta (#147A6E + #1A4B75)',
+    name: '1. Clínica Luminosa (Light)',
+    shortLabel: '1. Clínica Luminosa',
+    tagline: 'Estética médica luminosa (#F4F8FB, tarjetas blancas puras, #336699 y #99CC99)',
     description:
-      'Integra el Verde Esmeralda Óptico (#147A6E) y Azul Profundo (#1A4B75) del logo oficial sobre cristal esmerilado.',
-    previewSwatches: ['#F0FDF9', '#147A6E', '#1A4B75'],
-    typographySummary: 'Plus Jakarta Sans + Inter',
+      'Superficie clínica luminosa (#F4F8FB) con tarjetas blancas puras, acentos #336699 y #99CC99, y tarjeta de Certificado en azul profundo.',
+    previewSwatches: ['#F4F8FB', '#336699', '#99CC99'],
+    typographySummary: 'Plus Jakarta Sans + DM Sans',
   },
   {
-    id: 'theme-boutique',
-    name: 'Boutique Borgoña & Travertino',
-    shortLabel: 'Boutique',
-    tagline: 'Acento Borgoña (#A7144C de su web actual) + Crema cálido del video Flow',
+    id: 'theme-dark-glass',
+    name: '2. Dark Glass Asesor (Dark PDF)',
+    shortLabel: '2. Dark Glass Asesor',
+    tagline: 'Estética nocturna premium inspirada en el cierre de PREGUNTAS.pdf (#0A111A)',
     description:
-      'Fusiona el tono Borgoña (#A7144C) característico de opticaprofesional.com.ar con la piedra travertino cálida (#FAF7F2).',
-    previewSwatches: ['#FAF7F2', '#FCEEF2', '#A7144C'],
-    typographySummary: 'Playfair Display + Plus Jakarta Sans',
+      'Fondo #0A111A, tarjetas glass oscuras #111C2A/90 con bordes sutiles, badge BENEFICIO EXCLUSIVO en verde esmeralda traslúcido y botón CTA blanco puro.',
+    previewSwatches: ['#0A111A', '#111C2A', '#99CC99'],
+    typographySummary: 'Outfit + Inter + Space Grotesk',
+  },
+] as const;
+
+export const FONT_PAIR_PRESETS: readonly FontPairPreset[] = [
+  {
+    id: 'font-logo-match',
+    shortLabel: 'Fuente A (Logo Match)',
+    name: 'Plus Jakarta Sans + DM Sans',
+    summary: 'Títulos en Plus Jakarta Sans + Cuerpo en DM Sans',
   },
   {
-    id: 'theme-neutral',
-    name: 'Neutral Discovery (Smart Optical Lab)',
-    shortLabel: 'Neutral',
-    tagline: 'Estética minimalista Slate & Indigo para laboratorio B2B',
-    description:
-      'Paleta técnica neutra pensada para auditar jerarquía de información y uso mayorista en SMART OPTICAL.',
-    previewSwatches: ['#F8FAFC', '#4F46E5', '#0F172A'],
-    typographySummary: 'Inter + Plus Jakarta Sans',
+    id: 'font-tech-optical',
+    shortLabel: 'Fuente B (Tech Optical)',
+    name: 'Outfit + Inter + Space Grotesk',
+    summary: 'Títulos en Outfit + Cuerpo en Inter + Precios en Space Grotesk',
+  },
+  {
+    id: 'font-boutique-editorial',
+    shortLabel: 'Fuente C (Boutique Editorial)',
+    name: 'Fraunces + Plus Jakarta Sans',
+    summary: 'Títulos en Fraunces (Serif moderna) + Cuerpo en Plus Jakarta Sans',
   },
 ] as const;
 
 export function isValidBrandThemeId(value: unknown): value is BrandThemeId {
   return (
+    value === 'theme-clinical' ||
+    value === 'theme-dark-glass' ||
     value === 'theme-neutral' ||
-    value === 'theme-boutique' ||
-    value === 'theme-clinical'
+    value === 'theme-boutique'
+  );
+}
+
+export function isValidFontPairId(value: unknown): value is FontPairId {
+  return (
+    value === 'font-logo-match' ||
+    value === 'font-tech-optical' ||
+    value === 'font-boutique-editorial'
   );
 }
 
@@ -67,14 +89,5 @@ export function getBrandThemePreset(themeId: BrandThemeId): BrandThemePreset {
   if (found) {
     return found;
   }
-  return {
-    id: 'theme-clinical',
-    name: 'Identidad Logo Oficial (Teal & Azul Óptico)',
-    shortLabel: 'Oficial',
-    tagline: 'Colores exactos del isologo de Óptica Profesional Salta (#147A6E + #1A4B75)',
-    description:
-      'Integra el Verde Esmeralda Óptico (#147A6E) y Azul Profundo (#1A4B75) del logo oficial sobre cristal esmerilado.',
-    previewSwatches: ['#F0FDF9', '#147A6E', '#1A4B75'],
-    typographySummary: 'Plus Jakarta Sans + Inter',
-  };
+  return BRAND_THEME_PRESETS[0] as BrandThemePreset;
 }
