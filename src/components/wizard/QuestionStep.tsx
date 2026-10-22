@@ -55,29 +55,19 @@ const BASE_URL = import.meta.env.BASE_URL;
 
 const SHOWCASE_POOL = [
   {
-    poolId: 'step1',
-    src: `${BASE_URL}videos/step1-material-flow.mp4`,
-    poster: `${BASE_URL}videos/step1-material-poster.jpg`,
+    poolId: 'hero',
+    src: `${BASE_URL}videos/optical-hero-flow.mp4`,
+    poster: `${BASE_URL}videos/optical-hero-flow-poster.jpg`,
   },
   {
-    poolId: 'step2',
-    src: `${BASE_URL}videos/step2-activities-flow.mp4`,
-    poster: `${BASE_URL}videos/step2-activities-poster.jpg`,
+    poolId: 'titanium',
+    src: `${BASE_URL}videos/optical-titanium-bluecut-flow.mp4`,
+    poster: `${BASE_URL}videos/optical-titanium-bluecut-flow-poster.jpg`,
   },
   {
-    poolId: 'step3',
-    src: `${BASE_URL}videos/step3-priority-flow.mp4`,
-    poster: `${BASE_URL}videos/step3-priority-poster.jpg`,
-  },
-  {
-    poolId: 'step4',
-    src: `${BASE_URL}videos/step4-budget-flow.mp4`,
-    poster: `${BASE_URL}videos/step4-budget-poster.jpg`,
-  },
-  {
-    poolId: 'step5',
-    src: `${BASE_URL}videos/step5-prescription-flow.mp4`,
-    poster: `${BASE_URL}videos/step5-prescription-poster.jpg`,
+    poolId: 'photochromic',
+    src: `${BASE_URL}videos/optical-photochromic-flow.mp4`,
+    poster: `${BASE_URL}videos/optical-photochromic-flow-poster.jpg`,
   },
 ] as const;
 
@@ -93,32 +83,32 @@ const QUESTION_VIDEO_SHOWCASE: Record<
   }
 > = {
   improvementGoal: {
-    poolId: 'step1',
-    poster: `${BASE_URL}videos/step1-material-poster.jpg`,
+    poolId: 'hero',
+    poster: `${BASE_URL}videos/optical-hero-flow-poster.jpg`,
     caption: 'Tecnología en Cristales · Óptica Profesional',
     code: 'PASO 01',
   },
   activityContext: {
-    poolId: 'step2',
-    poster: `${BASE_URL}videos/step2-activities-poster.jpg`,
+    poolId: 'titanium',
+    poster: `${BASE_URL}videos/optical-titanium-bluecut-flow-poster.jpg`,
     caption: 'Comodidad Visual en tu Rutina Diaria',
     code: 'PASO 02',
   },
   clientPriority: {
-    poolId: 'step3',
-    poster: `${BASE_URL}videos/step3-priority-poster.jpg`,
+    poolId: 'photochromic',
+    poster: `${BASE_URL}videos/optical-photochromic-flow-poster.jpg`,
     caption: 'Calidad, Tecnología y Mejor Precio',
     code: 'PASO 03',
   },
   budgetPreferences: {
-    poolId: 'step4',
-    poster: `${BASE_URL}videos/step4-budget-poster.jpg`,
+    poolId: 'titanium',
+    poster: `${BASE_URL}videos/optical-titanium-bluecut-flow-poster.jpg`,
     caption: 'Obras Sociales · Cuotas · Beneficio Contado',
     code: 'PASO 04',
   },
   prescriptionAttachment: {
-    poolId: 'step5',
-    poster: `${BASE_URL}videos/step5-prescription-poster.jpg`,
+    poolId: 'hero',
+    poster: `${BASE_URL}videos/optical-hero-flow-poster.jpg`,
     caption: 'Adjuntá tu Receta en 1 Toque',
     code: 'PASO 05',
   },
@@ -162,11 +152,9 @@ export function QuestionStep({
   const [isProcessingPhoto, setIsProcessingPhoto] = useState<boolean>(false);
 
   const videoRefs = useRef<Record<ShowcasePoolId, HTMLVideoElement | null>>({
-    step1: null,
-    step2: null,
-    step3: null,
-    step4: null,
-    step5: null,
+    hero: null,
+    titanium: null,
+    photochromic: null,
   });
 
   const showcase = QUESTION_VIDEO_SHOWCASE[question.id];

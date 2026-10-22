@@ -12,29 +12,19 @@ const BASE_URL = import.meta.env.BASE_URL;
 
 const STAGE_VIDEOS = [
   {
-    id: 'step1',
-    src: `${BASE_URL}videos/step1-material-flow.mp4`,
-    poster: `${BASE_URL}videos/step1-material-poster.jpg`,
+    id: 'hero',
+    src: `${BASE_URL}videos/optical-hero-flow.mp4`,
+    poster: `${BASE_URL}videos/optical-hero-flow-poster.jpg`,
   },
   {
-    id: 'step2',
-    src: `${BASE_URL}videos/step2-activities-flow.mp4`,
-    poster: `${BASE_URL}videos/step2-activities-poster.jpg`,
+    id: 'photochromic',
+    src: `${BASE_URL}videos/optical-photochromic-flow.mp4`,
+    poster: `${BASE_URL}videos/optical-photochromic-flow-poster.jpg`,
   },
   {
-    id: 'step3',
-    src: `${BASE_URL}videos/step3-priority-flow.mp4`,
-    poster: `${BASE_URL}videos/step3-priority-poster.jpg`,
-  },
-  {
-    id: 'step4',
-    src: `${BASE_URL}videos/step4-budget-flow.mp4`,
-    poster: `${BASE_URL}videos/step4-budget-poster.jpg`,
-  },
-  {
-    id: 'step5',
-    src: `${BASE_URL}videos/step5-prescription-flow.mp4`,
-    poster: `${BASE_URL}videos/step5-prescription-poster.jpg`,
+    id: 'titanium',
+    src: `${BASE_URL}videos/optical-titanium-bluecut-flow.mp4`,
+    poster: `${BASE_URL}videos/optical-titanium-bluecut-flow-poster.jpg`,
   },
 ] as const;
 
@@ -45,41 +35,30 @@ function resolveStageVideoId(
   activeQuestionId?: QuestionId
 ): StageVideoId {
   if (currentStep === 'QUESTIONS') {
-    switch (activeQuestionId) {
-      case 'improvementGoal':
-        return 'step1';
-      case 'activityContext':
-        return 'step2';
-      case 'clientPriority':
-        return 'step3';
-      case 'budgetPreferences':
-        return 'step4';
-      case 'prescriptionAttachment':
-        return 'step5';
-      default:
-        return 'step1';
+    if (activeQuestionId === 'activityContext') {
+      return 'photochromic';
     }
+    if (
+      activeQuestionId === 'clientPriority' ||
+      activeQuestionId === 'budgetPreferences'
+    ) {
+      return 'titanium';
+    }
+    return 'hero';
   }
 
-  return 'step3';
+  return 'photochromic';
 }
 
-/**
- * Escenario de Video Inmersivo Responsive (Mobile-First + Full Viewport):
- * - 5 videos dedicados (1 por cada paso del flujo de Solana).
- * - 100% silencioso (`muted` permanente, sin controles de audio).
- */
 export function BackgroundVideoStage({
   enabled,
   currentStep,
   activeQuestionId,
 }: BackgroundVideoStageProps) {
   const videoRefs = useRef<Record<StageVideoId, HTMLVideoElement | null>>({
-    step1: null,
-    step2: null,
-    step3: null,
-    step4: null,
-    step5: null,
+    hero: null,
+    photochromic: null,
+    titanium: null,
   });
 
   const activeVideoId = resolveStageVideoId(currentStep, activeQuestionId);
