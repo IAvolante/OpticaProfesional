@@ -12,19 +12,29 @@ const BASE_URL = import.meta.env.BASE_URL;
 
 const STAGE_VIDEOS = [
   {
-    id: 'hero',
-    src: `${BASE_URL}videos/optical-hero-flow.mp4`,
-    poster: `${BASE_URL}videos/optical-hero-flow-poster.jpg`,
+    id: 'step1',
+    src: `${BASE_URL}videos/step1-material-flow.mp4`,
+    poster: `${BASE_URL}videos/step1-material-poster.jpg`,
   },
   {
-    id: 'photochromic',
-    src: `${BASE_URL}videos/optical-photochromic-flow.mp4`,
-    poster: `${BASE_URL}videos/optical-photochromic-flow-poster.jpg`,
+    id: 'step2',
+    src: `${BASE_URL}videos/step2-activities-flow.mp4`,
+    poster: `${BASE_URL}videos/step2-activities-poster.jpg`,
   },
   {
-    id: 'titanium',
-    src: `${BASE_URL}videos/optical-titanium-bluecut-flow.mp4`,
-    poster: `${BASE_URL}videos/optical-titanium-bluecut-flow-poster.jpg`,
+    id: 'step3',
+    src: `${BASE_URL}videos/step3-priority-flow.mp4`,
+    poster: `${BASE_URL}videos/step3-priority-poster.jpg`,
+  },
+  {
+    id: 'step4',
+    src: `${BASE_URL}videos/step4-budget-flow.mp4`,
+    poster: `${BASE_URL}videos/step4-budget-poster.jpg`,
+  },
+  {
+    id: 'step5',
+    src: `${BASE_URL}videos/step5-prescription-flow.mp4`,
+    poster: `${BASE_URL}videos/step5-prescription-poster.jpg`,
   },
 ] as const;
 
@@ -34,31 +44,30 @@ function resolveStageVideoId(
   currentStep: WizardStepType,
   activeQuestionId?: QuestionId
 ): StageVideoId {
-  if (currentStep === 'WELCOME') {
-    return 'hero';
-  }
-
   if (currentStep === 'QUESTIONS') {
-    if (activeQuestionId === 'activityContext') {
-      return 'photochromic';
+    switch (activeQuestionId) {
+      case 'improvementGoal':
+        return 'step1';
+      case 'activityContext':
+        return 'step2';
+      case 'clientPriority':
+        return 'step3';
+      case 'budgetPreferences':
+        return 'step4';
+      case 'prescriptionAttachment':
+        return 'step5';
+      default:
+        return 'step1';
     }
-    if (
-      activeQuestionId === 'clientPriority' ||
-      activeQuestionId === 'budgetPreferences'
-    ) {
-      return 'titanium';
-    }
-    return 'hero';
   }
 
-  return 'photochromic';
+  return 'step3';
 }
 
 /**
  * Escenario de Video Inmersivo Responsive (Mobile-First + Full Viewport):
+ * - 5 videos dedicados (1 por cada paso del flujo de Solana).
  * - 100% silencioso (`muted` permanente, sin controles de audio).
- * - Cubre todo el lienzo de forma fluida sin franjas blancas laterales ni cortes bruscos
- *   en teléfonos grandes, tablets o monitores de escritorio.
  */
 export function BackgroundVideoStage({
   enabled,
@@ -66,13 +75,14 @@ export function BackgroundVideoStage({
   activeQuestionId,
 }: BackgroundVideoStageProps) {
   const videoRefs = useRef<Record<StageVideoId, HTMLVideoElement | null>>({
-    hero: null,
-    photochromic: null,
-    titanium: null,
+    step1: null,
+    step2: null,
+    step3: null,
+    step4: null,
+    step5: null,
   });
 
   const activeVideoId = resolveStageVideoId(currentStep, activeQuestionId);
-  const isWelcomeStep = currentStep === 'WELCOME';
 
   useEffect(() => {
     if (!enabled) {
@@ -109,7 +119,6 @@ export function BackgroundVideoStage({
       aria-hidden="true"
       className="pointer-events-none fixed inset-0 z-0 overflow-hidden bg-[var(--brand-canvas)]"
     >
-      {/* Video a pantalla completa con transición suave y sin cortes laterales */}
       <div className="relative h-full w-full overflow-hidden">
         {STAGE_VIDEOS.map((item) => {
           const isCurrent = item.id === activeVideoId;
@@ -126,25 +135,14 @@ export function BackgroundVideoStage({
               playsInline
               preload="auto"
               className={cn(
-                'absolute inset-0 h-full w-full object-cover object-center transition-opacity duration-300 ease-out',
-                isCurrent ? 'opacity-100' : 'opacity-0 pointer-events-none',
-                isWelcomeStep
-                  ? 'scale-100 brightness-[0.96] contrast-[1.03] sm:blur-[2px]'
-                  : 'scale-105 blur-[3px] brightness-[0.92] contrast-[1.02]'
+                'absolute inset-0 h-full w-full object-cover object-center transition-opacity duration-300 ease-out scale-105 blur-[3px] brightness-[0.94] contrast-[1.02]',
+                isCurrent ? 'opacity-100' : 'opacity-0 pointer-events-none'
               )}
             />
           );
         })}
 
-        {/* Gradiente continuo en todo el ancho de pantalla para lectura limpia en móvil y desktop */}
-        <div
-          className={cn(
-            'absolute inset-0 transition-opacity duration-500',
-            isWelcomeStep
-              ? 'bg-gradient-to-b from-slate-950/20 via-[var(--brand-canvas)]/45 to-[var(--brand-canvas)]/95'
-              : 'bg-gradient-to-b from-[var(--brand-canvas)]/55 via-[var(--brand-canvas)]/80 to-[var(--brand-canvas)]/96'
-          )}
-        />
+        <div className="absolute inset-0 bg-gradient-to-b from-[var(--brand-canvas)]/60 via-[var(--brand-canvas)]/82 to-[var(--brand-canvas)]/96" />
       </div>
     </div>
   );
