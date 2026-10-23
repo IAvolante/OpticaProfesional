@@ -176,9 +176,17 @@ export function useOpticalWizard({
       return;
     }
     try {
+      // No persistimos el Base64 de la foto en sessionStorage para no exceder la cuota de 5MB en móviles
+      const lightSnapshot: PersistedWizardSnapshot = {
+        ...snapshot,
+        answers: {
+          ...snapshot.answers,
+          prescriptionPhotoDataUrl: undefined,
+        },
+      };
       window.sessionStorage.setItem(
         WIZARD_SESSION_STORAGE_KEY,
-        JSON.stringify(snapshot)
+        JSON.stringify(lightSnapshot)
       );
     } catch {
       // Ignorar si excede sessionStorage en navegador privado
@@ -359,7 +367,7 @@ export function useOpticalWizard({
           prescriptionPhotoDataUrl: dataUrl,
         };
 
-        if (isCompletedAnswers(updatedAnswers)) {
+        if (isCompletedAnswers(updatedAnswers) && prev.step !== 'QUOTE_RESULT') {
           const previewRec = calculateOpticalRecommendation(
             updatedAnswers,
             catalogItems
@@ -448,7 +456,13 @@ export function useOpticalWizard({
         prescriptionPhotoName: snapshot.answers.prescriptionPhotoName,
       };
 
-      const submitResult = await submitLeadToGoogleSheets({
+      setSnapshot((prev) => ({
+        ...prev,
+        lead: leadData,
+      }));
+
+      // Disparamos el registro hacia Google Sheets en segundo plano (sin bloquear la apertura inmediata de WhatsApp)
+      void submitLeadToGoogleSheets({
         leadId,
         lead: leadData,
         answers: snapshot.answers,
@@ -457,40 +471,14 @@ export function useOpticalWizard({
         activeTheme,
       });
 
-      const finalLead: LeadContactData = {
-        ...leadData,
-        prescriptionPhotoRemoteUrl: submitResult.uploadedPhotoUrl,
-      };
-
-      const finalAnswers: CompletedOpticalAnswers = {
-        ...snapshot.answers,
-        prescriptionPhotoRemoteUrl: submitResult.uploadedPhotoUrl,
-      };
-
-      setSnapshot((prev) => ({
-        ...prev,
-        lead: finalLead,
-        answers: finalAnswers,
-      }));
-
-      setIsSubmittingLead(false);
-
-      trackMetaPixelEvent('Contact', {
-        content_name: `Beneficio 12 Meses: ${chosenOption.commercialName}`,
-        content_category: chosenOption.family,
-        content_ids: [chosenOption.sku],
-        value: chosenOption.priceStockARS,
-        currency: 'ARS',
-        status: selectedTier,
-      });
-
       const whatsappUrl = buildWhatsAppDeepLink({
-        lead: finalLead,
-        answers: finalAnswers,
+        lead: leadData,
+        answers: snapshot.answers,
         recommendation,
         selectedLensType: selectedTier,
       });
 
+      setIsSubmittingLead(false);
       window.location.href = whatsappUrl;
     },
     [snapshot.answers, snapshot.lead, recommendation, activeTheme]

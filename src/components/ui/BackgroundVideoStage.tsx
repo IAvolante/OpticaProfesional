@@ -112,9 +112,9 @@ export function BackgroundVideoStage({
               loop
               muted
               playsInline
-              preload="auto"
+              preload={isCurrent ? 'auto' : 'metadata'}
               className={cn(
-                'absolute inset-0 h-full w-full object-cover object-center transition-opacity duration-300 ease-out scale-105 blur-[3px] brightness-[0.94] contrast-[1.02]',
+                'absolute inset-0 h-full w-full object-cover object-center transition-opacity duration-300 ease-out scale-105 brightness-[0.94] contrast-[1.02]',
                 isCurrent ? 'opacity-100' : 'opacity-0 pointer-events-none'
               )}
             />

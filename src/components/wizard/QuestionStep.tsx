@@ -5,7 +5,7 @@ import {
   type PanInfo,
   type Variants,
 } from 'framer-motion';
-import { ArrowRight, Camera, Check } from 'lucide-react';
+import { ArrowRight, Camera, Check } from '@phosphor-icons/react';
 import type {
   BudgetPreferenceAnswer,
   QuestionId,
@@ -149,7 +149,11 @@ export function QuestionStep({
 }: QuestionStepProps) {
   const prefersReducedMotion = useReducedMotion();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const advanceTimerRef = useRef<number | null>(null);
   const [isProcessingPhoto, setIsProcessingPhoto] = useState<boolean>(false);
+  const [photoError, setPhotoError] = useState<string>('');
+  const [pendingOption, setPendingOption] =
+    useState<QuestionOptionValue | null>(null);
 
   const videoRefs = useRef<Record<ShowcasePoolId, HTMLVideoElement | null>>({
     hero: null,
@@ -159,6 +163,16 @@ export function QuestionStep({
 
   const showcase = QUESTION_VIDEO_SHOWCASE[question.id];
   const selectedBudgetList = answers.budgetPreferences ?? [];
+
+  useEffect(() => {
+    setPendingOption(null);
+    setPhotoError('');
+    return () => {
+      if (advanceTimerRef.current !== null) {
+        window.clearTimeout(advanceTimerRef.current);
+      }
+    };
+  }, [question.id]);
 
   useEffect(() => {
     for (const item of SHOWCASE_POOL) {
@@ -182,7 +196,12 @@ export function QuestionStep({
     _event: MouseEvent | TouchEvent | PointerEvent,
     info: PanInfo
   ) => {
-    if (info.offset.x > 75 && onSwipeBack) {
+    if (
+      question.stepNumber > 1 &&
+      info.offset.x > 85 &&
+      Math.abs(info.offset.y) < 45 &&
+      onSwipeBack
+    ) {
       triggerHapticFeedback(12);
       onSwipeBack();
     }
@@ -190,17 +209,21 @@ export function QuestionStep({
 
   const handleFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
+    event.target.value = '';
     if (!file) {
       return;
     }
 
     triggerHapticFeedback(18);
+    setPhotoError('');
     setIsProcessingPhoto(true);
     try {
       const compressedDataUrl = await compressPrescriptionImageToDataUrl(file);
       onAttachPrescriptionPhoto(file.name, compressedDataUrl);
     } catch {
-      onAttachPrescriptionPhoto(file.name, '');
+      setPhotoError(
+        'No pudimos leer esa imagen. Probá con otra foto o continuá sin receta.'
+      );
     } finally {
       setIsProcessingPhoto(false);
     }
@@ -218,15 +241,35 @@ export function QuestionStep({
       return;
     }
 
-    onSelectOption(question.id, value);
+    // En el Paso 4 (selección múltiple), marca/desmarca al instante sin avanzar
+    if (question.isMultiSelect) {
+      onSelectOption(question.id, value);
+      return;
+    }
+
+    // En los Pasos 1, 2, 3 y 5 ("Aún no la tengo"), iluminamos la tarjeta 150ms antes de avanzar
+    setPendingOption(value);
+    if (advanceTimerRef.current !== null) {
+      window.clearTimeout(advanceTimerRef.current);
+    }
+    advanceTimerRef.current = window.setTimeout(() => {
+      setPendingOption(null);
+      onSelectOption(question.id, value);
+    }, 150);
   };
 
   const isOptionSelected = (value: QuestionOptionValue): boolean => {
+    if (pendingOption === value) {
+      return true;
+    }
     if (question.id === 'budgetPreferences') {
       return selectedBudgetList.includes(value as BudgetPreferenceAnswer);
     }
     return answers[question.id] === value;
   };
+
+  const canDragBack =
+    !prefersReducedMotion && question.stepNumber > 1 && Boolean(onSwipeBack);
 
   return (
     <div className="space-y-3 pb-10 touch-pan-y">
@@ -258,6 +301,7 @@ export function QuestionStep({
               key={pill.id}
               type="button"
               disabled={!canClickPill}
+              aria-current={isCurrent ? 'step' : undefined}
               onClick={() => {
                 if (canClickPill) {
                   triggerHapticFeedback(8);
@@ -265,7 +309,7 @@ export function QuestionStep({
                 }
               }}
               className={cn(
-                'flex flex-col items-center justify-center rounded-xl py-1.5 px-1 border text-center transition-all duration-200',
+                'flex min-h-[42px] flex-col items-center justify-center rounded-xl py-1.5 px-1 border text-center transition-all duration-200',
                 canClickPill ? 'cursor-pointer' : 'cursor-default',
                 isCurrent
                   ? 'border-[#336699] bg-[#336699] text-white shadow-2xs'
@@ -285,7 +329,7 @@ export function QuestionStep({
         })}
       </div>
 
-      {/* 2. Cabecera Card con Pool de 3 Videos Persistentes en Memoria (0ms cambio entre pasos) */}
+      {/* 2. Cabecera Card con Pool de 3 Videos Persistentes en Memoria */}
       <Card className="overflow-hidden">
         <div
           className="relative h-28 w-full overflow-hidden bg-slate-900 bg-cover bg-center"
@@ -305,7 +349,7 @@ export function QuestionStep({
                 loop
                 muted
                 playsInline
-                preload="auto"
+                preload={isActiveVideo ? 'auto' : 'metadata'}
                 className={cn(
                   'absolute inset-0 h-full w-full object-cover object-center transition-opacity duration-200',
                   isActiveVideo
@@ -351,9 +395,10 @@ export function QuestionStep({
       {/* 3. Opciones del Paso Actual */}
       <motion.div
         key={question.id}
-        drag={prefersReducedMotion ? false : 'x'}
+        drag={canDragBack ? 'x' : false}
+        dragDirectionLock
         dragConstraints={{ left: 0, right: 0 }}
-        dragElastic={{ left: 0.05, right: 0.28 }}
+        dragElastic={{ left: 0.02, right: 0.25 }}
         onDragEnd={handleDragEnd}
         initial={prefersReducedMotion ? false : { opacity: 0, x: 14 }}
         animate={{ opacity: 1, x: 0 }}
@@ -378,11 +423,12 @@ export function QuestionStep({
               >
                 <button
                   type="button"
+                  aria-pressed={isSelected}
                   disabled={isProcessingPhoto}
                   onClick={() => handleOptionPress(option.value)}
                   className={cn(
                     'optical-glass-card group relative w-full text-left rounded-2xl p-3.5 transition-all duration-200 cursor-pointer select-none block',
-                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#336699]',
+                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-ring)]',
                     'active:scale-[0.99]',
                     isSelected
                       ? 'optical-glass-card-active'
@@ -421,9 +467,12 @@ export function QuestionStep({
                           )}
                         >
                           {isSelected ? (
-                            <Check className="h-3 w-3 stroke-[3]" />
+                            <Check weight="bold" className="h-3 w-3" />
                           ) : isUploadRxButton ? (
-                            <Camera className="h-3 w-3 text-[#336699]" />
+                            <Camera
+                              weight="duotone"
+                              className="h-3.5 w-3.5 text-[var(--brand-icon-primary)]"
+                            />
                           ) : (
                             <span className="h-1.5 w-1.5 rounded-full bg-transparent" />
                           )}
@@ -433,6 +482,15 @@ export function QuestionStep({
                       <p className="text-[12.5px] text-[var(--brand-text-muted)] leading-relaxed">
                         {option.description}
                       </p>
+
+                      {isUploadRxButton && photoError ? (
+                        <p
+                          role="alert"
+                          className="pt-1 text-xs font-medium text-rose-500"
+                        >
+                          {photoError}
+                        </p>
+                      ) : null}
 
                       {isUploadRxButton && answers.prescriptionPhotoDataUrl ? (
                         <div className="pt-2 flex items-center gap-2.5 rounded-xl bg-[var(--brand-accent)] border border-[var(--brand-accent-border)] p-2">
@@ -460,24 +518,26 @@ export function QuestionStep({
         </motion.div>
       </motion.div>
 
-      {/* 4. En el Paso 4 (Selección Múltiple), botón claro para avanzar al Paso 5 */}
+      {/* 4. En el Paso 4 (Selección Múltiple), barra Sticky inferior para avanzar siempre visible */}
       {question.isMultiSelect && (
-        <div className="pt-2">
-          <Button
-            type="button"
-            variant="primary"
-            size="lg"
-            fullWidth
-            onClick={() => {
-              triggerHapticFeedback(15);
-              onConfirmBudgetStep();
-            }}
-            rightIcon={<ArrowRight className="h-4 w-4" />}
-          >
-            {selectedBudgetList.length > 0
-              ? `Continuar con ${selectedBudgetList.length} ${selectedBudgetList.length === 1 ? 'opción seleccionada' : 'opciones seleccionadas'}`
-              : 'Continuar al último paso'}
-          </Button>
+        <div className="sticky bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-30 pt-2">
+          <div className="rounded-2xl bg-[var(--brand-canvas)]/85 p-1.5 backdrop-blur-md shadow-lg border border-[var(--brand-border)]">
+            <Button
+              type="button"
+              variant="primary"
+              size="lg"
+              fullWidth
+              onClick={() => {
+                triggerHapticFeedback(15);
+                onConfirmBudgetStep();
+              }}
+              rightIcon={<ArrowRight weight="bold" className="h-4 w-4" />}
+            >
+              {selectedBudgetList.length > 0
+                ? `Continuar con ${selectedBudgetList.length} ${selectedBudgetList.length === 1 ? 'opción seleccionada' : 'opciones seleccionadas'}`
+                : 'Continuar al último paso'}
+            </Button>
+          </div>
         </div>
       )}
     </div>

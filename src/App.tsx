@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
 import { AnimatePresence } from 'framer-motion';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft } from '@phosphor-icons/react';
 import {
   BRAND_THEME_STORAGE_KEY,
   FONT_PAIR_STORAGE_KEY,
@@ -141,16 +141,16 @@ export function App() {
                 type="button"
                 onClick={goToPreviousStep}
                 aria-label="Volver al paso anterior"
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-[var(--brand-border)] bg-[var(--brand-surface)] text-[var(--brand-accent-foreground)] hover:bg-[var(--brand-surface-elevated)] active:scale-95 transition-all cursor-pointer"
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[var(--brand-border)] bg-[var(--brand-surface)] text-[var(--brand-accent-foreground)] hover:bg-[var(--brand-surface-elevated)] active:scale-95 transition-all cursor-pointer"
               >
-                <ArrowLeft className="h-4 w-4" />
+                <ArrowLeft weight="bold" className="h-4 w-4" />
               </button>
             ) : null}
 
             <img
               src={`${import.meta.env.BASE_URL}logo-optica-profesional.png`}
               alt={ENV_CONFIG.brandNameB2C}
-              className="h-8 w-auto object-contain shrink-0 select-none"
+              className="brand-header-logo h-8 w-auto object-contain shrink-0 select-none transition-all duration-200"
             />
           </div>
 

@@ -16,14 +16,61 @@ export function formatCurrencyARS(amount: number): string {
 }
 
 /**
- * Sanitiza un número de teléfono argentino dejándolo listo para wa.me.
+ * Sanitiza un número de teléfono argentino quitando prefijos interurbanos '0', '54', '549'
+ * y el '15' móvil después del código de área (ej: "0387 15 512-3456" -> "3875123456").
  */
 export function sanitizeArgentinePhone(rawPhone: string): string {
-  const digits = rawPhone.replace(/\D/g, '');
+  let digits = rawPhone.replace(/\D/g, '');
   if (digits.length === 0) {
     return '';
   }
+
+  if (digits.startsWith('549') && digits.length > 10) {
+    digits = digits.slice(3);
+  } else if (digits.startsWith('54') && digits.length > 10) {
+    digits = digits.slice(2);
+  }
+
+  if (digits.startsWith('0')) {
+    digits = digits.slice(1);
+  }
+
+  // Quita el 15 móvil luego de códigos de área de 2, 3 o 4 dígitos si sobran dígitos
+  if (digits.length === 12) {
+    if (digits.slice(2, 4) === '15') {
+      digits = `${digits.slice(0, 2)}${digits.slice(4)}`;
+    } else if (digits.slice(3, 5) === '15') {
+      digits = `${digits.slice(0, 3)}${digits.slice(5)}`;
+    } else if (digits.slice(4, 6) === '15') {
+      digits = `${digits.slice(0, 4)}${digits.slice(6)}`;
+    }
+  } else if (digits.length === 11 && digits.startsWith('15')) {
+    digits = digits.slice(2);
+  }
+
   return digits;
+}
+
+/**
+ * Parsea de forma resiliente montos numéricos provenientes de Google Sheets
+ * (soporta números puros o strings como "$ 48.000", "48.000", "48,000").
+ */
+export function parseFlexibleARSPrice(raw: unknown): number {
+  if (typeof raw === 'number' && Number.isFinite(raw)) {
+    return Math.round(raw);
+  }
+  if (typeof raw === 'string') {
+    const trimmed = raw.trim();
+    if (!trimmed) return NaN;
+    // Remueve todo excepto dígitos, puntos y comas
+    const clean = trimmed.replace(/[^\d.,]/g, '');
+    if (!clean) return NaN;
+    // Si tiene punto de miles argentino (ej: "48.000" o "112.500")
+    const digitsOnly = clean.replace(/[.,]\d{1,2}$/, '').replace(/[.,]/g, '');
+    const parsed = Number(digitsOnly);
+    return Number.isFinite(parsed) ? parsed : NaN;
+  }
+  return NaN;
 }
 
 /**

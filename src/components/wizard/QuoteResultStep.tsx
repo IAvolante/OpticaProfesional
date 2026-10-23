@@ -1,14 +1,14 @@
 import { useRef, useState, type ChangeEvent, type FormEvent } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import {
+  ArrowCounterClockwise,
   ArrowRight,
   Camera,
   Check,
   Phone,
-  RotateCcw,
   ShieldCheck,
   User,
-} from 'lucide-react';
+} from '@phosphor-icons/react';
 import type {
   BudgetPreferenceAnswer,
   CompletedOpticalAnswers,
@@ -63,6 +63,7 @@ function resolveDefaultSelectedTier(
 /**
  * Paso 6 ('QUOTE_RESULT') — Cierre del Asesor Virtual + Precios en Vivo de Google Sheets
  * + Cupón de Garantía de Recambio 12 Meses Gratis + Registro de Nombre y Teléfono.
+ * Respeta fielmente el Ejemplo de Cierre de la página 2 de PREGUNTAS .pdf.
  */
 export function QuoteResultStep({
   lead,
@@ -98,6 +99,7 @@ export function QuoteResultStep({
 
   const handlePhotoChange = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
+    event.target.value = '';
     if (!file) return;
     triggerHapticFeedback(15);
     try {
@@ -125,7 +127,7 @@ export function QuoteResultStep({
 
     if (cleanDigits.length < 8) {
       setPhoneError(
-        'Completá tu número de WhatsApp sin 0 ni 15 (ej: 3875123456).'
+        'Completá tu número de WhatsApp con característica (ej: 3875123456).'
       );
       if (!firstInvalidInput) {
         firstInvalidInput = phoneInputRef.current;
@@ -182,7 +184,9 @@ export function QuoteResultStep({
               className="h-7 w-auto object-contain select-none"
             />
             <span className="font-brand-heading text-base tracking-tight text-[var(--brand-text)]">
-              <span className="font-light text-[#68A868]">Optica </span>
+              <span className="font-normal text-[var(--brand-optica-word)]">
+                Optica{' '}
+              </span>
               <span className="font-semibold text-[var(--brand-accent-foreground)]">
                 Profesional
               </span>
@@ -202,7 +206,7 @@ export function QuoteResultStep({
           </p>
         </div>
 
-        {/* Grilla de 2 Opciones lado a lado (grid-cols-2 gap-3) con precios exactos en vivo */}
+        {/* Grilla de 2 Opciones lado a lado (grid-cols-2 gap-3) con precios alineados simétricamente */}
         <div className="grid grid-cols-2 gap-3 pt-1">
           {(
             [
@@ -226,6 +230,7 @@ export function QuoteResultStep({
               <button
                 key={tier}
                 type="button"
+                aria-pressed={isSelected}
                 onClick={() => {
                   triggerHapticFeedback(10);
                   setSelectedTier(tier);
@@ -250,11 +255,11 @@ export function QuoteResultStep({
                           : 'border-[var(--brand-border)] bg-[var(--brand-surface)]'
                       )}
                     >
-                      {isSelected && <Check className="h-3 w-3 stroke-[3]" />}
+                      {isSelected && <Check weight="bold" className="h-3 w-3" />}
                     </div>
                   </div>
 
-                  <p className="font-brand-heading text-[13.5px] sm:text-[14.5px] font-semibold text-[var(--brand-text)] leading-snug">
+                  <p className="font-brand-heading min-h-[38px] line-clamp-2 text-[13.5px] sm:text-[14.5px] font-semibold text-[var(--brand-text)] leading-snug">
                     {lens.commercialName}
                   </p>
 
@@ -282,44 +287,51 @@ export function QuoteResultStep({
                 key={pref}
                 className="inline-flex items-center gap-1 rounded-lg bg-[var(--brand-surface-elevated)] border border-[var(--brand-border)] px-2.5 py-1 text-[11px] font-medium text-[var(--brand-accent-foreground)]"
               >
-                <ShieldCheck className="h-3 w-3 text-[#336699]" />
+                <ShieldCheck
+                  weight="duotone"
+                  className="h-3.5 w-3.5 text-[var(--brand-icon-primary)]"
+                />
                 {BUDGET_BADGE_LABELS[pref]}
               </span>
             ))}
           </div>
 
-          {answers.prescriptionPhotoDataUrl ? (
-            <div className="flex items-center gap-2 rounded-xl bg-[var(--brand-accent)] border border-[var(--brand-accent-border)] px-2.5 py-1.5 w-full sm:w-auto justify-between">
-              <div className="flex items-center gap-2 min-w-0">
-                <img
-                  src={answers.prescriptionPhotoDataUrl}
-                  alt="Receta adjunta"
-                  className="h-8 w-8 rounded-md object-cover border border-[#336699]/30 shrink-0"
-                />
-                <div className="min-w-0">
-                  <p className="text-[11px] font-semibold text-[var(--brand-text)]">
-                    Foto de receta cargada
-                  </p>
-                  <p className="font-mono text-[10px] text-[var(--brand-text-muted)] truncate max-w-[150px]">
-                    {answers.prescriptionPhotoName ?? 'receta.jpg'}
-                  </p>
+          {answers.prescriptionPhotoDataUrl || answers.prescriptionPhotoName ? (
+            <div className="flex flex-col gap-1.5 rounded-xl bg-[var(--brand-accent)] border border-[var(--brand-accent-border)] p-2.5 w-full">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  {answers.prescriptionPhotoDataUrl ? (
+                    <img
+                      src={answers.prescriptionPhotoDataUrl}
+                      alt="Receta adjunta"
+                      className="h-9 w-9 rounded-md object-cover border border-[#336699]/30 shrink-0"
+                    />
+                  ) : null}
+                  <div className="min-w-0">
+                    <p className="text-[11.5px] font-semibold text-[var(--brand-text)]">
+                      Foto de receta lista ({answers.prescriptionPhotoName ?? 'receta.jpg'})
+                    </p>
+                    <p className="text-[11px] text-[var(--brand-text-muted)] leading-snug">
+                      Al abrirse WhatsApp podés enviarla directamente en el chat.
+                    </p>
+                  </div>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="min-h-[36px] px-2 text-[11px] font-semibold text-[var(--brand-accent-foreground)] underline cursor-pointer shrink-0"
+                >
+                  Cambiar
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className="text-[11px] font-semibold text-[var(--brand-accent-foreground)] underline cursor-pointer shrink-0 ml-2"
-              >
-                Cambiar
-              </button>
             </div>
           ) : (
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-dashed border-[#336699]/60 bg-[var(--brand-surface)] px-2.5 py-1 text-[11px] font-semibold text-[var(--brand-accent-foreground)] hover:bg-[var(--brand-surface-elevated)] transition-colors cursor-pointer"
+              className="inline-flex min-h-[36px] items-center gap-1.5 rounded-lg border border-dashed border-[#336699]/60 bg-[var(--brand-surface)] px-3 py-1.5 text-[11px] font-semibold text-[var(--brand-accent-foreground)] hover:bg-[var(--brand-surface-elevated)] transition-colors cursor-pointer"
             >
-              <Camera className="h-3.5 w-3.5" />
+              <Camera weight="duotone" className="h-4 w-4" />
               <span>¿Querés sumar foto de tu receta?</span>
             </button>
           )}
@@ -393,12 +405,14 @@ export function QuoteResultStep({
                 </label>
                 <div className="relative">
                   <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
-                    <User className="h-4 w-4" />
+                    <User weight="duotone" className="h-4 w-4" />
                   </div>
                   <input
                     ref={nameInputRef}
                     id="coupon-fullname"
                     type="text"
+                    aria-invalid={Boolean(nameError)}
+                    aria-describedby={nameError ? 'coupon-fullname-error' : undefined}
                     value={fullName}
                     onChange={(e) => {
                       setFullName(e.target.value);
@@ -417,6 +431,7 @@ export function QuoteResultStep({
                 </div>
                 {nameError ? (
                   <p
+                    id="coupon-fullname-error"
                     role="alert"
                     className="mt-1 rounded-lg bg-rose-500/20 border border-rose-400/50 px-2.5 py-1 text-xs font-medium text-rose-200"
                   >
@@ -437,13 +452,15 @@ export function QuoteResultStep({
                 </label>
                 <div className="relative">
                   <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
-                    <Phone className="h-4 w-4" />
+                    <Phone weight="duotone" className="h-4 w-4" />
                   </div>
                   <input
                     ref={phoneInputRef}
                     id="coupon-whatsapp"
                     type="tel"
                     inputMode="tel"
+                    aria-invalid={Boolean(phoneError)}
+                    aria-describedby={phoneError ? 'coupon-whatsapp-error' : undefined}
                     value={whatsapp}
                     onChange={(e) => {
                       setWhatsapp(e.target.value);
@@ -462,6 +479,7 @@ export function QuoteResultStep({
                 </div>
                 {phoneError ? (
                   <p
+                    id="coupon-whatsapp-error"
                     role="alert"
                     className="mt-1 rounded-lg bg-rose-500/20 border border-rose-400/50 px-2.5 py-1 text-xs font-medium text-rose-200"
                   >
@@ -483,7 +501,7 @@ export function QuoteResultStep({
                     ? 'Activando tu certificado...'
                     : 'Quiero aprovechar mi beneficio'}
                 </span>
-                <ArrowRight className="h-4 w-4 text-[#336699]" />
+                <ArrowRight weight="bold" className="h-4 w-4 text-[#336699]" />
               </button>
             </div>
           </form>
@@ -496,9 +514,9 @@ export function QuoteResultStep({
         <button
           type="button"
           onClick={onResetWizard}
-          className="inline-flex items-center gap-1.5 font-semibold text-[#336699] hover:underline cursor-pointer"
+          className="inline-flex min-h-[38px] items-center gap-1.5 px-2 font-semibold text-[var(--brand-icon-primary)] hover:underline cursor-pointer"
         >
-          <RotateCcw className="h-3.5 w-3.5" />
+          <ArrowCounterClockwise weight="bold" className="h-3.5 w-3.5" />
           <span>Volver a empezar</span>
         </button>
       </div>

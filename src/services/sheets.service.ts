@@ -7,6 +7,7 @@ import type {
   LensCatalogItem,
   OpticalRecommendationResult,
 } from '../types/optical.types';
+import { parseFlexibleARSPrice } from '../utils/formatters';
 
 const CATALOG_CACHE_STORAGE_KEY = 'optica_profesional_catalog_cache_v2';
 
@@ -161,8 +162,8 @@ function mergeRemotePricesIntoCatalog(
       return baseItem;
     }
 
-    const priceStock = Number(remote.priceStockARS);
-    const priceLab = Number(remote.priceLabARS);
+    const priceStock = parseFlexibleARSPrice(remote.priceStockARS);
+    const priceLab = parseFlexibleARSPrice(remote.priceLabARS);
     const warranty = Number(remote.warrantyMonths);
 
     return {
@@ -354,6 +355,7 @@ export async function submitLeadToGoogleSheets(
         'Content-Type': 'text/plain;charset=utf-8',
       },
       body,
+      keepalive: body.length < 60000,
       signal: controller.signal,
     });
 

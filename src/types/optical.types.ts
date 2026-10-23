@@ -197,7 +197,7 @@ export interface LeadContactData {
   readonly passportCode?: string;
 }
 
-export type WizardStepType = 'WELCOME' | 'QUESTIONS' | 'LEAD_CAPTURE' | 'QUOTE_RESULT';
+export type WizardStepType = 'QUESTIONS' | 'QUOTE_RESULT';
 
 export type WizardStateDiscriminated =
   | {

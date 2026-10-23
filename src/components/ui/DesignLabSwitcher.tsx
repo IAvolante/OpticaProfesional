@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   CaretDown,
   MoonStars,
@@ -34,6 +34,17 @@ export function DesignLabSwitcher({
 }: DesignLabSwitcherProps) {
   const [isExpanded, setIsExpanded] = useState<boolean>(false);
 
+  useEffect(() => {
+    if (!isExpanded) return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsExpanded(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isExpanded]);
+
   const currentThemePreset =
     BRAND_THEME_PRESETS.find((t) => t.id === activeTheme) ??
     BRAND_THEME_PRESETS[0];
@@ -44,16 +55,17 @@ export function DesignLabSwitcher({
   return (
     <aside
       aria-label="Laboratorio de Dirección de Arte (Design Lab)"
-      className="fixed bottom-3 right-3 z-50 max-w-[calc(100vw-1.5rem)] sm:max-w-[350px]"
+      className="fixed left-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-50 max-w-[calc(100vw-1.5rem)] sm:max-w-[350px]"
     >
       {!isExpanded ? (
         <button
           type="button"
+          aria-expanded={false}
           onClick={() => {
             triggerHapticFeedback(8);
             setIsExpanded(true);
           }}
-          className="flex items-center gap-2 rounded-full border border-[#99CC99]/60 bg-[#0B1929]/95 px-3.5 py-2 text-xs font-semibold text-white shadow-xl backdrop-blur-xl transition-transform hover:scale-[1.02] active:scale-95 cursor-pointer"
+          className="flex min-h-[42px] items-center gap-2 rounded-full border border-[#99CC99]/60 bg-[#0B1929]/95 px-3.5 py-2 text-xs font-semibold text-white shadow-xl backdrop-blur-xl transition-transform hover:scale-[1.02] active:scale-95 cursor-pointer"
         >
           <Palette weight="duotone" className="h-4 w-4 text-[#99CC99]" />
           <span>Design Lab</span>
@@ -82,7 +94,7 @@ export function DesignLabSwitcher({
                 setIsExpanded(false);
               }}
               aria-label="Minimizar Design Lab"
-              className="inline-flex items-center gap-1 rounded-lg bg-white/10 px-2 py-0.5 text-[10px] font-semibold text-slate-200 hover:bg-white/20 cursor-pointer"
+              className="inline-flex min-h-[32px] items-center gap-1 rounded-lg bg-white/10 px-2.5 py-1 text-[11px] font-semibold text-slate-200 hover:bg-white/20 cursor-pointer"
             >
               <span>Cerrar</span>
               <CaretDown weight="bold" className="h-3 w-3" />
@@ -112,12 +124,13 @@ export function DesignLabSwitcher({
                   <button
                     key={preset.id}
                     type="button"
+                    aria-pressed={isSelected}
                     onClick={() => {
                       triggerHapticFeedback(10);
                       onSelectTheme(preset.id);
                     }}
                     className={cn(
-                      'flex flex-col items-start rounded-xl border p-2 text-left transition-all cursor-pointer',
+                      'flex flex-col items-start rounded-xl border p-2.5 text-left transition-all cursor-pointer',
                       isSelected
                         ? 'border-[#99CC99] bg-[#336699]/40 text-white shadow-sm'
                         : 'border-white/10 bg-white/5 text-slate-300 hover:bg-white/10'
@@ -169,12 +182,13 @@ export function DesignLabSwitcher({
                   <button
                     key={font.id}
                     type="button"
+                    aria-pressed={isSelected}
                     onClick={() => {
                       triggerHapticFeedback(10);
                       onSelectFontPair(font.id);
                     }}
                     className={cn(
-                      'flex items-center justify-between rounded-xl border px-2.5 py-1.5 text-left transition-all cursor-pointer',
+                      'flex items-center justify-between rounded-xl border px-2.5 py-2 text-left transition-all cursor-pointer',
                       isSelected
                         ? 'border-[#99CC99] bg-[#336699]/40 text-white'
                         : 'border-white/10 bg-white/5 text-slate-300 hover:bg-white/10'

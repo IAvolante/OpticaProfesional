@@ -11,11 +11,13 @@
  * 1. CLÍNICA LUMINOSA (LIGHT) — ESTÉTICA MÉDICA LUMINOSA (#F4F8FB + #336699 + #99CC99)
  * ============================================================================ */
 :root,
-[data-theme="theme-clinical"] {
+[data-theme="theme-clinical"],
+[data-theme="theme-neutral"],
+[data-theme="theme-boutique"] {
   --brand-canvas: #F4F8FB;
   --brand-surface: #FFFFFF;
   --brand-surface-elevated: #EBF2F8;
-  --brand-header-bg: rgba(255, 255, 255, 0.90);
+  --brand-header-bg: rgba(255, 255, 255, 0.92);
   --brand-primary: #336699;
   --brand-primary-hover: #264F78;
   --brand-primary-foreground: #FFFFFF;
@@ -24,6 +26,7 @@
   --brand-accent: #EFF7EF;
   --brand-accent-border: #99CC99;
   --brand-accent-foreground: #255078;
+  --brand-optica-word: #2F7A43;
   --brand-text: #102336;
   --brand-text-muted: #4A637C;
   --brand-border: #D5E2EE;
@@ -46,18 +49,19 @@
   --brand-canvas: #0A111A;
   --brand-surface: #111C2A;
   --brand-surface-elevated: #172638;
-  --brand-header-bg: rgba(10, 17, 26, 0.88);
+  --brand-header-bg: rgba(10, 17, 26, 0.90);
   --brand-primary: #336699;
   --brand-primary-hover: #427DB8;
   --brand-primary-foreground: #FFFFFF;
   --brand-secondary: #99CC99;
   --brand-secondary-foreground: #0A111A;
-  --brand-accent: rgba(153, 204, 153, 0.14);
-  --brand-accent-border: rgba(153, 204, 153, 0.45);
-  --brand-accent-foreground: #99CC99;
+  --brand-accent: rgba(153, 204, 153, 0.16);
+  --brand-accent-border: rgba(153, 204, 153, 0.50);
+  --brand-accent-foreground: #B4E8B4;
+  --brand-optica-word: #99CC99;
   --brand-text: #F1F5F9;
   --brand-text-muted: #94A3B8;
-  --brand-border: rgba(148, 163, 184, 0.18);
+  --brand-border: rgba(148, 163, 184, 0.20);
   --brand-ring: #99CC99;
   --brand-glow: rgba(153, 204, 153, 0.22);
   --brand-gradient-start: #336699;
@@ -66,8 +70,13 @@
   --brand-badge-stock-text: #6EE7B7;
   --brand-badge-lab-bg: rgba(51, 102, 153, 0.25);
   --brand-badge-lab-text: #93C5FD;
-  --brand-icon-primary: #639CD9;
+  --brand-icon-primary: #7BB0E8;
   --brand-icon-secondary: #99CC99;
+}
+
+/* Realce luminoso sutil para el logo PNG oficial cuando está sobre el Header Oscuro */
+[data-theme="theme-dark-glass"] .brand-header-logo {
+  filter: brightness(1.32) contrast(1.06) drop-shadow(0 0 1px rgba(255, 255, 255, 0.35));
 }
 
 /* ============================================================================
@@ -156,16 +165,16 @@
 
 .optical-duotone-icon-selected svg [opacity="0.2"] {
   fill: #99CC99;
-  opacity: 0.65;
+  opacity: 0.68;
 }
 
-/* Superficie Liquid Glass adaptable a Light y Dark Glass */
+/* Superficie Liquid Glass adaptable a Light y Dark Glass (sin layout shift al activar) */
 .optical-glass-card {
   position: relative;
-  background-color: color-mix(in srgb, var(--brand-surface) 90%, transparent);
-  backdrop-filter: blur(20px) saturate(160%);
-  -webkit-backdrop-filter: blur(20px) saturate(160%);
-  border: 1px solid var(--brand-border);
+  background-color: color-mix(in srgb, var(--brand-surface) 92%, transparent);
+  backdrop-filter: blur(18px) saturate(150%);
+  -webkit-backdrop-filter: blur(18px) saturate(150%);
+  border: 1.5px solid var(--brand-border);
   box-shadow:
     0 10px 30px -10px rgba(15, 23, 42, 0.12),
     inset 0 1px 0 0 rgba(255, 255, 255, 0.14);
@@ -174,15 +183,19 @@
 /* Tarjeta Activa con Halo Bicolor */
 .optical-glass-card-active {
   background-color: color-mix(in srgb, var(--brand-accent) 92%, var(--brand-surface));
-  border: 2px solid var(--brand-primary);
+  border: 1.5px solid var(--brand-primary);
   box-shadow:
+    0 0 0 1px var(--brand-primary),
     0 10px 26px -6px var(--brand-glow),
     inset 0 1px 0 0 rgba(255, 255, 255, 0.18);
 }
 
 [data-theme="theme-dark-glass"] .optical-glass-card-active {
-  background-color: rgba(23, 38, 56, 0.94);
-  border: 2px solid #99CC99;
+  background-color: rgba(23, 38, 56, 0.95);
+  border: 1.5px solid #99CC99;
+  box-shadow:
+    0 0 0 1px rgba(153, 204, 153, 0.55),
+    0 10px 26px -6px var(--brand-glow);
 }
 
 /* Botón Principal con Gradiente Clínico y Brillo Superior */
