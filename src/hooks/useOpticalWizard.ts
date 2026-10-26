@@ -456,24 +456,56 @@ export function useOpticalWizard({
         prescriptionPhotoName: snapshot.answers.prescriptionPhotoName,
       };
 
+      const hasPhotoData = Boolean(
+        snapshot.answers.prescriptionPhotoDataUrl &&
+          snapshot.answers.prescriptionPhotoDataUrl.length > 50
+      );
+
+      let uploadedPhotoUrl: string | undefined;
+
+      if (hasPhotoData) {
+        // Si el cliente adjuntó foto de su receta, esperamos hasta 4s para guardarla en Google Drive
+        // y obtener el link público así viaja tanto en Google Sheets como en el mensaje de WhatsApp
+        const submitResult = await submitLeadToGoogleSheets({
+          leadId,
+          lead: leadData,
+          answers: snapshot.answers,
+          recommendation,
+          selectedTier,
+          activeTheme,
+        });
+        uploadedPhotoUrl = submitResult.uploadedPhotoUrl;
+      } else {
+        // Si no adjuntó foto, enviamos a Google Sheets en segundo plano y abrimos WhatsApp en el acto
+        void submitLeadToGoogleSheets({
+          leadId,
+          lead: leadData,
+          answers: snapshot.answers,
+          recommendation,
+          selectedTier,
+          activeTheme,
+        });
+      }
+
+      const finalLead: LeadContactData = {
+        ...leadData,
+        prescriptionPhotoRemoteUrl: uploadedPhotoUrl,
+      };
+
+      const finalAnswers: CompletedOpticalAnswers = {
+        ...snapshot.answers,
+        prescriptionPhotoRemoteUrl: uploadedPhotoUrl,
+      };
+
       setSnapshot((prev) => ({
         ...prev,
-        lead: leadData,
+        lead: finalLead,
+        answers: finalAnswers,
       }));
 
-      // Disparamos el registro hacia Google Sheets en segundo plano (sin bloquear la apertura inmediata de WhatsApp)
-      void submitLeadToGoogleSheets({
-        leadId,
-        lead: leadData,
-        answers: snapshot.answers,
-        recommendation,
-        selectedTier,
-        activeTheme,
-      });
-
       const whatsappUrl = buildWhatsAppDeepLink({
-        lead: leadData,
-        answers: snapshot.answers,
+        lead: finalLead,
+        answers: finalAnswers,
         recommendation,
         selectedLensType: selectedTier,
       });

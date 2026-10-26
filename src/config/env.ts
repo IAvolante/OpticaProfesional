@@ -46,7 +46,10 @@ export const ENV_CONFIG: AppEnvConfig = {
   cityAndProvince: 'Salta Capital, Argentina',
   whatsappNumberB2C: readEnvString('VITE_WHATSAPP_NUMBER_B2C', '5493875164050'),
   whatsappNumberB2B: readEnvString('VITE_WHATSAPP_NUMBER_B2B', '5493875164050'),
-  googleSheetsWebAppUrl: readEnvString('VITE_GOOGLE_SHEETS_WEBAPP_URL', ''),
+  googleSheetsWebAppUrl: readEnvString(
+    'VITE_GOOGLE_SHEETS_WEBAPP_URL',
+    'https://script.google.com/macros/s/AKfycbyMtqUv5aprawD7AacE_fPAcX8Fy5N7LpR_o3M5nCnscOXQ7-VZKH1L0gtuhiZhIt3I/exec'
+  ),
   metaPixelId: readEnvString('VITE_META_PIXEL_ID', '1815663315407962'),
   defaultTheme: isValidBrandThemeId(rawTheme) ? rawTheme : 'theme-clinical',
   isDevelopment: Boolean(import.meta.env.DEV),

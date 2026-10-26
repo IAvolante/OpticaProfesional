@@ -17,7 +17,7 @@ export interface WhatsAppMessagePayload {
   readonly selectedLensType?: 'PRIMARY' | 'ALTERNATIVE';
 }
 
-const IMPROVEMENT_GOAL_LABELS: Record<ImprovementGoalAnswer, string> = {
+export const IMPROVEMENT_GOAL_LABELS: Record<ImprovementGoalAnswer, string> = {
   organico_ar: 'Ver con mayor nitidez (ORGÁNICO AR)',
   organico_blue_ar:
     'Sentir mayor comodidad visual cuando uso pantallas (ORGÁNICO BLUE AR)',
@@ -29,21 +29,21 @@ const IMPROVEMENT_GOAL_LABELS: Record<ImprovementGoalAnswer, string> = {
     'Manejar mejor, reflejos o molestias del sol (ORGÁNICO CON FILTRO O FOTOCROMÁTICO)',
 };
 
-const ACTIVITY_CONTEXT_LABELS: Record<ActivityContextAnswer, string> = {
+export const ACTIVITY_CONTEXT_LABELS: Record<ActivityContextAnswer, string> = {
   computadora_celular: 'Trabajando con la computadora o usando el celular',
   lectura_cerca: 'Leyendo o realizando tareas de cerca',
   manejando_aire_libre: 'Manejando o realizando actividades al aire libre',
   actividades_diarias: 'En todas mis actividades diarias',
 };
 
-const CLIENT_PRIORITY_LABELS: Record<ClientPriorityAnswer, string> = {
+export const CLIENT_PRIORITY_LABELS: Record<ClientPriorityAnswer, string> = {
   precio: 'Equilibrio entre calidad y precio (PRECIO)',
   tecnologia: 'Últimas tecnologías del mercado (TECNOLOGÍA)',
   moda: 'Que combinen con mi estilo y se vean bien estéticamente (MODA)',
   solucion: 'Resolver mi necesidad visual de forma práctica (SOLUCIÓN)',
 };
 
-const BUDGET_PREFERENCE_LABELS: Record<BudgetPreferenceAnswer, string> = {
+export const BUDGET_PREFERENCE_LABELS: Record<BudgetPreferenceAnswer, string> = {
   tengo_obra_social: 'Tengo obra social',
   soy_particular: 'Soy particular',
   interes_cuotas_tarjeta: 'Me interesa conocer cuotas según mi tarjeta',

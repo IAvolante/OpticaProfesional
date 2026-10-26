@@ -8,6 +8,12 @@ import type {
   OpticalRecommendationResult,
 } from '../types/optical.types';
 import { parseFlexibleARSPrice } from '../utils/formatters';
+import {
+  ACTIVITY_CONTEXT_LABELS,
+  BUDGET_PREFERENCE_LABELS,
+  CLIENT_PRIORITY_LABELS,
+  IMPROVEMENT_GOAL_LABELS,
+} from '../utils/whatsapp.encoder';
 
 const CATALOG_CACHE_STORAGE_KEY = 'optica_profesional_catalog_cache_v2';
 
@@ -319,12 +325,21 @@ export async function submitLeadToGoogleSheets(
         ? payload.recommendation.alternativeOption
         : payload.recommendation.primaryOption;
 
+    const step4Labels =
+      payload.answers.budgetPreferences.length > 0
+        ? payload.answers.budgetPreferences
+            .map((item) => BUDGET_PREFERENCE_LABELS[item])
+            .join(' + ')
+        : 'Soy particular';
+
     const body = JSON.stringify({
       leadId: payload.leadId,
       passportCode: payload.lead.passportCode ?? payload.leadId,
       fullName: payload.lead.fullName,
       whatsapp: payload.lead.whatsapp,
-      selectedTier: payload.selectedTier,
+      whatsappLink: `https://wa.me/549${payload.lead.whatsapp}`,
+      selectedTier:
+        payload.selectedTier === 'ALTERNATIVE' ? 'Opción 2' : 'Opción 1',
       selectedSku: chosenOption.sku,
       selectedCommercialName: chosenOption.commercialName,
       selectedPriceARS: chosenOption.priceStockARS,
@@ -333,12 +348,21 @@ export async function submitLeadToGoogleSheets(
       priceStockARS: payload.recommendation.primaryOption.priceStockARS,
       alternativeSku: payload.recommendation.alternativeOption.sku,
       alternativeName: payload.recommendation.alternativeOption.commercialName,
-      alternativePriceARS: payload.recommendation.alternativeOption.priceStockARS,
+      alternativePriceARS:
+        payload.recommendation.alternativeOption.priceStockARS,
       improvementGoal: payload.answers.improvementGoal,
+      step1Label: IMPROVEMENT_GOAL_LABELS[payload.answers.improvementGoal],
       activityContext: payload.answers.activityContext,
+      step2Label: ACTIVITY_CONTEXT_LABELS[payload.answers.activityContext],
       clientPriority: payload.answers.clientPriority,
+      step3Label: CLIENT_PRIORITY_LABELS[payload.answers.clientPriority],
       budgetPreferences: payload.answers.budgetPreferences.join(', '),
+      step4Label: step4Labels,
       prescriptionAttachment: payload.answers.prescriptionAttachment,
+      step5Label:
+        payload.answers.prescriptionAttachment === 'cargar_foto_receta'
+          ? 'Adjuntó foto de receta'
+          : 'Aún no tiene la receta',
       prescriptionPhotoName: payload.answers.prescriptionPhotoName ?? '',
       prescriptionPhotoBase64: payload.answers.prescriptionPhotoDataUrl ?? '',
       warrantyBenefit: 'CERTIFICADO RECAMBIO 12 MESES GRATIS',
