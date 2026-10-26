@@ -74,6 +74,7 @@ function inicializarPlanillaCRM() {
   const statusRule = SpreadsheetApp.newDataValidation()
     .requireValueInList(
       [
+        'Vio precios (Sin completar datos)',
         'Pendiente de contacto',
         'Contactado por WhatsApp',
         'Esperando receta',
@@ -277,13 +278,20 @@ function doPost(e) {
     }
 
     const passportCode = String(data.passportCode || data.leadId || 'OP-2026');
-    const fullName = String(data.fullName || '').trim();
-    const whatsapp = String(data.whatsapp || '').trim();
-    const whatsappLink = data.whatsappLink || ('https://wa.me/549' + whatsapp);
+    const isAnonymousPreview = data.stage === 'QUOTE_VIEWED' || !data.whatsapp || data.whatsapp === '-';
+    const leadStatus = String(
+      data.leadStatus ||
+      (isAnonymousPreview ? 'Vio precios (Sin completar datos)' : 'Pendiente de contacto')
+    );
+    const fullName = String(data.fullName || '⏳ Vio precios (Sin completar datos)').trim();
+    const whatsapp = String(data.whatsapp || '-').trim();
+    const whatsappLink = isAnonymousPreview
+      ? 'Completó las 5 preguntas (Sin WhatsApp)'
+      : (data.whatsappLink || ('https://wa.me/549' + whatsapp));
 
     // Si viene foto en Base64, la guardamos en Google Drive y obtenemos su URL
-    let uploadedPhotoUrl = '';
-    if (data.prescriptionPhotoBase64) {
+    let uploadedPhotoUrl = String(data.prescriptionPhotoUrl || '').trim();
+    if (!uploadedPhotoUrl && data.prescriptionPhotoBase64) {
       uploadedPhotoUrl = guardarRecetaEnDrive_(
         data.prescriptionPhotoBase64,
         data.prescriptionPhotoName,
@@ -298,9 +306,35 @@ function doPost(e) {
       'dd/MM/yyyy HH:mm:ss'
     );
 
-    const newRow = [
+    const originNote = data.utmSource && data.utmSource !== 'direct'
+      ? ('Origen: ' + String(data.utmSource))
+      : '';
+
+    // Buscar si ya existe una fila con este código de sesión (#OP-XXXX) en la Columna C (índice 3)
+    const lastRow = sheet.getLastRow();
+    let existingRowIndex = -1;
+    let existingPhotoUrl = '';
+    let existingNotes = '';
+
+    if (lastRow >= 2) {
+      const codesRange = sheet.getRange(2, 3, lastRow - 1, 1).getValues();
+      for (let i = 0; i < codesRange.length; i++) {
+        if (String(codesRange[i][0] || '').trim() === passportCode) {
+          existingRowIndex = i + 2;
+          existingPhotoUrl = String(sheet.getRange(existingRowIndex, 14).getValue() || '').trim();
+          existingNotes = String(sheet.getRange(existingRowIndex, 19).getValue() || '').trim();
+          break;
+        }
+      }
+    }
+
+    const finalPhotoCell =
+      uploadedPhotoUrl ||
+      (existingPhotoUrl && existingPhotoUrl !== 'Sin foto adjunta' ? existingPhotoUrl : 'Sin foto adjunta');
+
+    const rowValues = [
       formattedDate,                                              // 1. Fecha y Hora
-      'Pendiente de contacto',                                    // 2. Estado de Seguimiento
+      leadStatus,                                                 // 2. Estado de Seguimiento
       passportCode,                                               // 3. Certificado 12 Meses
       fullName,                                                   // 4. Nombre y Apellido
       whatsapp,                                                   // 5. WhatsApp
@@ -312,20 +346,25 @@ function doPost(e) {
       String(data.step3Label || data.clientPriority || ''),       // 11. Paso 3: Prioridad
       String(data.step4Label || data.budgetPreferences || ''),    // 12. Paso 4: Obra Social / Financiación
       String(data.step5Label || data.prescriptionAttachment || ''), // 13. Paso 5: ¿Adjuntó Receta?
-      uploadedPhotoUrl || 'Sin foto adjunta',                     // 14. Link Foto de Receta (Google Drive)
+      finalPhotoCell,                                             // 14. Link Foto de Receta (Google Drive)
       String(data.primaryName || ''),                             // 15. Opción 1 Cotizada
       Number(data.priceStockARS || 0),                            // 16. Precio Opción 1
       String(data.alternativeName || ''),                         // 17. Opción 2 Cotizada
       Number(data.alternativePriceARS || 0),                      // 18. Precio Opción 2
-      ''                                                          // 19. Notas Internas Óptica
+      existingNotes || originNote                                 // 19. Notas Internas Óptica / Origen
     ];
 
-    sheet.appendRow(newRow);
+    if (existingRowIndex > 0) {
+      sheet.getRange(existingRowIndex, 1, 1, rowValues.length).setValues([rowValues]);
+    } else {
+      sheet.appendRow(rowValues);
+    }
 
     return respuestaJson_({
       ok: true,
+      updatedExistingRow: existingRowIndex > 0,
       leadId: passportCode,
-      photoUrl: uploadedPhotoUrl || undefined
+      photoUrl: uploadedPhotoUrl || (existingPhotoUrl !== 'Sin foto adjunta' ? existingPhotoUrl : undefined)
     });
   } catch (err) {
     return respuestaJson_({

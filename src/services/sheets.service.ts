@@ -51,6 +51,8 @@ export interface FetchCatalogResult {
   readonly updatedAtISO: string;
 }
 
+export type LeadSubmissionStage = 'QUOTE_VIEWED' | 'LEAD_SUBMITTED';
+
 export interface SubmitLeadToSheetsPayload {
   readonly leadId: string;
   readonly lead: LeadContactData;
@@ -58,6 +60,7 @@ export interface SubmitLeadToSheetsPayload {
   readonly recommendation: OpticalRecommendationResult;
   readonly selectedTier: 'PRIMARY' | 'ALTERNATIVE';
   readonly activeTheme: BrandThemeId;
+  readonly stage?: LeadSubmissionStage;
 }
 
 export interface SubmitLeadToSheetsResult {
@@ -320,6 +323,10 @@ export async function submitLeadToGoogleSheets(
   }, Math.max(ENV_CONFIG.fetchTimeoutMs, 6500));
 
   try {
+    const stage: LeadSubmissionStage = payload.stage ?? 'LEAD_SUBMITTED';
+    const isAnonymousPreview =
+      stage === 'QUOTE_VIEWED' || !payload.lead.whatsapp.trim();
+
     const chosenOption =
       payload.selectedTier === 'ALTERNATIVE'
         ? payload.recommendation.alternativeOption
@@ -332,14 +339,30 @@ export async function submitLeadToGoogleSheets(
             .join(' + ')
         : 'Soy particular';
 
+    const alreadyUploadedUrl =
+      payload.answers.prescriptionPhotoRemoteUrl ??
+      payload.lead.prescriptionPhotoRemoteUrl ??
+      '';
+
     const body = JSON.stringify({
+      stage,
+      leadStatus: isAnonymousPreview
+        ? 'Vio precios (Sin completar datos)'
+        : 'Pendiente de contacto',
       leadId: payload.leadId,
       passportCode: payload.lead.passportCode ?? payload.leadId,
-      fullName: payload.lead.fullName,
-      whatsapp: payload.lead.whatsapp,
-      whatsappLink: `https://wa.me/549${payload.lead.whatsapp}`,
-      selectedTier:
-        payload.selectedTier === 'ALTERNATIVE' ? 'Opción 2' : 'Opción 1',
+      fullName: isAnonymousPreview
+        ? '⏳ Vio precios (Sin completar datos)'
+        : payload.lead.fullName,
+      whatsapp: isAnonymousPreview ? '-' : payload.lead.whatsapp,
+      whatsappLink: isAnonymousPreview
+        ? 'Completó las 5 preguntas (Sin WhatsApp)'
+        : `https://wa.me/549${payload.lead.whatsapp}`,
+      selectedTier: isAnonymousPreview
+        ? 'Viendo cotización'
+        : payload.selectedTier === 'ALTERNATIVE'
+          ? 'Opción 2'
+          : 'Opción 1',
       selectedSku: chosenOption.sku,
       selectedCommercialName: chosenOption.commercialName,
       selectedPriceARS: chosenOption.priceStockARS,
@@ -364,13 +387,16 @@ export async function submitLeadToGoogleSheets(
           ? 'Adjuntó foto de receta'
           : 'Aún no tiene la receta',
       prescriptionPhotoName: payload.answers.prescriptionPhotoName ?? '',
-      prescriptionPhotoBase64: payload.answers.prescriptionPhotoDataUrl ?? '',
+      prescriptionPhotoUrl: alreadyUploadedUrl,
+      prescriptionPhotoBase64: alreadyUploadedUrl
+        ? ''
+        : (payload.answers.prescriptionPhotoDataUrl ?? ''),
       warrantyBenefit: 'CERTIFICADO RECAMBIO 12 MESES GRATIS',
       activeTheme: payload.activeTheme,
       utmSource:
         typeof window !== 'undefined' && window.location.search
           ? window.location.search
-          : 'direct',
+          : 'Tráfico Directo / Orgánico',
     });
 
     const response = await fetch(endpoint, {

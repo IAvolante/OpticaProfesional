@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { OPTICAL_WIZARD_QUESTIONS } from '../data/questions.data';
 import { calculateOpticalRecommendation } from '../services/recommendation.engine';
 import { submitLeadToGoogleSheets } from '../services/sheets.service';
@@ -170,6 +170,7 @@ export function useOpticalWizard({
     loadInitialSnapshot()
   );
   const [isSubmittingLead, setIsSubmittingLead] = useState<boolean>(false);
+  const trackedQuoteKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -309,10 +310,20 @@ export function useOpticalWizard({
               currency: 'ARS',
             });
 
+            const sessionPassportCode =
+              prev.lead?.passportCode ?? generateLeadId();
+
             return {
               ...prev,
               step: 'QUOTE_RESULT',
               answers: ensuredAnswers,
+              lead: prev.lead
+                ? { ...prev.lead, passportCode: sessionPassportCode }
+                : {
+                    fullName: '',
+                    whatsapp: '',
+                    passportCode: sessionPassportCode,
+                  },
             };
           }
         }
@@ -365,6 +376,7 @@ export function useOpticalWizard({
           prescriptionAttachment: 'cargar_foto_receta',
           prescriptionPhotoName: fileName,
           prescriptionPhotoDataUrl: dataUrl,
+          prescriptionPhotoRemoteUrl: undefined,
         };
 
         if (isCompletedAnswers(updatedAnswers) && prev.step !== 'QUOTE_RESULT') {
@@ -384,15 +396,104 @@ export function useOpticalWizard({
           });
         }
 
+        const sessionPassportCode =
+          prev.lead?.passportCode ?? generateLeadId();
+
         return {
           ...prev,
           step: 'QUOTE_RESULT',
           answers: updatedAnswers,
+          lead: prev.lead
+            ? {
+                ...prev.lead,
+                passportCode: sessionPassportCode,
+                prescriptionPhotoName: fileName,
+                prescriptionPhotoRemoteUrl: undefined,
+              }
+            : {
+                fullName: '',
+                whatsapp: '',
+                passportCode: sessionPassportCode,
+                prescriptionPhotoName: fileName,
+              },
         };
       });
     },
     [catalogItems]
   );
+
+  // Registro automático en Google Sheets apenas el usuario termina las 5 preguntas y llega al Paso 6 (viendo precios),
+  // incluso si luego abandona la página sin completar su Nombre y WhatsApp.
+  useEffect(() => {
+    if (
+      snapshot.step !== 'QUOTE_RESULT' ||
+      !isCompletedAnswers(snapshot.answers) ||
+      !recommendation
+    ) {
+      return;
+    }
+
+    // Si ya completó su WhatsApp en esta sesión, no enviamos el estado preliminar
+    if (snapshot.lead?.whatsapp && snapshot.lead.whatsapp.trim().length > 0) {
+      return;
+    }
+
+    const sessionPassportCode =
+      snapshot.lead?.passportCode ?? generateLeadId();
+    const photoSignature = snapshot.answers.prescriptionPhotoName ?? 'no-rx';
+    const quoteTrackingKey = `${sessionPassportCode}::${photoSignature}`;
+
+    if (trackedQuoteKeyRef.current === quoteTrackingKey) {
+      return;
+    }
+    trackedQuoteKeyRef.current = quoteTrackingKey;
+
+    const previewLead: LeadContactData = {
+      fullName: snapshot.lead?.fullName ?? '',
+      whatsapp: snapshot.lead?.whatsapp ?? '',
+      passportCode: sessionPassportCode,
+      prescriptionPhotoName: snapshot.answers.prescriptionPhotoName,
+      prescriptionPhotoRemoteUrl: snapshot.answers.prescriptionPhotoRemoteUrl,
+    };
+
+    void submitLeadToGoogleSheets({
+      stage: 'QUOTE_VIEWED',
+      leadId: sessionPassportCode,
+      lead: previewLead,
+      answers: snapshot.answers,
+      recommendation,
+      selectedTier: 'PRIMARY',
+      activeTheme,
+    }).then((result) => {
+      if (result.uploadedPhotoUrl) {
+        setSnapshot((prev) => ({
+          ...prev,
+          lead: prev.lead
+            ? {
+                ...prev.lead,
+                passportCode: sessionPassportCode,
+                prescriptionPhotoRemoteUrl: result.uploadedPhotoUrl,
+              }
+            : {
+                fullName: '',
+                whatsapp: '',
+                passportCode: sessionPassportCode,
+                prescriptionPhotoRemoteUrl: result.uploadedPhotoUrl,
+              },
+          answers: {
+            ...prev.answers,
+            prescriptionPhotoRemoteUrl: result.uploadedPhotoUrl,
+          },
+        }));
+      }
+    });
+  }, [
+    snapshot.step,
+    snapshot.answers,
+    snapshot.lead,
+    recommendation,
+    activeTheme,
+  ]);
 
   const goToPreviousStep = useCallback(() => {
     setSnapshot((prev) => {
@@ -449,24 +550,30 @@ export function useOpticalWizard({
         status: snapshot.answers.prescriptionAttachment,
       });
 
+      const alreadyUploadedUrl =
+        snapshot.answers.prescriptionPhotoRemoteUrl ??
+        snapshot.lead?.prescriptionPhotoRemoteUrl;
+
       const leadData: LeadContactData = {
         fullName,
         whatsapp,
         passportCode: leadId,
         prescriptionPhotoName: snapshot.answers.prescriptionPhotoName,
+        prescriptionPhotoRemoteUrl: alreadyUploadedUrl,
       };
 
-      const hasPhotoData = Boolean(
-        snapshot.answers.prescriptionPhotoDataUrl &&
+      const hasUnuploadedPhotoData = Boolean(
+        !alreadyUploadedUrl &&
+          snapshot.answers.prescriptionPhotoDataUrl &&
           snapshot.answers.prescriptionPhotoDataUrl.length > 50
       );
 
-      let uploadedPhotoUrl: string | undefined;
+      let uploadedPhotoUrl: string | undefined = alreadyUploadedUrl;
 
-      if (hasPhotoData) {
-        // Si el cliente adjuntó foto de su receta, esperamos hasta 4s para guardarla en Google Drive
-        // y obtener el link público así viaja tanto en Google Sheets como en el mensaje de WhatsApp
+      if (hasUnuploadedPhotoData) {
+        // Si la foto aún no terminó de subirse en segundo plano, esperamos hasta 4s para obtener el link
         const submitResult = await submitLeadToGoogleSheets({
+          stage: 'LEAD_SUBMITTED',
           leadId,
           lead: leadData,
           answers: snapshot.answers,
@@ -474,10 +581,11 @@ export function useOpticalWizard({
           selectedTier,
           activeTheme,
         });
-        uploadedPhotoUrl = submitResult.uploadedPhotoUrl;
+        uploadedPhotoUrl = submitResult.uploadedPhotoUrl ?? alreadyUploadedUrl;
       } else {
-        // Si no adjuntó foto, enviamos a Google Sheets en segundo plano y abrimos WhatsApp en el acto
+        // Enviamos los datos finales del cliente (Nombre, WhatsApp y Opción elegida) en segundo plano y abrimos WhatsApp en el acto
         void submitLeadToGoogleSheets({
+          stage: 'LEAD_SUBMITTED',
           leadId,
           lead: leadData,
           answers: snapshot.answers,
@@ -517,6 +625,7 @@ export function useOpticalWizard({
   );
 
   const resetWizard = useCallback(() => {
+    trackedQuoteKeyRef.current = null;
     setSnapshot({
       step: 'QUESTIONS',
       activeQuestionIndex: 0,
