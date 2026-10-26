@@ -19,6 +19,7 @@ export interface AppEnvConfig {
   readonly whatsappNumberB2B: string;
   readonly googleSheetsWebAppUrl: string;
   readonly metaPixelId: string;
+  readonly clarityProjectId: string;
   readonly defaultTheme: BrandThemeId;
   readonly isDevelopment: boolean;
   readonly cacheTtlMinutes: number;
@@ -51,6 +52,7 @@ export const ENV_CONFIG: AppEnvConfig = {
     'https://script.google.com/macros/s/AKfycbyMtqUv5aprawD7AacE_fPAcX8Fy5N7LpR_o3M5nCnscOXQ7-VZKH1L0gtuhiZhIt3I/exec'
   ),
   metaPixelId: readEnvString('VITE_META_PIXEL_ID', '1815663315407962'),
+  clarityProjectId: readEnvString('VITE_CLARITY_PROJECT_ID', ''),
   defaultTheme: isValidBrandThemeId(rawTheme) ? rawTheme : 'theme-clinical',
   isDevelopment: Boolean(import.meta.env.DEV),
   cacheTtlMinutes: 15,

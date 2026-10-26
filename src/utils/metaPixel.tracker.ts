@@ -20,9 +20,66 @@ type FbqFunction = (
   params?: Record<string, string | number | readonly string[] | undefined>
 ) => void;
 
+type ClarityFunction = (
+  command: 'set' | 'identify' | 'event',
+  keyOrEvent: string,
+  value?: string
+) => void;
+
 declare global {
   interface Window {
     fbq?: FbqFunction;
+    clarity?: ClarityFunction;
+  }
+}
+
+/**
+ * Inicializa Microsoft Clarity (mapas de calor y grabaciones de sesión en video)
+ * si `ENV_CONFIG.clarityProjectId` está configurado.
+ */
+export function initClarityHeatmaps(): void {
+  const projectId = ENV_CONFIG.clarityProjectId;
+  if (typeof window === 'undefined' || !projectId) {
+    return;
+  }
+
+  if (document.getElementById('ms-clarity-script')) {
+    return;
+  }
+
+  try {
+    const script = document.createElement('script');
+    script.id = 'ms-clarity-script';
+    script.async = true;
+    script.src = `https://www.clarity.ms/tag/${projectId}`;
+
+    const win = window as unknown as Record<string, unknown>;
+    if (typeof win['clarity'] !== 'function') {
+      const clarityQueue: unknown[][] = [];
+      const clarityFn = (...args: unknown[]) => {
+        clarityQueue.push(args);
+      };
+      (clarityFn as unknown as { q: unknown[][] }).q = clarityQueue;
+      win['clarity'] = clarityFn;
+    }
+
+    document.head.appendChild(script);
+  } catch {
+    // Fallo silencioso ante bloqueadores de anuncios
+  }
+}
+
+/**
+ * Etiqueta la grabación de video en Microsoft Clarity con datos del embudo
+ * (por ejemplo, el código `#OP-XXXX` para poder buscar el video exacto de esa fila de Google Sheets).
+ */
+export function tagClaritySession(key: string, value: string): void {
+  if (typeof window !== 'undefined' && typeof window.clarity === 'function') {
+    try {
+      window.clarity('set', key, value);
+    } catch {
+      // Ignorar si hay bloqueador
+    }
   }
 }
 

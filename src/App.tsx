@@ -9,6 +9,10 @@ import { ENV_CONFIG } from './config/env';
 import { useCatalogPrices } from './hooks/useCatalogPrices';
 import { useOpticalWizard } from './hooks/useOpticalWizard';
 import type { BrandThemeId, FontPairId } from './types/optical.types';
+import {
+  initClarityHeatmaps,
+  tagClaritySession,
+} from './utils/metaPixel.tracker';
 import { BackgroundVideoStage } from './components/ui/BackgroundVideoStage';
 import { DesignLabSwitcher } from './components/ui/DesignLabSwitcher';
 import { OpticalBrandTransition } from './components/ui/OpticalBrandTransition';
@@ -44,6 +48,7 @@ export function App() {
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', FIXED_LIGHT_THEME);
+    initClarityHeatmaps();
   }, []);
 
   useEffect(() => {
@@ -95,7 +100,11 @@ export function App() {
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, [activeTransitionKey]);
+    tagClaritySession('wizardStep', activeTransitionKey);
+    if (wizardState.lead?.passportCode) {
+      tagClaritySession('passportCode', wizardState.lead.passportCode);
+    }
+  }, [activeTransitionKey, wizardState.lead?.passportCode]);
 
   return (
     <div className="relative min-h-dvh w-full flex flex-col text-[var(--brand-text)]">
