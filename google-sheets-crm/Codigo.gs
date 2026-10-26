@@ -1,24 +1,20 @@
 /**
  * ============================================================================
- * GOOGLE APPS SCRIPT — CRM & TRACKING DE EMBUDO PARA ÓPTICA PROFESIONAL (2026)
+ * GOOGLE APPS SCRIPT — CRM & TRACKING INTELIGENTE PARA ÓPTICA PROFESIONAL (2026)
  * ============================================================================
  *
- * ¿QUÉ HACE ESTE SCRIPT?
- * Organiza automáticamente la planilla en 3 pestañas separadas y prolijas:
+ * ¿QUÉ TIENE DE ESPECIAL ESTA VERSIÓN?
+ * 1. MAPEADO INTELIGENTE POR NOMBRE DE COLUMNA:
+ *    El script lee los títulos de la Fila 1 antes de guardar cada registro.
+ *    Si vos o la óptica arrastran o cambian de lugar cualquier columna en Google Sheets
+ *    (por ejemplo, poniendo "Nombre y Apellido" en la Columna A), el sistema detecta
+ *    automáticamente dónde está cada título y guarda cada dato debajo de su columna correcta.
  *
- * 1. "CONSULTAS_Y_CLIENTES" (Pestaña 1 — Para Vendedores de la Óptica):
- *    Guarda ÚNICAMENTE las personas que completaron su Nombre y WhatsApp.
- *    Lista 100% limpia para hacer clic en el link de WhatsApp, ver su receta y vender.
- *
- * 2. "TRACKING_INCOMPLETOS" (Pestaña 2 — Métricas de Abandono y Publicidad):
- *    Guarda automáticamente a cada visitante que contestó las 5 preguntas y llegó a ver
- *    los precios pero AÚN NO completó su Nombre y WhatsApp.
- *    -> Si la persona se va sin dejar datos, queda acá para medir qué buscan y de qué anuncio vinieron.
- *    -> Si la persona SÍ completa su Nombre y WhatsApp, el sistema la mueve automáticamente
- *       de "TRACKING_INCOMPLETOS" hacia "CONSULTAS_Y_CLIENTES" (para que nunca queden duplicados).
- *
- * 3. "PRECIOS_CRISTALES" (Pestaña 3 — Catálogo en Vivo):
- *    Lista de precios que la web consulta en tiempo real.
+ * 2. DOS HOJAS DE SEGUIMIENTO SEPARADAS:
+ *    - "CONSULTAS_Y_CLIENTES": Solo clientes reales que completaron Nombre y WhatsApp.
+ *    - "TRACKING_INCOMPLETOS": Visitantes que contestaron las 5 preguntas y vieron precios
+ *      pero no dejaron sus datos (si luego completan sus datos, se mueven solos a CONSULTAS_Y_CLIENTES).
+ *    - "PRECIOS_CRISTALES": Catálogo de precios en vivo.
  */
 
 const SHEET_LEADS_NAME = 'CONSULTAS_Y_CLIENTES';
@@ -26,51 +22,104 @@ const SHEET_TRACKING_NAME = 'TRACKING_INCOMPLETOS';
 const SHEET_PRICES_NAME = 'PRECIOS_CRISTALES';
 const DRIVE_FOLDER_NAME = 'Recetas Optica Profesional - Cotizador Web';
 
+const LEADS_DEFAULT_HEADERS = [
+  'Fecha y Hora',
+  'Estado de Seguimiento',
+  'Nombre y Apellido',
+  'Link Directo WhatsApp',
+  'Link Foto de Receta (Google Drive)',
+  'Cristal Elegido',
+  'Precio Elegido (ARS)',
+  'Paso 1: Mejora / Material',
+  'Paso 2: Actividad Diaria',
+  'Paso 3: Prioridad del Cliente',
+  'Paso 4: Obra Social / Financiación',
+  'Paso 5: ¿Adjuntó Receta?',
+  'WhatsApp',
+  'Certificado 12 Meses',
+  'Opción 1 Cotizada',
+  'Precio Opción 1 (ARS)',
+  'Opción 2 Cotizada',
+  'Precio Opción 2 (ARS)',
+  'Notas Internas / Origen'
+];
+
+const TRACKING_DEFAULT_HEADERS = [
+  'Fecha y Hora',
+  'Estado en el Embudo',
+  'Código de Sesión',
+  'Origen / Publicidad (UTM)',
+  'Paso 1: Mejora / Material',
+  'Paso 2: Actividad Diaria',
+  'Paso 3: Prioridad del Visitante',
+  'Paso 4: Obra Social / Financiación',
+  'Paso 5: ¿Adjuntó Receta?',
+  'Link Foto de Receta (Google Drive)',
+  'Opción 1 Mostrada',
+  'Precio Opción 1 (ARS)',
+  'Opción 2 Mostrada',
+  'Precio Opción 2 (ARS)'
+];
+
 /**
- * Configura o asegura que exista la pestaña CONSULTAS_Y_CLIENTES (Registros Completos)
+ * Encuentra el número de columna (1-based) buscando por el título en la Fila 1.
  */
-function asegurarHojaClientes_(ss) {
-  let leadsSheet = ss.getSheetByName(SHEET_LEADS_NAME);
-  if (!leadsSheet) {
-    leadsSheet = ss.insertSheet(SHEET_LEADS_NAME, 0);
+function encontrarColumnaPorTitulo_(sheet, posiblesTitulos) {
+  const lastCol = sheet.getLastColumn();
+  if (lastCol < 1) return -1;
+  const headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+  const targets = Array.isArray(posiblesTitulos) ? posiblesTitulos : [posiblesTitulos];
+
+  for (let col = 0; col < headers.length; col++) {
+    const h = String(headers[col] || '').trim().toLowerCase();
+    for (let t = 0; t < targets.length; t++) {
+      if (h === String(targets[t]).trim().toLowerCase()) {
+        return col + 1;
+      }
+    }
+  }
+  return -1;
+}
+
+/**
+ * Arma el array de celdas en el orden EXACTO en que estén las columnas de la Fila 1 de la hoja.
+ * Así, aunque cambien el orden de las columnas manualmente, cada dato cae siempre en su columna correcta.
+ */
+function armarFilaSegunEncabezadosActuales_(sheet, diccionarioDatos, defaultHeaders) {
+  let lastCol = sheet.getLastColumn();
+  if (lastCol < 1) {
+    sheet.getRange(1, 1, 1, defaultHeaders.length).setValues([defaultHeaders]);
+    lastCol = defaultHeaders.length;
   }
 
-  const leadsHeaders = [
-    'Fecha y Hora',
-    'Estado de Seguimiento',
-    'Certificado 12 Meses',
-    'Nombre y Apellido',
-    'WhatsApp',
-    'Link Directo WhatsApp',
-    'Cristal Elegido',
-    'Precio Elegido (ARS)',
-    'Paso 1: Mejora / Material',
-    'Paso 2: Actividad Diaria',
-    'Paso 3: Prioridad del Cliente',
-    'Paso 4: Obra Social / Financiación',
-    'Paso 5: ¿Adjuntó Receta?',
-    'Link Foto de Receta (Google Drive)',
-    'Opción 1 Cotizada',
-    'Precio Opción 1 (ARS)',
-    'Opción 2 Cotizada',
-    'Precio Opción 2 (ARS)',
-    'Notas Internas / Origen'
-  ];
+  const headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+  const fila = [];
 
-  if (leadsSheet.getLastRow() === 0) {
-    leadsSheet.getRange(1, 1, 1, leadsHeaders.length).setValues([leadsHeaders]);
+  for (let i = 0; i < headers.length; i++) {
+    const titulo = String(headers[i] || '').trim();
+    if (titulo in diccionarioDatos) {
+      fila.push(diccionarioDatos[titulo]);
+    } else {
+      fila.push('');
+    }
+  }
 
-    const headerRange = leadsSheet.getRange(1, 1, 1, leadsHeaders.length);
-    headerRange
-      .setBackground('#336699')
-      .setFontColor('#FFFFFF')
-      .setFontWeight('bold')
-      .setHorizontalAlignment('center')
-      .setVerticalAlignment('middle');
+  return fila;
+}
 
-    leadsSheet.setFrozenRows(1);
-    leadsSheet.setRowHeight(1, 36);
+/**
+ * Aplica la lista desplegable de "Estado de Seguimiento" únicamente a la columna que tenga ese título,
+ * limpiando flechas viejas que hayan quedado corridas en otras columnas.
+ */
+function repararValidacionEstado_(leadsSheet) {
+  const maxRows = Math.max(leadsSheet.getMaxRows() - 1, 500);
+  const maxCols = Math.max(leadsSheet.getLastColumn(), LEADS_DEFAULT_HEADERS.length);
 
+  // Limpiar validaciones viejas que hayan quedado desfasadas al mover columnas
+  leadsSheet.getRange(2, 1, maxRows, maxCols).clearDataValidations();
+
+  const statusCol = encontrarColumnaPorTitulo_(leadsSheet, ['Estado de Seguimiento']);
+  if (statusCol > 0) {
     const statusRule = SpreadsheetApp.newDataValidation()
       .requireValueInList(
         [
@@ -85,30 +134,40 @@ function asegurarHojaClientes_(ss) {
       )
       .setAllowInvalid(true)
       .build();
-    leadsSheet.getRange(2, 2, 500, 1).setDataValidation(statusRule);
+    leadsSheet.getRange(2, statusCol, 500, 1).setDataValidation(statusRule);
+  }
+}
 
-    leadsSheet.setColumnWidth(1, 145);
-    leadsSheet.setColumnWidth(2, 175);
-    leadsSheet.setColumnWidth(3, 135);
-    leadsSheet.setColumnWidth(4, 180);
-    leadsSheet.setColumnWidth(5, 130);
-    leadsSheet.setColumnWidth(6, 170);
-    leadsSheet.setColumnWidth(7, 210);
-    leadsSheet.setColumnWidth(8, 130);
-    leadsSheet.setColumnWidth(9, 250);
-    leadsSheet.setColumnWidth(10, 230);
-    leadsSheet.setColumnWidth(11, 220);
-    leadsSheet.setColumnWidth(12, 230);
-    leadsSheet.setColumnWidth(13, 160);
-    leadsSheet.setColumnWidth(14, 240);
-    leadsSheet.setColumnWidth(19, 240);
+/**
+ * Configura o asegura que exista la pestaña CONSULTAS_Y_CLIENTES (Registros Completos)
+ */
+function asegurarHojaClientes_(ss) {
+  let leadsSheet = ss.getSheetByName(SHEET_LEADS_NAME);
+  if (!leadsSheet) {
+    leadsSheet = ss.insertSheet(SHEET_LEADS_NAME, 0);
+  }
+
+  if (leadsSheet.getLastRow() === 0) {
+    leadsSheet.getRange(1, 1, 1, LEADS_DEFAULT_HEADERS.length).setValues([LEADS_DEFAULT_HEADERS]);
+
+    const headerRange = leadsSheet.getRange(1, 1, 1, LEADS_DEFAULT_HEADERS.length);
+    headerRange
+      .setBackground('#336699')
+      .setFontColor('#FFFFFF')
+      .setFontWeight('bold')
+      .setHorizontalAlignment('center')
+      .setVerticalAlignment('middle');
+
+    leadsSheet.setFrozenRows(1);
+    leadsSheet.setRowHeight(1, 36);
+    repararValidacionEstado_(leadsSheet);
   }
 
   return leadsSheet;
 }
 
 /**
- * Configura o asegura que exista la pestaña TRACKING_INCOMPLETOS (Visitantes que vieron precios pero no dejaron WhatsApp)
+ * Configura o asegura que exista la pestaña TRACKING_INCOMPLETOS
  */
 function asegurarHojaTracking_(ss) {
   let trackingSheet = ss.getSheetByName(SHEET_TRACKING_NAME);
@@ -116,27 +175,10 @@ function asegurarHojaTracking_(ss) {
     trackingSheet = ss.insertSheet(SHEET_TRACKING_NAME, 1);
   }
 
-  const trackingHeaders = [
-    'Fecha y Hora',
-    'Estado en el Embudo',
-    'Código de Sesión',
-    'Origen / Publicidad (UTM)',
-    'Paso 1: Mejora / Material',
-    'Paso 2: Actividad Diaria',
-    'Paso 3: Prioridad del Visitante',
-    'Paso 4: Obra Social / Financiación',
-    'Paso 5: ¿Adjuntó Receta?',
-    'Link Foto de Receta (Google Drive)',
-    'Opción 1 Mostrada',
-    'Precio Opción 1 (ARS)',
-    'Opción 2 Mostrada',
-    'Precio Opción 2 (ARS)'
-  ];
-
   if (trackingSheet.getLastRow() === 0) {
-    trackingSheet.getRange(1, 1, 1, trackingHeaders.length).setValues([trackingHeaders]);
+    trackingSheet.getRange(1, 1, 1, TRACKING_DEFAULT_HEADERS.length).setValues([TRACKING_DEFAULT_HEADERS]);
 
-    const headerRange = trackingSheet.getRange(1, 1, 1, trackingHeaders.length);
+    const headerRange = trackingSheet.getRange(1, 1, 1, TRACKING_DEFAULT_HEADERS.length);
     headerRange
       .setBackground('#4A607A')
       .setFontColor('#FFFFFF')
@@ -146,36 +188,73 @@ function asegurarHojaTracking_(ss) {
 
     trackingSheet.setFrozenRows(1);
     trackingSheet.setRowHeight(1, 36);
-
-    trackingSheet.setColumnWidth(1, 145); // Fecha
-    trackingSheet.setColumnWidth(2, 210); // Estado Embudo
-    trackingSheet.setColumnWidth(3, 130); // Código Sesión
-    trackingSheet.setColumnWidth(4, 230); // Origen UTM
-    trackingSheet.setColumnWidth(5, 250); // Paso 1
-    trackingSheet.setColumnWidth(6, 230); // Paso 2
-    trackingSheet.setColumnWidth(7, 220); // Paso 3
-    trackingSheet.setColumnWidth(8, 230); // Paso 4
-    trackingSheet.setColumnWidth(9, 160); // Paso 5
-    trackingSheet.setColumnWidth(10, 240); // Link Foto
-    trackingSheet.setColumnWidth(11, 210); // Opción 1
-    trackingSheet.setColumnWidth(12, 140); // Precio 1
-    trackingSheet.setColumnWidth(13, 210); // Opción 2
-    trackingSheet.setColumnWidth(14, 140); // Precio 2
   }
 
   return trackingSheet;
 }
 
 /**
- * PASO 1 DE INSTALACIÓN (Opcional si ya está creada):
- * Crea y formatea las 3 pestañas: CONSULTAS_Y_CLIENTES, TRACKING_INCOMPLETOS y PRECIOS_CRISTALES.
+ * EJECUTAR ESTA FUNCIÓN ("inicializarPlanillaCRM") SI QUERÉS LIMPIAR LAS PRUEBAS Y ALINEAR TODAS LAS COLUMNAS DE CERO.
  */
 function inicializarPlanillaCRM() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
 
-  asegurarHojaClientes_(ss);
-  asegurarHojaTracking_(ss);
+  // 1. Limpiar y alinear CONSULTAS_Y_CLIENTES con las columnas más cómodas primero
+  let leadsSheet = ss.getSheetByName(SHEET_LEADS_NAME);
+  if (!leadsSheet) {
+    leadsSheet = ss.insertSheet(SHEET_LEADS_NAME, 0);
+  } else {
+    leadsSheet.clear();
+    leadsSheet.getRange(1, 1, leadsSheet.getMaxRows(), leadsSheet.getMaxColumns()).clearDataValidations();
+  }
 
+  leadsSheet.getRange(1, 1, 1, LEADS_DEFAULT_HEADERS.length).setValues([LEADS_DEFAULT_HEADERS]);
+  leadsSheet
+    .getRange(1, 1, 1, LEADS_DEFAULT_HEADERS.length)
+    .setBackground('#336699')
+    .setFontColor('#FFFFFF')
+    .setFontWeight('bold')
+    .setHorizontalAlignment('center')
+    .setVerticalAlignment('middle');
+  leadsSheet.setFrozenRows(1);
+  leadsSheet.setRowHeight(1, 36);
+  repararValidacionEstado_(leadsSheet);
+
+  leadsSheet.setColumnWidth(1, 145); // Fecha y Hora
+  leadsSheet.setColumnWidth(2, 175); // Estado de Seguimiento
+  leadsSheet.setColumnWidth(3, 185); // Nombre y Apellido
+  leadsSheet.setColumnWidth(4, 195); // Link Directo WhatsApp
+  leadsSheet.setColumnWidth(5, 230); // Link Foto de Receta
+  leadsSheet.setColumnWidth(6, 210); // Cristal Elegido
+  leadsSheet.setColumnWidth(7, 135); // Precio Elegido
+
+  // 2. Limpiar y alinear TRACKING_INCOMPLETOS
+  let trackingSheet = ss.getSheetByName(SHEET_TRACKING_NAME);
+  if (!trackingSheet) {
+    trackingSheet = ss.insertSheet(SHEET_TRACKING_NAME, 1);
+  } else {
+    trackingSheet.clear();
+    trackingSheet.getRange(1, 1, trackingSheet.getMaxRows(), trackingSheet.getMaxColumns()).clearDataValidations();
+  }
+
+  trackingSheet.getRange(1, 1, 1, TRACKING_DEFAULT_HEADERS.length).setValues([TRACKING_DEFAULT_HEADERS]);
+  trackingSheet
+    .getRange(1, 1, 1, TRACKING_DEFAULT_HEADERS.length)
+    .setBackground('#4A607A')
+    .setFontColor('#FFFFFF')
+    .setFontWeight('bold')
+    .setHorizontalAlignment('center')
+    .setVerticalAlignment('middle');
+  trackingSheet.setFrozenRows(1);
+  trackingSheet.setRowHeight(1, 36);
+
+  trackingSheet.setColumnWidth(1, 145);
+  trackingSheet.setColumnWidth(2, 210);
+  trackingSheet.setColumnWidth(3, 130);
+  trackingSheet.setColumnWidth(4, 230);
+  trackingSheet.setColumnWidth(5, 250);
+
+  // 3. Asegurar PRECIOS_CRISTALES
   let pricesSheet = ss.getSheetByName(SHEET_PRICES_NAME);
   if (!pricesSheet) {
     pricesSheet = ss.insertSheet(SHEET_PRICES_NAME, 2);
@@ -219,11 +298,6 @@ function inicializarPlanillaCRM() {
 
   pricesSheet.setFrozenRows(1);
   pricesSheet.setRowHeight(1, 34);
-  pricesSheet.setColumnWidth(1, 190);
-  pricesSheet.setColumnWidth(2, 250);
-  pricesSheet.setColumnWidth(3, 150);
-  pricesSheet.setColumnWidth(4, 160);
-  pricesSheet.setColumnWidth(5, 280);
 
   obtenerOCrearCarpetaRecetas_();
 }
@@ -236,8 +310,7 @@ function obtenerOCrearCarpetaRecetas_() {
   if (folders.hasNext()) {
     return folders.next();
   }
-  const newFolder = DriveApp.createFolder(DRIVE_FOLDER_NAME);
-  return newFolder;
+  return DriveApp.createFolder(DRIVE_FOLDER_NAME);
 }
 
 /**
@@ -291,19 +364,31 @@ function guardarRecetaEnDrive_(base64DataUrl, originalFileName, passportCode, fu
 }
 
 /**
- * Busca una fila por Código de Sesión (#OP-XXXX) en la Columna C (índice 3) de una hoja dada.
+ * Busca una fila por Código de Sesión (#OP-XXXX) buscando primero en qué columna está el código.
  */
 function buscarFilaPorCodigo_(sheet, passportCode) {
   const lastRow = sheet.getLastRow();
   if (lastRow < 2) return -1;
 
-  const codes = sheet.getRange(2, 3, lastRow - 1, 1).getValues();
+  const codeCol = encontrarColumnaPorTitulo_(sheet, ['Certificado 12 Meses', 'Código de Sesión']);
+  const colToSearch = codeCol > 0 ? codeCol : 3;
+
+  const codes = sheet.getRange(2, colToSearch, lastRow - 1, 1).getValues();
   for (let i = 0; i < codes.length; i++) {
     if (String(codes[i][0] || '').trim() === passportCode) {
       return i + 2;
     }
   }
   return -1;
+}
+
+/**
+ * Lee el valor de una celda en una fila según el título de la columna.
+ */
+function leerValorPorTitulo_(sheet, rowIndex, posiblesTitulos) {
+  const col = encontrarColumnaPorTitulo_(sheet, posiblesTitulos);
+  if (col < 1 || rowIndex < 2) return '';
+  return String(sheet.getRange(rowIndex, col).getValue() || '').trim();
 }
 
 /**
@@ -347,10 +432,7 @@ function doGet() {
 }
 
 /**
- * POST:
- * - Si `stage === 'QUOTE_VIEWED'` (solo vio precios sin dejar datos): guarda/actualiza en `TRACKING_INCOMPLETOS`.
- * - Si `stage === 'LEAD_SUBMITTED'` (completó Nombre y WhatsApp): guarda en `CONSULTAS_Y_CLIENTES`
- *   y elimina esa sesión de `TRACKING_INCOMPLETOS` para que `TRACKING_INCOMPLETOS` solo tenga las incompletas.
+ * POST: Guarda cada columna haciendo coincidir el nombre exacto del encabezado en la Fila 1.
  */
 function doPost(e) {
   try {
@@ -360,6 +442,9 @@ function doPost(e) {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const leadsSheet = asegurarHojaClientes_(ss);
     const trackingSheet = asegurarHojaTracking_(ss);
+
+    // Asegurar que las flechas desplegables estén únicamente en la columna "Estado de Seguimiento"
+    repararValidacionEstado_(leadsSheet);
 
     const passportCode = String(data.passportCode || data.leadId || 'OP-2026').trim();
     const isAnonymousPreview =
@@ -376,7 +461,6 @@ function doPost(e) {
         ? String(data.utmSource)
         : 'Tráfico Directo / Orgánico';
 
-    // Si viene foto en Base64, la guardamos en Google Drive y obtenemos su URL
     let uploadedPhotoUrl = String(data.prescriptionPhotoUrl || '').trim();
     if (!uploadedPhotoUrl && data.prescriptionPhotoBase64) {
       uploadedPhotoUrl = guardarRecetaEnDrive_(
@@ -394,29 +478,37 @@ function doPost(e) {
       const existingTrackingRow = buscarFilaPorCodigo_(trackingSheet, passportCode);
       let prevPhotoUrl = '';
       if (existingTrackingRow > 0) {
-        prevPhotoUrl = String(trackingSheet.getRange(existingTrackingRow, 10).getValue() || '').trim();
+        prevPhotoUrl = leerValorPorTitulo_(trackingSheet, existingTrackingRow, [
+          'Link Foto de Receta (Google Drive)'
+        ]);
       }
 
       const finalPhotoTracking =
         uploadedPhotoUrl ||
         (prevPhotoUrl && prevPhotoUrl !== 'Sin foto adjunta' ? prevPhotoUrl : 'Sin foto adjunta');
 
-      const trackingRowValues = [
-        formattedDate,                                                // 1. Fecha y Hora
-        'Vio precios (Sin completar datos)',                          // 2. Estado en el Embudo
-        passportCode,                                                 // 3. Código de Sesión
-        utmOrigin,                                                    // 4. Origen / Publicidad (UTM)
-        String(data.step1Label || data.improvementGoal || ''),        // 5. Paso 1
-        String(data.step2Label || data.activityContext || ''),        // 6. Paso 2
-        String(data.step3Label || data.clientPriority || ''),         // 7. Paso 3
-        String(data.step4Label || data.budgetPreferences || ''),      // 8. Paso 4
-        String(data.step5Label || data.prescriptionAttachment || ''), // 9. Paso 5
-        finalPhotoTracking,                                           // 10. Link Foto de Receta
-        String(data.primaryName || ''),                               // 11. Opción 1 Mostrada
-        Number(data.priceStockARS || 0),                              // 12. Precio Opción 1
-        String(data.alternativeName || ''),                           // 13. Opción 2 Mostrada
-        Number(data.alternativePriceARS || 0)                         // 14. Precio Opción 2
-      ];
+      const datosTracking = {
+        'Fecha y Hora': formattedDate,
+        'Estado en el Embudo': 'Vio precios (Sin completar datos)',
+        'Código de Sesión': passportCode,
+        'Origen / Publicidad (UTM)': utmOrigin,
+        'Paso 1: Mejora / Material': String(data.step1Label || data.improvementGoal || ''),
+        'Paso 2: Actividad Diaria': String(data.step2Label || data.activityContext || ''),
+        'Paso 3: Prioridad del Visitante': String(data.step3Label || data.clientPriority || ''),
+        'Paso 4: Obra Social / Financiación': String(data.step4Label || data.budgetPreferences || ''),
+        'Paso 5: ¿Adjuntó Receta?': String(data.step5Label || data.prescriptionAttachment || ''),
+        'Link Foto de Receta (Google Drive)': finalPhotoTracking,
+        'Opción 1 Mostrada': String(data.primaryName || ''),
+        'Precio Opción 1 (ARS)': Number(data.priceStockARS || 0),
+        'Opción 2 Mostrada': String(data.alternativeName || ''),
+        'Precio Opción 2 (ARS)': Number(data.alternativePriceARS || 0)
+      };
+
+      const trackingRowValues = armarFilaSegunEncabezadosActuales_(
+        trackingSheet,
+        datosTracking,
+        TRACKING_DEFAULT_HEADERS
+      );
 
       if (existingTrackingRow > 0) {
         trackingSheet
@@ -436,19 +528,22 @@ function doPost(e) {
 
     // =========================================================================
     // CASO 2: CLIENTE COMPLETÓ NOMBRE Y WHATSAPP -> CONSULTAS_Y_CLIENTES
-    // (Y se retira de TRACKING_INCOMPLETOS porque ya completó sus datos)
     // =========================================================================
     let photoFromTracking = '';
     const existingTrackingRow = buscarFilaPorCodigo_(trackingSheet, passportCode);
     if (existingTrackingRow > 0) {
-      photoFromTracking = String(trackingSheet.getRange(existingTrackingRow, 10).getValue() || '').trim();
+      photoFromTracking = leerValorPorTitulo_(trackingSheet, existingTrackingRow, [
+        'Link Foto de Receta (Google Drive)'
+      ]);
       trackingSheet.deleteRow(existingTrackingRow);
     }
 
     const existingLeadRow = buscarFilaPorCodigo_(leadsSheet, passportCode);
     let prevLeadPhoto = '';
     if (existingLeadRow > 0) {
-      prevLeadPhoto = String(leadsSheet.getRange(existingLeadRow, 14).getValue() || '').trim();
+      prevLeadPhoto = leerValorPorTitulo_(leadsSheet, existingLeadRow, [
+        'Link Foto de Receta (Google Drive)'
+      ]);
     }
 
     const finalLeadPhoto =
@@ -460,27 +555,34 @@ function doPost(e) {
     const whatsapp = String(data.whatsapp || '').trim();
     const whatsappLink = data.whatsappLink || ('https://wa.me/549' + whatsapp);
 
-    const leadRowValues = [
-      formattedDate,                                                // 1. Fecha y Hora
-      'Pendiente de contacto',                                      // 2. Estado de Seguimiento
-      passportCode,                                                 // 3. Certificado 12 Meses
-      fullName,                                                     // 4. Nombre y Apellido
-      whatsapp,                                                     // 5. WhatsApp
-      whatsappLink,                                                 // 6. Link Directo WhatsApp
-      String(data.selectedCommercialName || '') + ' (' + String(data.selectedTier || '') + ')', // 7. Cristal Elegido
-      Number(data.selectedPriceARS || 0),                           // 8. Precio Elegido (ARS)
-      String(data.step1Label || data.improvementGoal || ''),        // 9. Paso 1
-      String(data.step2Label || data.activityContext || ''),        // 10. Paso 2
-      String(data.step3Label || data.clientPriority || ''),         // 11. Paso 3
-      String(data.step4Label || data.budgetPreferences || ''),      // 12. Paso 4
-      String(data.step5Label || data.prescriptionAttachment || ''), // 13. Paso 5
-      finalLeadPhoto,                                               // 14. Link Foto de Receta
-      String(data.primaryName || ''),                               // 15. Opción 1 Cotizada
-      Number(data.priceStockARS || 0),                              // 16. Precio Opción 1
-      String(data.alternativeName || ''),                           // 17. Opción 2 Cotizada
-      Number(data.alternativePriceARS || 0),                        // 18. Precio Opción 2
-      'Origen: ' + utmOrigin                                        // 19. Notas Internas / Origen
-    ];
+    const datosCliente = {
+      'Fecha y Hora': formattedDate,
+      'Estado de Seguimiento': 'Pendiente de contacto',
+      'Certificado 12 Meses': passportCode,
+      'Nombre y Apellido': fullName,
+      'WhatsApp': whatsapp,
+      'Link Directo WhatsApp': whatsappLink,
+      'Cristal Elegido': String(data.selectedCommercialName || '') + ' (' + String(data.selectedTier || '') + ')',
+      'Precio Elegido (ARS)': Number(data.selectedPriceARS || 0),
+      'Paso 1: Mejora / Material': String(data.step1Label || data.improvementGoal || ''),
+      'Paso 2: Actividad Diaria': String(data.step2Label || data.activityContext || ''),
+      'Paso 3: Prioridad del Cliente': String(data.step3Label || data.clientPriority || ''),
+      'Paso 4: Obra Social / Financiación': String(data.step4Label || data.budgetPreferences || ''),
+      'Paso 5: ¿Adjuntó Receta?': String(data.step5Label || data.prescriptionAttachment || ''),
+      'Link Foto de Receta (Google Drive)': finalLeadPhoto,
+      'Opción 1 Cotizada': String(data.primaryName || ''),
+      'Precio Opción 1 (ARS)': Number(data.priceStockARS || 0),
+      'Opción 2 Cotizada': String(data.alternativeName || ''),
+      'Precio Opción 2 (ARS)': Number(data.alternativePriceARS || 0),
+      'Notas Internas Óptica': 'Origen: ' + utmOrigin,
+      'Notas Internas / Origen': 'Origen: ' + utmOrigin
+    };
+
+    const leadRowValues = armarFilaSegunEncabezadosActuales_(
+      leadsSheet,
+      datosCliente,
+      LEADS_DEFAULT_HEADERS
+    );
 
     if (existingLeadRow > 0) {
       leadsSheet.getRange(existingLeadRow, 1, 1, leadRowValues.length).setValues([leadRowValues]);
