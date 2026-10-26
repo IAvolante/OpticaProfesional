@@ -52,7 +52,7 @@ export const ENV_CONFIG: AppEnvConfig = {
     'https://script.google.com/macros/s/AKfycbyMtqUv5aprawD7AacE_fPAcX8Fy5N7LpR_o3M5nCnscOXQ7-VZKH1L0gtuhiZhIt3I/exec'
   ),
   metaPixelId: readEnvString('VITE_META_PIXEL_ID', '1815663315407962'),
-  clarityProjectId: readEnvString('VITE_CLARITY_PROJECT_ID', ''),
+  clarityProjectId: readEnvString('VITE_CLARITY_PROJECT_ID', 'z3yioxauzm'),
   defaultTheme: isValidBrandThemeId(rawTheme) ? rawTheme : 'theme-clinical',
   isDevelopment: Boolean(import.meta.env.DEV),
   cacheTtlMinutes: 15,
