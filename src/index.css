@@ -80,7 +80,7 @@
 }
 
 /* ============================================================================
- * 3 COMBINACIONES TIPOGRÁFICAS DEL DESIGN LAB
+ * 5 COMBINACIONES TIPOGRÁFICAS PARA SELECCIÓN EN VIVO DE SOLANA
  * ============================================================================ */
 :root,
 [data-font-pair="font-logo-match"] {
@@ -93,6 +93,18 @@
   --font-heading: 'Outfit', 'Inter', sans-serif;
   --font-sans: 'Inter', -apple-system, sans-serif;
   --font-price: 'Space Grotesk', 'JetBrains Mono', monospace;
+}
+
+[data-font-pair="font-swiss-medical"] {
+  --font-heading: 'Manrope', 'Inter', sans-serif;
+  --font-sans: 'Inter', -apple-system, sans-serif;
+  --font-price: 'Manrope', 'JetBrains Mono', sans-serif;
+}
+
+[data-font-pair="font-modern-atelier"] {
+  --font-heading: 'Sora', 'DM Sans', sans-serif;
+  --font-sans: 'DM Sans', 'Inter', sans-serif;
+  --font-price: 'Sora', 'JetBrains Mono', sans-serif;
 }
 
 [data-font-pair="font-boutique-editorial"] {

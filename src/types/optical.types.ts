@@ -12,7 +12,12 @@ export type BrandThemeId =
   | 'theme-neutral'
   | 'theme-boutique';
 
-export type FontPairId = 'font-logo-match' | 'font-tech-optical' | 'font-boutique-editorial';
+export type FontPairId =
+  | 'font-logo-match'
+  | 'font-tech-optical'
+  | 'font-swiss-medical'
+  | 'font-modern-atelier'
+  | 'font-boutique-editorial';
 
 export type BusinessUnit = 'B2C_OPTICA_PROFESIONAL' | 'B2B_SMART_OPTICAL';
 

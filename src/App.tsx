@@ -2,9 +2,7 @@ import { lazy, Suspense, useEffect, useState } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { ArrowLeft } from '@phosphor-icons/react';
 import {
-  BRAND_THEME_STORAGE_KEY,
   FONT_PAIR_STORAGE_KEY,
-  isValidBrandThemeId,
   isValidFontPairId,
 } from './config/brandTheme';
 import { ENV_CONFIG } from './config/env';
@@ -22,20 +20,7 @@ const QuoteResultStep = lazy(
   () => import('./components/wizard/QuoteResultStep')
 );
 
-function loadInitialBrandTheme(): BrandThemeId {
-  if (typeof window === 'undefined') {
-    return 'theme-clinical';
-  }
-  try {
-    const stored = window.localStorage.getItem(BRAND_THEME_STORAGE_KEY);
-    if (isValidBrandThemeId(stored)) {
-      return stored;
-    }
-  } catch {
-    // Fallback
-  }
-  return 'theme-clinical';
-}
+const FIXED_LIGHT_THEME: BrandThemeId = 'theme-clinical';
 
 function loadInitialFontPair(): FontPairId {
   if (typeof window === 'undefined') {
@@ -53,21 +38,13 @@ function loadInitialFontPair(): FontPairId {
 }
 
 export function App() {
-  const [activeTheme, setActiveTheme] = useState<BrandThemeId>(() =>
-    loadInitialBrandTheme()
-  );
   const [activeFontPair, setActiveFontPair] = useState<FontPairId>(() =>
     loadInitialFontPair()
   );
 
   useEffect(() => {
-    document.documentElement.setAttribute('data-theme', activeTheme);
-    try {
-      window.localStorage.setItem(BRAND_THEME_STORAGE_KEY, activeTheme);
-    } catch {
-      // Ignore storage error
-    }
-  }, [activeTheme]);
+    document.documentElement.setAttribute('data-theme', FIXED_LIGHT_THEME);
+  }, []);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-font-pair', activeFontPair);
@@ -96,7 +73,7 @@ export function App() {
     resetWizard,
   } = useOpticalWizard({
     catalogItems: catalogState.items,
-    activeTheme,
+    activeTheme: FIXED_LIGHT_THEME,
   });
 
   const catalogSourceLabel =
@@ -202,11 +179,9 @@ export function App() {
         </Suspense>
       </main>
 
-      {/* Barra Flotante Design Lab para evaluar las 2 Estéticas y 3 Duplas de Fuentes en Vivo */}
+      {/* Toggle Flotante de 5 Fuentes para evaluación en vivo con Solana */}
       <DesignLabSwitcher
-        activeTheme={activeTheme}
         activeFontPair={activeFontPair}
-        onSelectTheme={setActiveTheme}
         onSelectFontPair={setActiveFontPair}
       />
     </div>
