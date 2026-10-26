@@ -1,33 +1,35 @@
 /**
  * ============================================================================
- * GOOGLE APPS SCRIPT — CRM & CATÁLOGO EN VIVO PARA ÓPTICA PROFESIONAL (2026)
+ * GOOGLE APPS SCRIPT — CRM & TRACKING DE EMBUDO PARA ÓPTICA PROFESIONAL (2026)
  * ============================================================================
  *
  * ¿QUÉ HACE ESTE SCRIPT?
- * 1. Crea y configura automáticamente las 2 pestañas de la planilla con un solo clic
- *    ejecutando la función `inicializarPlanillaCRM()`:
- *    - Pestaña 1: "CONSULTAS_Y_CLIENTES" (CRM de Seguimiento, respuestas de los 5 pasos,
- *      WhatsApp clicable, certificado 12 meses, foto de la receta en Google Drive y estado).
- *    - Pestaña 2: "PRECIOS_CRISTALES" (Catálogo de precios que lee la web en vivo).
- * 2. Crea automáticamente en Google Drive la carpeta "Recetas Optica Profesional - Cotizador Web"
- *    y guarda allí cada foto de receta subida por los clientes, pegando el link directo en la celda.
- * 3. Expone `doGet()` para que la web consulte los precios actualizados en vivo.
- * 4. Expone `doPost()` para guardar cada consulta nueva de principio a fin y devolver el link de la receta.
+ * Organiza automáticamente la planilla en 3 pestañas separadas y prolijas:
+ *
+ * 1. "CONSULTAS_Y_CLIENTES" (Pestaña 1 — Para Vendedores de la Óptica):
+ *    Guarda ÚNICAMENTE las personas que completaron su Nombre y WhatsApp.
+ *    Lista 100% limpia para hacer clic en el link de WhatsApp, ver su receta y vender.
+ *
+ * 2. "TRACKING_INCOMPLETOS" (Pestaña 2 — Métricas de Abandono y Publicidad):
+ *    Guarda automáticamente a cada visitante que contestó las 5 preguntas y llegó a ver
+ *    los precios pero AÚN NO completó su Nombre y WhatsApp.
+ *    -> Si la persona se va sin dejar datos, queda acá para medir qué buscan y de qué anuncio vinieron.
+ *    -> Si la persona SÍ completa su Nombre y WhatsApp, el sistema la mueve automáticamente
+ *       de "TRACKING_INCOMPLETOS" hacia "CONSULTAS_Y_CLIENTES" (para que nunca queden duplicados).
+ *
+ * 3. "PRECIOS_CRISTALES" (Pestaña 3 — Catálogo en Vivo):
+ *    Lista de precios que la web consulta en tiempo real.
  */
 
 const SHEET_LEADS_NAME = 'CONSULTAS_Y_CLIENTES';
+const SHEET_TRACKING_NAME = 'TRACKING_INCOMPLETOS';
 const SHEET_PRICES_NAME = 'PRECIOS_CRISTALES';
 const DRIVE_FOLDER_NAME = 'Recetas Optica Profesional - Cotizador Web';
 
 /**
- * PASO 1 DE INSTALACIÓN:
- * Seleccioná `inicializarPlanillaCRM` en la barra superior de Apps Script y tocá "Ejecutar".
- * Esto armará toda la planilla con el diseño de Óptica Profesional (#336699 y #99CC99).
+ * Configura o asegura que exista la pestaña CONSULTAS_Y_CLIENTES (Registros Completos)
  */
-function inicializarPlanillaCRM() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-
-  // 1. Crear o preparar pestaña CONSULTAS_Y_CLIENTES
+function asegurarHojaClientes_(ss) {
   let leadsSheet = ss.getSheetByName(SHEET_LEADS_NAME);
   if (!leadsSheet) {
     leadsSheet = ss.insertSheet(SHEET_LEADS_NAME, 0);
@@ -52,63 +54,131 @@ function inicializarPlanillaCRM() {
     'Precio Opción 1 (ARS)',
     'Opción 2 Cotizada',
     'Precio Opción 2 (ARS)',
-    'Notas Internas Óptica'
+    'Notas Internas / Origen'
   ];
 
   if (leadsSheet.getLastRow() === 0) {
     leadsSheet.getRange(1, 1, 1, leadsHeaders.length).setValues([leadsHeaders]);
+
+    const headerRange = leadsSheet.getRange(1, 1, 1, leadsHeaders.length);
+    headerRange
+      .setBackground('#336699')
+      .setFontColor('#FFFFFF')
+      .setFontWeight('bold')
+      .setHorizontalAlignment('center')
+      .setVerticalAlignment('middle');
+
+    leadsSheet.setFrozenRows(1);
+    leadsSheet.setRowHeight(1, 36);
+
+    const statusRule = SpreadsheetApp.newDataValidation()
+      .requireValueInList(
+        [
+          'Pendiente de contacto',
+          'Contactado por WhatsApp',
+          'Esperando receta',
+          'Citado al local',
+          'Venta cerrada',
+          'Desestimado'
+        ],
+        true
+      )
+      .setAllowInvalid(true)
+      .build();
+    leadsSheet.getRange(2, 2, 500, 1).setDataValidation(statusRule);
+
+    leadsSheet.setColumnWidth(1, 145);
+    leadsSheet.setColumnWidth(2, 175);
+    leadsSheet.setColumnWidth(3, 135);
+    leadsSheet.setColumnWidth(4, 180);
+    leadsSheet.setColumnWidth(5, 130);
+    leadsSheet.setColumnWidth(6, 170);
+    leadsSheet.setColumnWidth(7, 210);
+    leadsSheet.setColumnWidth(8, 130);
+    leadsSheet.setColumnWidth(9, 250);
+    leadsSheet.setColumnWidth(10, 230);
+    leadsSheet.setColumnWidth(11, 220);
+    leadsSheet.setColumnWidth(12, 230);
+    leadsSheet.setColumnWidth(13, 160);
+    leadsSheet.setColumnWidth(14, 240);
+    leadsSheet.setColumnWidth(19, 240);
   }
 
-  const headerRange = leadsSheet.getRange(1, 1, 1, leadsHeaders.length);
-  headerRange
-    .setBackground('#336699')
-    .setFontColor('#FFFFFF')
-    .setFontWeight('bold')
-    .setHorizontalAlignment('center')
-    .setVerticalAlignment('middle');
+  return leadsSheet;
+}
 
-  leadsSheet.setFrozenRows(1);
-  leadsSheet.setRowHeight(1, 36);
+/**
+ * Configura o asegura que exista la pestaña TRACKING_INCOMPLETOS (Visitantes que vieron precios pero no dejaron WhatsApp)
+ */
+function asegurarHojaTracking_(ss) {
+  let trackingSheet = ss.getSheetByName(SHEET_TRACKING_NAME);
+  if (!trackingSheet) {
+    trackingSheet = ss.insertSheet(SHEET_TRACKING_NAME, 1);
+  }
 
-  // Configurar lista desplegable de Estado de Seguimiento en Columna B (filas 2 a 500)
-  const statusRule = SpreadsheetApp.newDataValidation()
-    .requireValueInList(
-      [
-        'Vio precios (Sin completar datos)',
-        'Pendiente de contacto',
-        'Contactado por WhatsApp',
-        'Esperando receta',
-        'Citado al local',
-        'Venta cerrada',
-        'Desestimado'
-      ],
-      true
-    )
-    .setAllowInvalid(true)
-    .build();
-  leadsSheet.getRange(2, 2, 500, 1).setDataValidation(statusRule);
+  const trackingHeaders = [
+    'Fecha y Hora',
+    'Estado en el Embudo',
+    'Código de Sesión',
+    'Origen / Publicidad (UTM)',
+    'Paso 1: Mejora / Material',
+    'Paso 2: Actividad Diaria',
+    'Paso 3: Prioridad del Visitante',
+    'Paso 4: Obra Social / Financiación',
+    'Paso 5: ¿Adjuntó Receta?',
+    'Link Foto de Receta (Google Drive)',
+    'Opción 1 Mostrada',
+    'Precio Opción 1 (ARS)',
+    'Opción 2 Mostrada',
+    'Precio Opción 2 (ARS)'
+  ];
 
-  // Anchos de columna cómodos para lectura
-  leadsSheet.setColumnWidth(1, 145); // Fecha
-  leadsSheet.setColumnWidth(2, 175); // Estado
-  leadsSheet.setColumnWidth(3, 135); // Certificado
-  leadsSheet.setColumnWidth(4, 180); // Nombre
-  leadsSheet.setColumnWidth(5, 130); // WhatsApp
-  leadsSheet.setColumnWidth(6, 170); // Link WA
-  leadsSheet.setColumnWidth(7, 210); // Cristal Elegido
-  leadsSheet.setColumnWidth(8, 130); // Precio Elegido
-  leadsSheet.setColumnWidth(9, 250); // Paso 1
-  leadsSheet.setColumnWidth(10, 230); // Paso 2
-  leadsSheet.setColumnWidth(11, 220); // Paso 3
-  leadsSheet.setColumnWidth(12, 230); // Paso 4
-  leadsSheet.setColumnWidth(13, 160); // Paso 5
-  leadsSheet.setColumnWidth(14, 240); // Link Foto Receta
-  leadsSheet.setColumnWidth(19, 240); // Notas
+  if (trackingSheet.getLastRow() === 0) {
+    trackingSheet.getRange(1, 1, 1, trackingHeaders.length).setValues([trackingHeaders]);
 
-  // 2. Crear o preparar pestaña PRECIOS_CRISTALES
+    const headerRange = trackingSheet.getRange(1, 1, 1, trackingHeaders.length);
+    headerRange
+      .setBackground('#4A607A')
+      .setFontColor('#FFFFFF')
+      .setFontWeight('bold')
+      .setHorizontalAlignment('center')
+      .setVerticalAlignment('middle');
+
+    trackingSheet.setFrozenRows(1);
+    trackingSheet.setRowHeight(1, 36);
+
+    trackingSheet.setColumnWidth(1, 145); // Fecha
+    trackingSheet.setColumnWidth(2, 210); // Estado Embudo
+    trackingSheet.setColumnWidth(3, 130); // Código Sesión
+    trackingSheet.setColumnWidth(4, 230); // Origen UTM
+    trackingSheet.setColumnWidth(5, 250); // Paso 1
+    trackingSheet.setColumnWidth(6, 230); // Paso 2
+    trackingSheet.setColumnWidth(7, 220); // Paso 3
+    trackingSheet.setColumnWidth(8, 230); // Paso 4
+    trackingSheet.setColumnWidth(9, 160); // Paso 5
+    trackingSheet.setColumnWidth(10, 240); // Link Foto
+    trackingSheet.setColumnWidth(11, 210); // Opción 1
+    trackingSheet.setColumnWidth(12, 140); // Precio 1
+    trackingSheet.setColumnWidth(13, 210); // Opción 2
+    trackingSheet.setColumnWidth(14, 140); // Precio 2
+  }
+
+  return trackingSheet;
+}
+
+/**
+ * PASO 1 DE INSTALACIÓN (Opcional si ya está creada):
+ * Crea y formatea las 3 pestañas: CONSULTAS_Y_CLIENTES, TRACKING_INCOMPLETOS y PRECIOS_CRISTALES.
+ */
+function inicializarPlanillaCRM() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+
+  asegurarHojaClientes_(ss);
+  asegurarHojaTracking_(ss);
+
   let pricesSheet = ss.getSheetByName(SHEET_PRICES_NAME);
   if (!pricesSheet) {
-    pricesSheet = ss.insertSheet(SHEET_PRICES_NAME, 1);
+    pricesSheet = ss.insertSheet(SHEET_PRICES_NAME, 2);
   }
 
   const pricesHeaders = [
@@ -155,7 +225,6 @@ function inicializarPlanillaCRM() {
   pricesSheet.setColumnWidth(4, 160);
   pricesSheet.setColumnWidth(5, 280);
 
-  // 3. Asegurar carpeta en Google Drive para las fotos de recetas
   obtenerOCrearCarpetaRecetas_();
 }
 
@@ -191,7 +260,7 @@ function guardarRecetaEnDrive_(base64DataUrl, originalFileName, passportCode, fu
       mimeType = mimeMatch[1];
     }
 
-    const cleanCustomerName = String(fullName || 'Cliente')
+    const cleanCustomerName = String(fullName || 'Visitante')
       .replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s_-]/g, '')
       .trim()
       .replace(/\s+/g, '_');
@@ -209,7 +278,6 @@ function guardarRecetaEnDrive_(base64DataUrl, originalFileName, passportCode, fu
     const folder = obtenerOCrearCarpetaRecetas_();
     const file = folder.createFile(blob);
 
-    // Permitir que cualquiera con el link (el vendedor desde WhatsApp o desde la planilla) pueda ver la receta
     try {
       file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
     } catch (sharingErr) {
@@ -220,6 +288,22 @@ function guardarRecetaEnDrive_(base64DataUrl, originalFileName, passportCode, fu
   } catch (err) {
     return 'Error al guardar imagen: ' + String(err);
   }
+}
+
+/**
+ * Busca una fila por Código de Sesión (#OP-XXXX) en la Columna C (índice 3) de una hoja dada.
+ */
+function buscarFilaPorCodigo_(sheet, passportCode) {
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) return -1;
+
+  const codes = sheet.getRange(2, 3, lastRow - 1, 1).getValues();
+  for (let i = 0; i < codes.length; i++) {
+    if (String(codes[i][0] || '').trim() === passportCode) {
+      return i + 2;
+    }
+  }
+  return -1;
 }
 
 /**
@@ -263,7 +347,10 @@ function doGet() {
 }
 
 /**
- * POST: Recibe cada consulta del cotizador web, guarda la receta en Drive y agrega la fila en CONSULTAS_Y_CLIENTES.
+ * POST:
+ * - Si `stage === 'QUOTE_VIEWED'` (solo vio precios sin dejar datos): guarda/actualiza en `TRACKING_INCOMPLETOS`.
+ * - Si `stage === 'LEAD_SUBMITTED'` (completó Nombre y WhatsApp): guarda en `CONSULTAS_Y_CLIENTES`
+ *   y elimina esa sesión de `TRACKING_INCOMPLETOS` para que `TRACKING_INCOMPLETOS` solo tenga las incompletas.
  */
 function doPost(e) {
   try {
@@ -271,23 +358,23 @@ function doPost(e) {
     const data = JSON.parse(rawBody);
 
     const ss = SpreadsheetApp.getActiveSpreadsheet();
-    let sheet = ss.getSheetByName(SHEET_LEADS_NAME);
-    if (!sheet) {
-      inicializarPlanillaCRM();
-      sheet = ss.getSheetByName(SHEET_LEADS_NAME);
-    }
+    const leadsSheet = asegurarHojaClientes_(ss);
+    const trackingSheet = asegurarHojaTracking_(ss);
 
-    const passportCode = String(data.passportCode || data.leadId || 'OP-2026');
-    const isAnonymousPreview = data.stage === 'QUOTE_VIEWED' || !data.whatsapp || data.whatsapp === '-';
-    const leadStatus = String(
-      data.leadStatus ||
-      (isAnonymousPreview ? 'Vio precios (Sin completar datos)' : 'Pendiente de contacto')
+    const passportCode = String(data.passportCode || data.leadId || 'OP-2026').trim();
+    const isAnonymousPreview =
+      data.stage === 'QUOTE_VIEWED' || !data.whatsapp || String(data.whatsapp).trim() === '-';
+
+    const formattedDate = Utilities.formatDate(
+      new Date(),
+      'America/Argentina/Salta',
+      'dd/MM/yyyy HH:mm:ss'
     );
-    const fullName = String(data.fullName || '⏳ Vio precios (Sin completar datos)').trim();
-    const whatsapp = String(data.whatsapp || '-').trim();
-    const whatsappLink = isAnonymousPreview
-      ? 'Completó las 5 preguntas (Sin WhatsApp)'
-      : (data.whatsappLink || ('https://wa.me/549' + whatsapp));
+
+    const utmOrigin =
+      data.utmSource && data.utmSource !== 'direct'
+        ? String(data.utmSource)
+        : 'Tráfico Directo / Orgánico';
 
     // Si viene foto en Base64, la guardamos en Google Drive y obtenemos su URL
     let uploadedPhotoUrl = String(data.prescriptionPhotoUrl || '').trim();
@@ -296,75 +383,117 @@ function doPost(e) {
         data.prescriptionPhotoBase64,
         data.prescriptionPhotoName,
         passportCode,
-        fullName
+        isAnonymousPreview ? 'Receta_Paso5' : data.fullName
       );
     }
 
-    const formattedDate = Utilities.formatDate(
-      new Date(),
-      'America/Argentina/Salta',
-      'dd/MM/yyyy HH:mm:ss'
-    );
-
-    const originNote = data.utmSource && data.utmSource !== 'direct'
-      ? ('Origen: ' + String(data.utmSource))
-      : '';
-
-    // Buscar si ya existe una fila con este código de sesión (#OP-XXXX) en la Columna C (índice 3)
-    const lastRow = sheet.getLastRow();
-    let existingRowIndex = -1;
-    let existingPhotoUrl = '';
-    let existingNotes = '';
-
-    if (lastRow >= 2) {
-      const codesRange = sheet.getRange(2, 3, lastRow - 1, 1).getValues();
-      for (let i = 0; i < codesRange.length; i++) {
-        if (String(codesRange[i][0] || '').trim() === passportCode) {
-          existingRowIndex = i + 2;
-          existingPhotoUrl = String(sheet.getRange(existingRowIndex, 14).getValue() || '').trim();
-          existingNotes = String(sheet.getRange(existingRowIndex, 19).getValue() || '').trim();
-          break;
-        }
+    // =========================================================================
+    // CASO 1: VISITANTE VIENDO PRECIOS SIN COMPLETAR DATOS -> TRACKING_INCOMPLETOS
+    // =========================================================================
+    if (isAnonymousPreview) {
+      const existingTrackingRow = buscarFilaPorCodigo_(trackingSheet, passportCode);
+      let prevPhotoUrl = '';
+      if (existingTrackingRow > 0) {
+        prevPhotoUrl = String(trackingSheet.getRange(existingTrackingRow, 10).getValue() || '').trim();
       }
+
+      const finalPhotoTracking =
+        uploadedPhotoUrl ||
+        (prevPhotoUrl && prevPhotoUrl !== 'Sin foto adjunta' ? prevPhotoUrl : 'Sin foto adjunta');
+
+      const trackingRowValues = [
+        formattedDate,                                                // 1. Fecha y Hora
+        'Vio precios (Sin completar datos)',                          // 2. Estado en el Embudo
+        passportCode,                                                 // 3. Código de Sesión
+        utmOrigin,                                                    // 4. Origen / Publicidad (UTM)
+        String(data.step1Label || data.improvementGoal || ''),        // 5. Paso 1
+        String(data.step2Label || data.activityContext || ''),        // 6. Paso 2
+        String(data.step3Label || data.clientPriority || ''),         // 7. Paso 3
+        String(data.step4Label || data.budgetPreferences || ''),      // 8. Paso 4
+        String(data.step5Label || data.prescriptionAttachment || ''), // 9. Paso 5
+        finalPhotoTracking,                                           // 10. Link Foto de Receta
+        String(data.primaryName || ''),                               // 11. Opción 1 Mostrada
+        Number(data.priceStockARS || 0),                              // 12. Precio Opción 1
+        String(data.alternativeName || ''),                           // 13. Opción 2 Mostrada
+        Number(data.alternativePriceARS || 0)                         // 14. Precio Opción 2
+      ];
+
+      if (existingTrackingRow > 0) {
+        trackingSheet
+          .getRange(existingTrackingRow, 1, 1, trackingRowValues.length)
+          .setValues([trackingRowValues]);
+      } else {
+        trackingSheet.appendRow(trackingRowValues);
+      }
+
+      return respuestaJson_({
+        ok: true,
+        sheet: SHEET_TRACKING_NAME,
+        leadId: passportCode,
+        photoUrl: finalPhotoTracking !== 'Sin foto adjunta' ? finalPhotoTracking : undefined
+      });
     }
 
-    const finalPhotoCell =
-      uploadedPhotoUrl ||
-      (existingPhotoUrl && existingPhotoUrl !== 'Sin foto adjunta' ? existingPhotoUrl : 'Sin foto adjunta');
+    // =========================================================================
+    // CASO 2: CLIENTE COMPLETÓ NOMBRE Y WHATSAPP -> CONSULTAS_Y_CLIENTES
+    // (Y se retira de TRACKING_INCOMPLETOS porque ya completó sus datos)
+    // =========================================================================
+    let photoFromTracking = '';
+    const existingTrackingRow = buscarFilaPorCodigo_(trackingSheet, passportCode);
+    if (existingTrackingRow > 0) {
+      photoFromTracking = String(trackingSheet.getRange(existingTrackingRow, 10).getValue() || '').trim();
+      trackingSheet.deleteRow(existingTrackingRow);
+    }
 
-    const rowValues = [
-      formattedDate,                                              // 1. Fecha y Hora
-      leadStatus,                                                 // 2. Estado de Seguimiento
-      passportCode,                                               // 3. Certificado 12 Meses
-      fullName,                                                   // 4. Nombre y Apellido
-      whatsapp,                                                   // 5. WhatsApp
-      whatsappLink,                                               // 6. Link Directo WhatsApp
+    const existingLeadRow = buscarFilaPorCodigo_(leadsSheet, passportCode);
+    let prevLeadPhoto = '';
+    if (existingLeadRow > 0) {
+      prevLeadPhoto = String(leadsSheet.getRange(existingLeadRow, 14).getValue() || '').trim();
+    }
+
+    const finalLeadPhoto =
+      uploadedPhotoUrl ||
+      (photoFromTracking && photoFromTracking !== 'Sin foto adjunta' ? photoFromTracking : '') ||
+      (prevLeadPhoto && prevLeadPhoto !== 'Sin foto adjunta' ? prevLeadPhoto : 'Sin foto adjunta');
+
+    const fullName = String(data.fullName || '').trim();
+    const whatsapp = String(data.whatsapp || '').trim();
+    const whatsappLink = data.whatsappLink || ('https://wa.me/549' + whatsapp);
+
+    const leadRowValues = [
+      formattedDate,                                                // 1. Fecha y Hora
+      'Pendiente de contacto',                                      // 2. Estado de Seguimiento
+      passportCode,                                                 // 3. Certificado 12 Meses
+      fullName,                                                     // 4. Nombre y Apellido
+      whatsapp,                                                     // 5. WhatsApp
+      whatsappLink,                                                 // 6. Link Directo WhatsApp
       String(data.selectedCommercialName || '') + ' (' + String(data.selectedTier || '') + ')', // 7. Cristal Elegido
-      Number(data.selectedPriceARS || 0),                         // 8. Precio Elegido (ARS)
-      String(data.step1Label || data.improvementGoal || ''),      // 9. Paso 1: Mejora / Material
-      String(data.step2Label || data.activityContext || ''),      // 10. Paso 2: Actividad Diaria
-      String(data.step3Label || data.clientPriority || ''),       // 11. Paso 3: Prioridad
-      String(data.step4Label || data.budgetPreferences || ''),    // 12. Paso 4: Obra Social / Financiación
-      String(data.step5Label || data.prescriptionAttachment || ''), // 13. Paso 5: ¿Adjuntó Receta?
-      finalPhotoCell,                                             // 14. Link Foto de Receta (Google Drive)
-      String(data.primaryName || ''),                             // 15. Opción 1 Cotizada
-      Number(data.priceStockARS || 0),                            // 16. Precio Opción 1
-      String(data.alternativeName || ''),                         // 17. Opción 2 Cotizada
-      Number(data.alternativePriceARS || 0),                      // 18. Precio Opción 2
-      existingNotes || originNote                                 // 19. Notas Internas Óptica / Origen
+      Number(data.selectedPriceARS || 0),                           // 8. Precio Elegido (ARS)
+      String(data.step1Label || data.improvementGoal || ''),        // 9. Paso 1
+      String(data.step2Label || data.activityContext || ''),        // 10. Paso 2
+      String(data.step3Label || data.clientPriority || ''),         // 11. Paso 3
+      String(data.step4Label || data.budgetPreferences || ''),      // 12. Paso 4
+      String(data.step5Label || data.prescriptionAttachment || ''), // 13. Paso 5
+      finalLeadPhoto,                                               // 14. Link Foto de Receta
+      String(data.primaryName || ''),                               // 15. Opción 1 Cotizada
+      Number(data.priceStockARS || 0),                              // 16. Precio Opción 1
+      String(data.alternativeName || ''),                           // 17. Opción 2 Cotizada
+      Number(data.alternativePriceARS || 0),                        // 18. Precio Opción 2
+      'Origen: ' + utmOrigin                                        // 19. Notas Internas / Origen
     ];
 
-    if (existingRowIndex > 0) {
-      sheet.getRange(existingRowIndex, 1, 1, rowValues.length).setValues([rowValues]);
+    if (existingLeadRow > 0) {
+      leadsSheet.getRange(existingLeadRow, 1, 1, leadRowValues.length).setValues([leadRowValues]);
     } else {
-      sheet.appendRow(rowValues);
+      leadsSheet.appendRow(leadRowValues);
     }
 
     return respuestaJson_({
       ok: true,
-      updatedExistingRow: existingRowIndex > 0,
+      sheet: SHEET_LEADS_NAME,
+      movedFromTracking: existingTrackingRow > 0,
       leadId: passportCode,
-      photoUrl: uploadedPhotoUrl || (existingPhotoUrl !== 'Sin foto adjunta' ? existingPhotoUrl : undefined)
+      photoUrl: finalLeadPhoto !== 'Sin foto adjunta' ? finalLeadPhoto : undefined
     });
   } catch (err) {
     return respuestaJson_({
