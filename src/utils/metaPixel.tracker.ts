@@ -43,7 +43,10 @@ export function initClarityHeatmaps(): void {
     return;
   }
 
-  if (document.getElementById('ms-clarity-script')) {
+  if (
+    typeof window.clarity === 'function' ||
+    document.getElementById('ms-clarity-script')
+  ) {
     return;
   }
 
