@@ -8,9 +8,13 @@ import {
 import { ArrowRight, Camera, Check } from '@phosphor-icons/react';
 import type {
   BudgetPreferenceAnswer,
+  DesignLabConfig,
+  FontScaleId,
   QuestionId,
   QuestionOptionValue,
+  TransitionStyleId,
   UserOpticalAnswers,
+  VideoBoxSizeId,
   WizardQuestionDefinition,
 } from '../../types/optical.types';
 import { cn } from '../../utils/cn';
@@ -26,6 +30,7 @@ import { OpticalOptionDiagram } from './OpticalOptionDiagram';
 export interface QuestionStepProps {
   readonly question: WizardQuestionDefinition;
   readonly answers: UserOpticalAnswers;
+  readonly designLabConfig?: DesignLabConfig;
   readonly onSelectOption: (
     questionId: QuestionId,
     value: QuestionOptionValue
@@ -102,26 +107,90 @@ const QUESTION_VIDEO_SHOWCASE: Record<
   },
 };
 
-const listContainerVariants: Variants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.04,
-      delayChildren: 0.01,
+const VIDEO_BOX_HEIGHT_CLASSES: Record<VideoBoxSizeId, string> = {
+  compact: 'min-h-[148px] sm:min-h-[164px]',
+  balanced: 'min-h-[204px] sm:min-h-[220px]',
+  cinematic: 'min-h-[272px] sm:min-h-[292px]',
+};
+
+const FONT_SCALE_CLASSES: Record<
+  FontScaleId,
+  {
+    readonly questionTitle: string;
+    readonly questionSubtitle: string;
+    readonly optionLabel: string;
+    readonly optionDescription: string;
+  }
+> = {
+  'scale-sm': {
+    questionTitle: 'text-[17px] sm:text-[18.5px]',
+    questionSubtitle: 'text-[12.5px]',
+    optionLabel: 'text-[14px]',
+    optionDescription: 'text-[12px]',
+  },
+  'scale-md': {
+    questionTitle: 'text-[19px] sm:text-[21px]',
+    questionSubtitle: 'text-[13.5px]',
+    optionLabel: 'text-[15px]',
+    optionDescription: 'text-[12.5px]',
+  },
+  'scale-lg': {
+    questionTitle: 'text-[21px] sm:text-[23px]',
+    questionSubtitle: 'text-[14.5px]',
+    optionLabel: 'text-[16.5px]',
+    optionDescription: 'text-[13.5px]',
+  },
+};
+
+const CONTAINER_VARIANTS_BY_STYLE: Record<TransitionStyleId, Variants> = {
+  'transition-slide': {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: { staggerChildren: 0.04, delayChildren: 0.01 },
+    },
+  },
+  'transition-lens': {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: { staggerChildren: 0.055, delayChildren: 0.02 },
+    },
+  },
+  'transition-cascade': {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: { staggerChildren: 0.075, delayChildren: 0.02 },
     },
   },
 };
 
-const optionCardVariants: Variants = {
-  hidden: { opacity: 0, y: 8 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: {
-      type: 'spring',
-      stiffness: 420,
-      damping: 30,
+const CARD_VARIANTS_BY_STYLE: Record<TransitionStyleId, Variants> = {
+  'transition-slide': {
+    hidden: { opacity: 0, x: 18 },
+    visible: {
+      opacity: 1,
+      x: 0,
+      transition: { type: 'spring', stiffness: 420, damping: 30 },
+    },
+  },
+  'transition-lens': {
+    hidden: { opacity: 0, scale: 0.94, filter: 'blur(6px)' },
+    visible: {
+      opacity: 1,
+      scale: 1,
+      filter: 'blur(0px)',
+      transition: { duration: 0.34, ease: [0.22, 1, 0.36, 1] },
+    },
+  },
+  'transition-cascade': {
+    hidden: { opacity: 0, y: 24, scale: 0.96 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      scale: 1,
+      transition: { type: 'spring', stiffness: 280, damping: 20 },
     },
   },
 };
@@ -129,6 +198,7 @@ const optionCardVariants: Variants = {
 export function QuestionStep({
   question,
   answers,
+  designLabConfig,
   onSelectOption,
   onConfirmBudgetStep,
   onAttachPrescriptionPhoto,
@@ -141,6 +211,14 @@ export function QuestionStep({
   const [photoError, setPhotoError] = useState<string>('');
   const [pendingOption, setPendingOption] =
     useState<QuestionOptionValue | null>(null);
+
+  const activeVideoBoxSize: VideoBoxSizeId =
+    designLabConfig?.videoBoxSize ?? 'balanced';
+  const activeFontScale: FontScaleId =
+    designLabConfig?.fontScale ?? 'scale-md';
+  const activeTransitionStyle: TransitionStyleId =
+    designLabConfig?.transitionStyle ?? 'transition-slide';
+  const scaleClasses = FONT_SCALE_CLASSES[activeFontScale];
 
   const videoRefs = useRef<Record<ShowcasePoolId, HTMLVideoElement | null>>({
     hero: null,
@@ -303,32 +381,77 @@ export function QuestionStep({
           <div className="absolute inset-0 z-20 bg-gradient-to-t from-[#091524] via-[#091524]/40 via-45% to-transparent pointer-events-none" />
         </div>
 
-        <CardHeader className="relative z-30 flex min-h-[204px] sm:min-h-[220px] flex-col justify-end p-4 sm:p-5">
-          <div className="space-y-1.5">
-            <CardTitle className="text-[19px] sm:text-[21px] leading-[1.25] font-bold text-white drop-shadow-xs">
+        <CardHeader
+          className={cn(
+            'relative z-30 flex flex-col justify-end p-4 sm:p-5 transition-all duration-300',
+            VIDEO_BOX_HEIGHT_CLASSES[activeVideoBoxSize]
+          )}
+        >
+          <motion.div
+            key={`header-${question.id}-${activeTransitionStyle}`}
+            initial={
+              prefersReducedMotion
+                ? false
+                : activeTransitionStyle === 'transition-lens'
+                  ? { opacity: 0, scale: 0.95, filter: 'blur(6px)' }
+                  : activeTransitionStyle === 'transition-cascade'
+                    ? { opacity: 0, y: 16 }
+                    : { opacity: 0, x: 14 }
+            }
+            animate={{ opacity: 1, scale: 1, x: 0, y: 0, filter: 'blur(0px)' }}
+            transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+            className="space-y-1.5"
+          >
+            <CardTitle
+              className={cn(
+                'leading-[1.24] font-bold text-white drop-shadow-xs transition-all duration-200',
+                scaleClasses.questionTitle
+              )}
+            >
               {question.title}
             </CardTitle>
-            <CardDescription className="text-[13.5px] leading-snug text-slate-200/95 drop-shadow-2xs">
+            <CardDescription
+              className={cn(
+                'leading-snug text-slate-200/95 drop-shadow-2xs transition-all duration-200',
+                scaleClasses.questionSubtitle
+              )}
+            >
               {question.subtitle}
             </CardDescription>
-          </div>
+          </motion.div>
         </CardHeader>
       </Card>
 
       {/* 3. Opciones del Paso Actual */}
       <motion.div
-        key={question.id}
+        key={`${question.id}-${activeTransitionStyle}`}
         drag={canDragBack ? 'x' : false}
         dragDirectionLock
         dragConstraints={{ left: 0, right: 0 }}
         dragElastic={{ left: 0.02, right: 0.25 }}
         onDragEnd={handleDragEnd}
-        initial={prefersReducedMotion ? false : { opacity: 0, x: 14 }}
-        animate={{ opacity: 1, x: 0 }}
-        transition={{ type: 'spring', stiffness: 400, damping: 32 }}
+        initial={
+          prefersReducedMotion
+            ? false
+            : activeTransitionStyle === 'transition-lens'
+              ? { opacity: 0, scale: 0.96, filter: 'blur(8px)' }
+              : activeTransitionStyle === 'transition-cascade'
+                ? { opacity: 0, y: 20 }
+                : { opacity: 0, x: 18 }
+        }
+        animate={{ opacity: 1, scale: 1, x: 0, y: 0, filter: 'blur(0px)' }}
+        transition={
+          activeTransitionStyle === 'transition-lens'
+            ? { duration: 0.35, ease: [0.22, 1, 0.36, 1] }
+            : { type: 'spring', stiffness: 360, damping: 28 }
+        }
       >
         <motion.div
-          variants={prefersReducedMotion ? undefined : listContainerVariants}
+          variants={
+            prefersReducedMotion
+              ? undefined
+              : CONTAINER_VARIANTS_BY_STYLE[activeTransitionStyle]
+          }
           initial="hidden"
           animate="visible"
           className="space-y-2.5"
@@ -342,7 +465,11 @@ export function QuestionStep({
             return (
               <motion.div
                 key={option.value}
-                variants={prefersReducedMotion ? undefined : optionCardVariants}
+                variants={
+                  prefersReducedMotion
+                    ? undefined
+                    : CARD_VARIANTS_BY_STYLE[activeTransitionStyle]
+                }
               >
                 <button
                   type="button"
@@ -372,7 +499,12 @@ export function QuestionStep({
                               {option.badgeText}
                             </Badge>
                           ) : null}
-                          <p className="font-brand-heading text-[15px] font-semibold text-[var(--brand-text)] leading-snug">
+                          <p
+                            className={cn(
+                              'font-brand-heading font-semibold text-[var(--brand-text)] leading-snug transition-all duration-200',
+                              scaleClasses.optionLabel
+                            )}
+                          >
                             {isUploadRxButton && isProcessingPhoto
                               ? 'Cargando imagen de tu receta...'
                               : option.label}
@@ -402,7 +534,12 @@ export function QuestionStep({
                         </div>
                       </div>
 
-                      <p className="text-[12.5px] text-[var(--brand-text-muted)] leading-relaxed">
+                      <p
+                        className={cn(
+                          'text-[var(--brand-text-muted)] leading-relaxed transition-all duration-200',
+                          scaleClasses.optionDescription
+                        )}
+                      >
                         {option.description}
                       </p>
 

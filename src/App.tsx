@@ -1,14 +1,14 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { ArrowLeft } from '@phosphor-icons/react';
-import {
-  FONT_PAIR_STORAGE_KEY,
-  isValidFontPairId,
-} from './config/brandTheme';
 import { ENV_CONFIG } from './config/env';
 import { useCatalogPrices } from './hooks/useCatalogPrices';
 import { useOpticalWizard } from './hooks/useOpticalWizard';
-import type { BrandThemeId, FontPairId } from './types/optical.types';
+import type {
+  BrandThemeId,
+  DesignLabConfig,
+  FontPairId,
+} from './types/optical.types';
 import {
   initClarityHeatmaps,
   tagClaritySession,
@@ -24,40 +24,73 @@ const QuoteResultStep = lazy(
 );
 
 const FIXED_LIGHT_THEME: BrandThemeId = 'theme-clinical';
+// Fuente #4 seleccionada por el cliente: Sora + DM Sans ('font-modern-atelier')
+const SELECTED_FONT_PAIR_4: FontPairId = 'font-modern-atelier';
+const DESIGN_LAB_STORAGE_KEY = 'optica_profesional_design_lab_v1';
 
-function loadInitialFontPair(): FontPairId {
+const DEFAULT_DESIGN_LAB_CONFIG: DesignLabConfig = {
+  videoBoxSize: 'balanced',
+  fontScale: 'scale-md',
+  transitionStyle: 'transition-slide',
+};
+
+function loadInitialDesignLabConfig(): DesignLabConfig {
   if (typeof window === 'undefined') {
-    return 'font-logo-match';
+    return DEFAULT_DESIGN_LAB_CONFIG;
   }
   try {
-    const stored = window.localStorage.getItem(FONT_PAIR_STORAGE_KEY);
-    if (isValidFontPairId(stored)) {
-      return stored;
-    }
+    const raw = window.localStorage.getItem(DESIGN_LAB_STORAGE_KEY);
+    if (!raw) return DEFAULT_DESIGN_LAB_CONFIG;
+    const parsed = JSON.parse(raw) as Partial<DesignLabConfig>;
+    const videoBoxSize =
+      parsed.videoBoxSize === 'compact' ||
+      parsed.videoBoxSize === 'balanced' ||
+      parsed.videoBoxSize === 'cinematic'
+        ? parsed.videoBoxSize
+        : 'balanced';
+    const fontScale =
+      parsed.fontScale === 'scale-sm' ||
+      parsed.fontScale === 'scale-md' ||
+      parsed.fontScale === 'scale-lg'
+        ? parsed.fontScale
+        : 'scale-md';
+    const transitionStyle =
+      parsed.transitionStyle === 'transition-slide' ||
+      parsed.transitionStyle === 'transition-lens' ||
+      parsed.transitionStyle === 'transition-cascade'
+        ? parsed.transitionStyle
+        : 'transition-slide';
+
+    return { videoBoxSize, fontScale, transitionStyle };
   } catch {
-    // Fallback
+    return DEFAULT_DESIGN_LAB_CONFIG;
   }
-  return 'font-logo-match';
 }
 
 export function App() {
-  const [activeFontPair, setActiveFontPair] = useState<FontPairId>(() =>
-    loadInitialFontPair()
+  const [designLabConfig, setDesignLabConfig] = useState<DesignLabConfig>(() =>
+    loadInitialDesignLabConfig()
   );
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', FIXED_LIGHT_THEME);
+    document.documentElement.setAttribute(
+      'data-font-pair',
+      SELECTED_FONT_PAIR_4
+    );
     initClarityHeatmaps();
   }, []);
 
   useEffect(() => {
-    document.documentElement.setAttribute('data-font-pair', activeFontPair);
     try {
-      window.localStorage.setItem(FONT_PAIR_STORAGE_KEY, activeFontPair);
+      window.localStorage.setItem(
+        DESIGN_LAB_STORAGE_KEY,
+        JSON.stringify(designLabConfig)
+      );
     } catch {
-      // Ignore storage error
+      // Ignorar errores de almacenamiento
     }
-  }, [activeFontPair]);
+  }, [designLabConfig]);
 
   const { catalogState } = useCatalogPrices();
 
@@ -164,6 +197,7 @@ export function App() {
                 key="step-questions"
                 question={currentQuestion}
                 answers={wizardState.answers}
+                designLabConfig={designLabConfig}
                 onSelectOption={selectQuestionOption}
                 onConfirmBudgetStep={confirmBudgetPreferencesStep}
                 onAttachPrescriptionPhoto={attachPrescriptionPhotoAndAdvance}
@@ -189,10 +223,10 @@ export function App() {
         </Suspense>
       </main>
 
-      {/* Toggle Flotante de 5 Fuentes para evaluación en vivo con Solana */}
+      {/* Panel Flotante para probar los 3 Tamaños de Video, 3 Escalas de Letra y 3 Efectos de Transición */}
       <DesignLabSwitcher
-        activeFontPair={activeFontPair}
-        onSelectFontPair={setActiveFontPair}
+        config={designLabConfig}
+        onChangeConfig={setDesignLabConfig}
       />
     </div>
   );

@@ -19,6 +19,21 @@ export type FontPairId =
   | 'font-modern-atelier'
   | 'font-boutique-editorial';
 
+export type VideoBoxSizeId = 'compact' | 'balanced' | 'cinematic';
+
+export type FontScaleId = 'scale-sm' | 'scale-md' | 'scale-lg';
+
+export type TransitionStyleId =
+  | 'transition-slide'
+  | 'transition-lens'
+  | 'transition-cascade';
+
+export interface DesignLabConfig {
+  readonly videoBoxSize: VideoBoxSizeId;
+  readonly fontScale: FontScaleId;
+  readonly transitionStyle: TransitionStyleId;
+}
+
 export type BusinessUnit = 'B2C_OPTICA_PROFESIONAL' | 'B2B_SMART_OPTICAL';
 
 /**
