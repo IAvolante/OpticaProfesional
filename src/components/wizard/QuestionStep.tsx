@@ -329,10 +329,10 @@ export function QuestionStep({
         })}
       </div>
 
-      {/* 2. Cabecera Card con Pool de 3 Videos Persistentes en Memoria */}
-      <Card className="overflow-hidden">
+      {/* 2. Cabecera Card Full-Video con la Pregunta superpuesta encima del video */}
+      <Card className="relative overflow-hidden border-[#336699]/35 bg-[#0B1929] shadow-md">
         <div
-          className="relative h-28 w-full overflow-hidden bg-slate-900 bg-cover bg-center"
+          className="absolute inset-0 bg-slate-900 bg-cover bg-center"
           style={{ backgroundImage: `url(${showcase.poster})` }}
         >
           {SHOWCASE_POOL.map((item) => {
@@ -359,36 +359,31 @@ export function QuestionStep({
               />
             );
           })}
-          <div className="absolute inset-0 z-20 bg-gradient-to-t from-[#102336]/85 via-[#102336]/25 to-transparent" />
-          <div className="absolute bottom-2.5 left-3.5 right-3.5 z-30 flex items-center justify-between gap-2">
-            <span className="inline-flex items-center gap-2 rounded-md bg-[#102336]/80 backdrop-blur-md border border-white/15 px-2.5 py-1 text-[11px] font-medium text-white">
-              <span className="h-2 w-2 rounded-full bg-[#99CC99]" />
-              <span>{showcase.caption}</span>
-            </span>
-            <span className="font-mono text-[10px] font-semibold uppercase tracking-widest text-[#99CC99]">
-              {showcase.code}
-            </span>
-          </div>
+          {/* Velo clínico degradado para garantizar lectura perfecta de la pregunta sobre el video */}
+          <div className="absolute inset-0 z-20 bg-gradient-to-t from-[#091524]/92 via-[#0D2137]/72 to-[#0D2137]/45" />
         </div>
 
-        <CardHeader className="p-4 space-y-1.5">
+        <CardHeader className="relative z-30 flex min-h-[146px] flex-col justify-between p-4 sm:p-5 space-y-3">
           <div className="flex items-center justify-between gap-2">
-            <span className="font-mono text-[11px] font-semibold uppercase tracking-wider text-[var(--brand-accent-foreground)]">
-              {question.categoryBadge}
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-[#091524]/70 backdrop-blur-md border border-white/15 px-2.5 py-1 font-mono text-[10px] font-semibold uppercase tracking-wider text-white">
+              <span className="h-2 w-2 rounded-full bg-[#99CC99] shrink-0" />
+              <span>{question.categoryBadge}</span>
             </span>
-            <span className="font-mono text-[10px] font-semibold text-[var(--brand-accent-foreground)] bg-[var(--brand-accent)] border border-[var(--brand-accent-border)] rounded-md px-2 py-0.5">
+            <span className="font-mono text-[10px] font-semibold text-[#99CC99] bg-[#99CC99]/15 backdrop-blur-md border border-[#99CC99]/45 rounded-full px-2.5 py-0.5 shrink-0">
               {question.isMultiSelect
                 ? 'Podés elegir varias'
                 : 'Tocá una opción'}
             </span>
           </div>
 
-          <CardTitle className="text-[18px] leading-[1.28] font-semibold text-[var(--brand-text)]">
-            {question.title}
-          </CardTitle>
-          <CardDescription className="text-[13px] leading-relaxed text-[var(--brand-text-muted)]">
-            {question.subtitle}
-          </CardDescription>
+          <div className="space-y-1 pt-1">
+            <CardTitle className="text-[18px] sm:text-[19px] leading-[1.25] font-bold text-white drop-shadow-xs">
+              {question.title}
+            </CardTitle>
+            <CardDescription className="text-[13px] leading-snug text-slate-200/95">
+              {question.subtitle}
+            </CardDescription>
+          </div>
         </CardHeader>
       </Card>
 
