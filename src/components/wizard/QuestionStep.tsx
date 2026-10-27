@@ -282,19 +282,12 @@ export function QuestionStep({
         className="hidden"
       />
 
-      {/* 1. Tira Visual de los 5 Pasos con paleta Bicolor 2026 (#336699 + #99CC99) */}
-      <div className="grid grid-cols-5 gap-1.5">
-        {STEP_PILLS.map((pill, idx) => {
+      {/* 1. Indicador progresivo sin previsualizar pasos futuros (solo muestra los pasos ya ejecutados y el número del paso actual) */}
+      <div className="flex items-center gap-1.5">
+        {STEP_PILLS.slice(0, question.stepNumber).map((pill, idx) => {
           const isCurrent = pill.id === question.id;
-          const isCompleted =
-            pill.id === 'budgetPreferences'
-              ? Boolean(
-                  answers.budgetPreferences &&
-                    answers.budgetPreferences.length > 0
-                )
-              : Boolean(answers[pill.id]);
           const isPast = idx + 1 < question.stepNumber;
-          const canClickPill = (isCompleted || isPast) && onJumpToStep;
+          const canClickPill = isPast && Boolean(onJumpToStep);
 
           return (
             <button
@@ -303,33 +296,28 @@ export function QuestionStep({
               disabled={!canClickPill}
               aria-current={isCurrent ? 'step' : undefined}
               onClick={() => {
-                if (canClickPill) {
+                if (canClickPill && onJumpToStep) {
                   triggerHapticFeedback(8);
                   onJumpToStep(idx);
                 }
               }}
               className={cn(
-                'flex min-h-[42px] flex-col items-center justify-center rounded-xl py-1.5 px-1 border text-center transition-all duration-200',
+                'flex min-h-[36px] min-w-[44px] items-center justify-center rounded-xl px-3 py-1.5 border text-center transition-all duration-200',
                 canClickPill ? 'cursor-pointer' : 'cursor-default',
                 isCurrent
                   ? 'border-[#336699] bg-[#336699] text-white shadow-2xs'
-                  : isCompleted || isPast
-                    ? 'border-[var(--brand-accent-border)] bg-[var(--brand-accent)] text-[var(--brand-accent-foreground)]'
-                    : 'border-[var(--brand-border)] bg-[var(--brand-surface)]/85 text-[var(--brand-text-muted)]'
+                  : 'border-[var(--brand-accent-border)] bg-[var(--brand-accent)] text-[var(--brand-accent-foreground)]'
               )}
             >
-              <span className="font-mono text-[9px] font-bold uppercase tracking-wider leading-none">
+              <span className="font-mono text-xs font-bold uppercase tracking-wider leading-none">
                 {pill.code}
-              </span>
-              <span className="text-[10px] font-semibold truncate max-w-full mt-0.5 leading-tight">
-                {pill.shortLabel}
               </span>
             </button>
           );
         })}
       </div>
 
-      {/* 2. Cabecera Card Full-Video con la Pregunta superpuesta encima del video */}
+      {/* 2. Cabecera Card Full-Video con la Pregunta superpuesta encima del video (sin texto "Paso X de 5") */}
       <Card className="relative overflow-hidden border-[#336699]/35 bg-[#0B1929] shadow-md">
         <div
           className="absolute inset-0 bg-slate-900 bg-cover bg-center"
@@ -360,23 +348,11 @@ export function QuestionStep({
             );
           })}
           {/* Velo clínico degradado para garantizar lectura perfecta de la pregunta sobre el video */}
-          <div className="absolute inset-0 z-20 bg-gradient-to-t from-[#091524]/92 via-[#0D2137]/72 to-[#0D2137]/45" />
+          <div className="absolute inset-0 z-20 bg-gradient-to-t from-[#091524]/92 via-[#0D2137]/68 to-[#0D2137]/35" />
         </div>
 
-        <CardHeader className="relative z-30 flex min-h-[146px] flex-col justify-between p-4 sm:p-5 space-y-3">
-          <div className="flex items-center justify-between gap-2">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-[#091524]/70 backdrop-blur-md border border-white/15 px-2.5 py-1 font-mono text-[10px] font-semibold uppercase tracking-wider text-white">
-              <span className="h-2 w-2 rounded-full bg-[#99CC99] shrink-0" />
-              <span>{question.categoryBadge}</span>
-            </span>
-            <span className="font-mono text-[10px] font-semibold text-[#99CC99] bg-[#99CC99]/15 backdrop-blur-md border border-[#99CC99]/45 rounded-full px-2.5 py-0.5 shrink-0">
-              {question.isMultiSelect
-                ? 'Podés elegir varias'
-                : 'Tocá una opción'}
-            </span>
-          </div>
-
-          <div className="space-y-1 pt-1">
+        <CardHeader className="relative z-30 flex min-h-[138px] flex-col justify-end p-4 sm:p-5">
+          <div className="space-y-1.5">
             <CardTitle className="text-[18px] sm:text-[19px] leading-[1.25] font-bold text-white drop-shadow-xs">
               {question.title}
             </CardTitle>

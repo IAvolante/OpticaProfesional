@@ -16,7 +16,6 @@ import {
 import { BackgroundVideoStage } from './components/ui/BackgroundVideoStage';
 import { DesignLabSwitcher } from './components/ui/DesignLabSwitcher';
 import { OpticalBrandTransition } from './components/ui/OpticalBrandTransition';
-import { ProgressBar } from './components/ui/ProgressBar';
 import { WizardStepSkeleton } from './components/ui/WizardStepSkeleton';
 import { QuestionStep } from './components/wizard/QuestionStep';
 
@@ -65,8 +64,6 @@ export function App() {
   const {
     wizardState,
     currentQuestion,
-    totalQuestions,
-    progressPercentage,
     canGoBack,
     isSubmittingLead,
     selectQuestionOption,
@@ -87,11 +84,6 @@ export function App() {
       : catalogState.source === 'LOCAL_CACHE'
         ? 'Precios sincronizados'
         : 'Precios vigentes · Óptica Profesional';
-
-  const stepIndicatorLabel =
-    wizardState.step === 'QUESTIONS'
-      ? `Paso ${wizardState.activeQuestionIndex + 1} de ${totalQuestions}`
-      : 'Tu Resultado';
 
   const activeTransitionKey =
     wizardState.step === 'QUESTIONS'
@@ -140,17 +132,11 @@ export function App() {
             />
           </div>
 
-          <span className="font-mono rounded-lg bg-[var(--brand-accent)] px-2.5 py-1 text-[11px] font-semibold tracking-wide text-[var(--brand-accent-foreground)] border border-[var(--brand-accent-border)] shrink-0">
-            {stepIndicatorLabel}
-          </span>
-        </div>
-
-        <div className="mx-auto w-full max-w-[480px]">
-          <ProgressBar
-            percentage={progressPercentage}
-            label="Progreso del cotizador óptico"
-            slim
-          />
+          {wizardState.step === 'QUOTE_RESULT' ? (
+            <span className="font-mono rounded-lg bg-[var(--brand-accent)] px-2.5 py-1 text-[11px] font-semibold tracking-wide text-[var(--brand-accent-foreground)] border border-[var(--brand-accent-border)] shrink-0">
+              Tu Resultado
+            </span>
+          ) : null}
         </div>
       </header>
 
