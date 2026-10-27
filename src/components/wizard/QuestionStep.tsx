@@ -303,7 +303,7 @@ export function QuestionStep({
           <div className="absolute inset-0 z-20 bg-gradient-to-t from-[#091524] via-[#091524]/40 via-45% to-transparent pointer-events-none" />
         </div>
 
-        <CardHeader className="relative z-30 flex min-h-[272px] sm:min-h-[292px] flex-col justify-end p-4 sm:p-5">
+        <CardHeader className="relative z-30 flex min-h-[204px] sm:min-h-[220px] flex-col justify-end p-4 sm:p-5">
           <div className="space-y-1.5">
             <CardTitle className="text-[19px] sm:text-[21px] leading-[1.25] font-bold text-white drop-shadow-xs">
               {question.title}
