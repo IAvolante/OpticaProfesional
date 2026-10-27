@@ -39,18 +39,6 @@ export interface QuestionStepProps {
   readonly onJumpToStep?: (index: number) => void;
 }
 
-const STEP_PILLS: readonly {
-  readonly id: QuestionId;
-  readonly code: string;
-  readonly shortLabel: string;
-}[] = [
-  { id: 'improvementGoal', code: '01', shortLabel: 'Material' },
-  { id: 'activityContext', code: '02', shortLabel: 'Solución' },
-  { id: 'clientPriority', code: '03', shortLabel: 'Prioridad' },
-  { id: 'budgetPreferences', code: '04', shortLabel: 'Beneficios' },
-  { id: 'prescriptionAttachment', code: '05', shortLabel: 'Receta' },
-];
-
 const BASE_URL = import.meta.env.BASE_URL;
 
 const SHOWCASE_POOL = [
@@ -145,7 +133,6 @@ export function QuestionStep({
   onConfirmBudgetStep,
   onAttachPrescriptionPhoto,
   onSwipeBack,
-  onJumpToStep,
 }: QuestionStepProps) {
   const prefersReducedMotion = useReducedMotion();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -282,42 +269,7 @@ export function QuestionStep({
         className="hidden"
       />
 
-      {/* 1. Indicador progresivo sin previsualizar pasos futuros (solo muestra los pasos ya ejecutados y el número del paso actual) */}
-      <div className="flex items-center gap-1.5">
-        {STEP_PILLS.slice(0, question.stepNumber).map((pill, idx) => {
-          const isCurrent = pill.id === question.id;
-          const isPast = idx + 1 < question.stepNumber;
-          const canClickPill = isPast && Boolean(onJumpToStep);
-
-          return (
-            <button
-              key={pill.id}
-              type="button"
-              disabled={!canClickPill}
-              aria-current={isCurrent ? 'step' : undefined}
-              onClick={() => {
-                if (canClickPill && onJumpToStep) {
-                  triggerHapticFeedback(8);
-                  onJumpToStep(idx);
-                }
-              }}
-              className={cn(
-                'flex min-h-[36px] min-w-[44px] items-center justify-center rounded-xl px-3 py-1.5 border text-center transition-all duration-200',
-                canClickPill ? 'cursor-pointer' : 'cursor-default',
-                isCurrent
-                  ? 'border-[#336699] bg-[#336699] text-white shadow-2xs'
-                  : 'border-[var(--brand-accent-border)] bg-[var(--brand-accent)] text-[var(--brand-accent-foreground)]'
-              )}
-            >
-              <span className="font-mono text-xs font-bold uppercase tracking-wider leading-none">
-                {pill.code}
-              </span>
-            </button>
-          );
-        })}
-      </div>
-
-      {/* 2. Cabecera Card Full-Video con la Pregunta superpuesta encima del video (sin texto "Paso X de 5") */}
+      {/* 1. Cabecera Card Full-Video al DOBLE de altura (2x) con la Pregunta superpuesta encima del video */}
       <Card className="relative overflow-hidden border-[#336699]/35 bg-[#0B1929] shadow-md">
         <div
           className="absolute inset-0 bg-slate-900 bg-cover bg-center"
@@ -347,16 +299,16 @@ export function QuestionStep({
               />
             );
           })}
-          {/* Velo clínico degradado para garantizar lectura perfecta de la pregunta sobre el video */}
-          <div className="absolute inset-0 z-20 bg-gradient-to-t from-[#091524]/92 via-[#0D2137]/68 to-[#0D2137]/35" />
+          {/* Velo clínico de 3 fases: parte superior luminosa para lucir el video y base oscura para contraste perfecto de la pregunta */}
+          <div className="absolute inset-0 z-20 bg-gradient-to-t from-[#091524] via-[#091524]/40 via-45% to-transparent pointer-events-none" />
         </div>
 
-        <CardHeader className="relative z-30 flex min-h-[138px] flex-col justify-end p-4 sm:p-5">
+        <CardHeader className="relative z-30 flex min-h-[272px] sm:min-h-[292px] flex-col justify-end p-4 sm:p-5">
           <div className="space-y-1.5">
-            <CardTitle className="text-[18px] sm:text-[19px] leading-[1.25] font-bold text-white drop-shadow-xs">
+            <CardTitle className="text-[19px] sm:text-[21px] leading-[1.25] font-bold text-white drop-shadow-xs">
               {question.title}
             </CardTitle>
-            <CardDescription className="text-[13px] leading-snug text-slate-200/95">
+            <CardDescription className="text-[13.5px] leading-snug text-slate-200/95 drop-shadow-2xs">
               {question.subtitle}
             </CardDescription>
           </div>

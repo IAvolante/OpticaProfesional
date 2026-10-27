@@ -110,10 +110,11 @@ export function App() {
       {/* Sello de Agua Sutil con el Isotipo 2026 "op" */}
       <OpticalBrandTransition stepKey={activeTransitionKey} />
 
-      {/* Header Sticky con el Nuevo Logo 2026 (op Optica Profesional) */}
+      {/* Header Sticky con Logo 2026 siempre centrado matemáticamente */}
       <header className="sticky top-0 z-30 w-full border-b border-[var(--brand-border)] bg-[var(--brand-header-bg)] backdrop-blur-xl transition-colors duration-200">
-        <div className="mx-auto flex h-14 w-full max-w-[480px] items-center justify-between gap-2 px-4">
-          <div className="flex items-center gap-2.5 min-w-0">
+        <div className="relative mx-auto flex h-14 w-full max-w-[480px] items-center justify-between px-4">
+          {/* Slot Izquierdo: Botón Volver con ancho fijo w-10 (nunca desplaza al logo) */}
+          <div className="flex w-10 items-center justify-start shrink-0 z-10">
             {canGoBack ? (
               <button
                 type="button"
@@ -124,19 +125,33 @@ export function App() {
                 <ArrowLeft weight="bold" className="h-4 w-4" />
               </button>
             ) : null}
+          </div>
 
+          {/* Slot Central: Logo Oficial Óptica Profesional fijo en el centro exacto (no clickeable) */}
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none">
             <img
               src={`${import.meta.env.BASE_URL}logo-optica-profesional.png`}
               alt={ENV_CONFIG.brandNameB2C}
-              className="brand-header-logo h-8 w-auto object-contain shrink-0 select-none transition-all duration-200"
+              draggable={false}
+              className="brand-header-logo h-8 w-auto object-contain select-none pointer-events-none transition-all duration-200"
             />
           </div>
 
-          {wizardState.step === 'QUOTE_RESULT' ? (
-            <span className="font-mono rounded-lg bg-[var(--brand-accent)] px-2.5 py-1 text-[11px] font-semibold tracking-wide text-[var(--brand-accent-foreground)] border border-[var(--brand-accent-border)] shrink-0">
-              Tu Resultado
-            </span>
-          ) : null}
+          {/* Slot Derecho: Indicador del paso actual sin anticipar cuántos pasos hay */}
+          <div className="flex min-w-10 items-center justify-end shrink-0 z-10">
+            {wizardState.step === 'QUESTIONS' ? (
+              <div className="flex items-center gap-1.5 rounded-full border border-[var(--brand-accent-border)] bg-[var(--brand-accent)] px-2.5 py-1 text-[var(--brand-accent-foreground)] shadow-2xs">
+                <span className="h-1.5 w-1.5 rounded-full bg-[var(--brand-secondary)]" />
+                <span className="font-mono text-[11px] font-bold tracking-tight text-[var(--brand-primary)]">
+                  PASO {currentQuestion.stepNumber.toString().padStart(2, '0')}
+                </span>
+              </div>
+            ) : (
+              <span className="font-mono rounded-full bg-[var(--brand-accent)] px-2.5 py-1 text-[11px] font-semibold tracking-wide text-[var(--brand-accent-foreground)] border border-[var(--brand-accent-border)] shrink-0">
+                Tu Resultado
+              </span>
+            )}
+          </div>
         </div>
       </header>
 
