@@ -5,7 +5,12 @@ import {
   type PanInfo,
   type Variants,
 } from 'framer-motion';
-import { ArrowRight, Camera, Check } from '@phosphor-icons/react';
+import {
+  ArrowRight,
+  Camera,
+  Check,
+  CircleNotch,
+} from '@phosphor-icons/react';
 import type {
   BudgetPreferenceAnswer,
   DesignLabConfig,
@@ -109,8 +114,8 @@ const QUESTION_VIDEO_SHOWCASE: Record<
 
 const VIDEO_BOX_HEIGHT_CLASSES: Record<VideoBoxSizeId, string> = {
   compact: 'min-h-[148px] sm:min-h-[164px]',
-  balanced: 'min-h-[204px] sm:min-h-[220px]',
-  cinematic: 'min-h-[272px] sm:min-h-[292px]',
+  balanced: 'min-h-[188px] sm:min-h-[216px]',
+  cinematic: 'min-h-[268px] sm:min-h-[288px]',
 };
 
 const FONT_SCALE_CLASSES: Record<
@@ -454,7 +459,9 @@ export function QuestionStep({
           }
           initial="hidden"
           animate="visible"
-          className="space-y-2.5"
+          className={
+            question.options.length >= 5 ? 'space-y-2' : 'space-y-2.5'
+          }
         >
           {question.options.map((option) => {
             const isSelected = isOptionSelected(option.value);
@@ -477,10 +484,11 @@ export function QuestionStep({
                   disabled={isProcessingPhoto}
                   onClick={() => handleOptionPress(option.value)}
                   className={cn(
-                    'optical-glass-card group relative w-full text-left rounded-2xl p-3.5 transition-all duration-200 cursor-pointer select-none block',
+                    'optical-glass-card group relative w-full text-left rounded-2xl transition-all duration-200 cursor-pointer select-none block',
+                    question.options.length >= 5 ? 'p-3 sm:p-3.5' : 'p-3.5',
                     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-ring)]',
                     'active:scale-[0.99]',
-                    isSelected
+                    isSelected || (isUploadRxButton && isProcessingPhoto)
                       ? 'optical-glass-card-active'
                       : 'hover:border-[#336699]/50'
                   )}
@@ -506,22 +514,27 @@ export function QuestionStep({
                             )}
                           >
                             {isUploadRxButton && isProcessingPhoto
-                              ? 'Cargando imagen de tu receta...'
+                              ? 'Optimizando imagen de tu receta...'
                               : option.label}
                           </p>
                         </div>
 
-                        {/* Indicador de Selección (Checkbox en Paso 4, Radio/Cámara en los demás) */}
+                        {/* Indicador de Selección (Checkbox en Paso 4, Spinner/Radio/Cámara en los demás) */}
                         <div
                           className={cn(
                             'mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center border transition-colors',
                             question.isMultiSelect ? 'rounded-md' : 'rounded-full',
-                            isSelected
+                            isSelected || (isUploadRxButton && isProcessingPhoto)
                               ? 'border-[#336699] bg-[#336699] text-white'
                               : 'border-[var(--brand-border)] bg-[var(--brand-surface)] group-hover:border-[#336699]'
                           )}
                         >
-                          {isSelected ? (
+                          {isUploadRxButton && isProcessingPhoto ? (
+                            <CircleNotch
+                              weight="bold"
+                              className="h-3.5 w-3.5 animate-spin"
+                            />
+                          ) : isSelected ? (
                             <Check weight="bold" className="h-3 w-3" />
                           ) : isUploadRxButton ? (
                             <Camera
@@ -564,7 +577,7 @@ export function QuestionStep({
                               Receta cargada correctamente
                             </p>
                             <p className="font-mono text-[10px] text-[var(--brand-text-muted)] truncate">
-                              {answers.prescriptionPhotoName ?? 'receta.jpg'}
+                              {answers.prescriptionPhotoName ?? 'receta.jpg'} — Tocá para cambiar foto
                             </p>
                           </div>
                         </div>
@@ -577,6 +590,29 @@ export function QuestionStep({
           })}
         </motion.div>
       </motion.div>
+
+      {/* Si el usuario volvió al Paso 5 y ya tenía una foto cargada, permitirle avanzar en 1 toque sin re-subirla */}
+      {question.id === 'prescriptionAttachment' &&
+        answers.prescriptionPhotoDataUrl && (
+          <div className="pt-1">
+            <Button
+              type="button"
+              variant="primary"
+              size="lg"
+              fullWidth
+              onClick={() => {
+                triggerHapticFeedback(15);
+                onAttachPrescriptionPhoto(
+                  answers.prescriptionPhotoName ?? 'receta.jpg',
+                  answers.prescriptionPhotoDataUrl!
+                );
+              }}
+              rightIcon={<ArrowRight weight="bold" className="h-4 w-4" />}
+            >
+              Continuar con mi receta cargada
+            </Button>
+          </div>
+        )}
 
       {/* 4. En el Paso 4 (Selección Múltiple), barra Sticky inferior para avanzar siempre visible */}
       {question.isMultiSelect && (

@@ -71,6 +71,23 @@ export function App() {
   const [designLabConfig, setDesignLabConfig] = useState<DesignLabConfig>(() =>
     loadInitialDesignLabConfig()
   );
+  const [isDesignLabEnabled, setIsDesignLabEnabled] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    const params = new URLSearchParams(window.location.search);
+    return params.get('lab') === '1';
+  });
+  const [, setSecretTapCount] = useState<number>(0);
+
+  const handleStepBadgeSecretTap = () => {
+    setSecretTapCount((prev) => {
+      const next = prev + 1;
+      if (next >= 3) {
+        setIsDesignLabEnabled((enabled) => !enabled);
+        return 0;
+      }
+      return next;
+    });
+  };
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', FIXED_LIGHT_THEME);
@@ -170,26 +187,38 @@ export function App() {
             />
           </div>
 
-          {/* Slot Derecho: Indicador del paso actual sin anticipar cuántos pasos hay */}
+          {/* Slot Derecho: Indicador del paso actual sin anticipar cuántos pasos hay (3 toques desbloquean el Modo Laboratorio) */}
           <div className="flex min-w-10 items-center justify-end shrink-0 z-10">
             {wizardState.step === 'QUESTIONS' ? (
-              <div className="flex items-center gap-1.5 rounded-full border border-[var(--brand-accent-border)] bg-[var(--brand-accent)] px-2.5 py-1 text-[var(--brand-accent-foreground)] shadow-2xs">
+              <button
+                type="button"
+                onClick={handleStepBadgeSecretTap}
+                className="flex items-center gap-1.5 rounded-full border border-[var(--brand-accent-border)] bg-[var(--brand-accent)] px-2.5 py-1 text-[var(--brand-accent-foreground)] shadow-2xs select-none cursor-default"
+              >
                 <span className="h-1.5 w-1.5 rounded-full bg-[var(--brand-secondary)]" />
                 <span className="font-mono text-[11px] font-bold tracking-tight text-[var(--brand-primary)]">
                   PASO {currentQuestion.stepNumber.toString().padStart(2, '0')}
                 </span>
-              </div>
+              </button>
             ) : (
-              <span className="font-mono rounded-full bg-[var(--brand-accent)] px-2.5 py-1 text-[11px] font-semibold tracking-wide text-[var(--brand-accent-foreground)] border border-[var(--brand-accent-border)] shrink-0">
+              <button
+                type="button"
+                onClick={handleStepBadgeSecretTap}
+                className="font-mono rounded-full bg-[var(--brand-accent)] px-2.5 py-1 text-[11px] font-semibold tracking-wide text-[var(--brand-accent-foreground)] border border-[var(--brand-accent-border)] shrink-0 select-none cursor-default"
+              >
                 Tu Resultado
-              </span>
+              </button>
             )}
           </div>
         </div>
       </header>
 
       {/* Contenedor Responsive Mobile-First (100% en smartphone, 480px centrado en desktop) */}
-      <main className="relative z-10 mx-auto w-full max-w-[480px] flex-1 flex flex-col px-4 pt-3.5 pb-16">
+      <main
+        className={`relative z-10 mx-auto w-full max-w-[480px] flex-1 flex flex-col px-4 pt-3.5 ${
+          isDesignLabEnabled ? 'pb-16' : 'pb-8'
+        }`}
+      >
         <Suspense fallback={<WizardStepSkeleton />}>
           <AnimatePresence mode="wait">
             {wizardState.step === 'QUESTIONS' && (
@@ -223,11 +252,13 @@ export function App() {
         </Suspense>
       </main>
 
-      {/* Panel Flotante para probar los 3 Tamaños de Video, 3 Escalas de Letra y 3 Efectos de Transición */}
-      <DesignLabSwitcher
-        config={designLabConfig}
-        onChangeConfig={setDesignLabConfig}
-      />
+      {/* Panel Flotante de Laboratorio (oculto al público; se activa con ?lab=1 o tocando 3 veces PASO 0X) */}
+      {isDesignLabEnabled && (
+        <DesignLabSwitcher
+          config={designLabConfig}
+          onChangeConfig={setDesignLabConfig}
+        />
+      )}
     </div>
   );
 }

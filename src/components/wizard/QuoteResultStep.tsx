@@ -97,6 +97,20 @@ export function QuoteResultStep({
     advisorClosingParagraph,
   } = recommendation;
 
+  const isNameValid = fullName.trim().length >= 2;
+  const isPhoneValid = sanitizeArgentinePhone(whatsapp).length >= 8;
+  const activeSelectedLens =
+    selectedTier === 'PRIMARY' ? primaryOption : alternativeOption;
+  const activeOptionLabel =
+    selectedTier === 'PRIMARY' ? 'Opción 1' : 'Opción 2';
+
+  const handleInputFocusScroll = (inputEl: HTMLInputElement | null) => {
+    if (!inputEl) return;
+    window.setTimeout(() => {
+      inputEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 180);
+  };
+
   const handlePhotoChange = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     event.target.value = '';
@@ -236,7 +250,7 @@ export function QuoteResultStep({
                   setSelectedTier(tier);
                 }}
                 className={cn(
-                  'group relative flex flex-col justify-between rounded-2xl p-3.5 text-left transition-all duration-200 cursor-pointer border',
+                  'group relative flex flex-col justify-between rounded-2xl p-3.5 text-left transition-all duration-200 cursor-pointer border active:scale-[0.99]',
                   isSelected
                     ? 'optical-glass-card-active'
                     : 'border-[var(--brand-border)] bg-[var(--brand-surface)]/85 hover:border-[#336699]/60'
@@ -247,23 +261,30 @@ export function QuoteResultStep({
                     <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--brand-accent-foreground)]">
                       {stepTitle}
                     </span>
-                    <div
+                    <span
                       className={cn(
-                        'flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition-colors',
+                        'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold transition-colors',
                         isSelected
-                          ? 'border-[#336699] bg-[#336699] text-white'
-                          : 'border-[var(--brand-border)] bg-[var(--brand-surface)]'
+                          ? 'bg-[#336699] text-white'
+                          : 'bg-[var(--brand-surface-elevated)] text-[var(--brand-text-muted)] border border-[var(--brand-border)]'
                       )}
                     >
-                      {isSelected && <Check weight="bold" className="h-3 w-3" />}
-                    </div>
+                      {isSelected ? (
+                        <>
+                          <Check weight="bold" className="h-2.5 w-2.5" />
+                          <span>Elegida</span>
+                        </>
+                      ) : (
+                        <span>Elegir</span>
+                      )}
+                    </span>
                   </div>
 
                   <p className="font-brand-heading min-h-[38px] line-clamp-2 text-[13.5px] sm:text-[14.5px] font-semibold text-[var(--brand-text)] leading-snug">
                     {lens.commercialName}
                   </p>
 
-                  <p className="font-brand-price tabular-nums text-xl sm:text-2xl font-bold tracking-tight text-[var(--brand-text)] pt-0.5">
+                  <p className="font-brand-price tabular-nums text-[19px] sm:text-2xl leading-none font-bold tracking-tight text-[var(--brand-text)] pt-1">
                     {formatCurrencyARS(lens.priceStockARS)}
                   </p>
                 </div>
@@ -272,7 +293,12 @@ export function QuoteResultStep({
                   <span className="text-[11px] font-medium text-[var(--brand-text-muted)] leading-tight">
                     {tagline}
                   </span>
-                  <span className="h-2 w-2 rounded-full bg-[#99CC99] shrink-0" />
+                  <span
+                    className={cn(
+                      'h-2 w-2 rounded-full shrink-0 transition-colors',
+                      isSelected ? 'bg-[#336699]' : 'bg-[#99CC99]'
+                    )}
+                  />
                 </div>
               </button>
             );
@@ -388,6 +414,17 @@ export function QuoteResultStep({
             noValidate
             className="space-y-3 text-left pt-1"
           >
+            {/* Resumen dinámico de la opción seleccionada arriba */}
+            <div className="rounded-xl bg-white/[0.07] border border-white/15 px-3 py-2 text-center">
+              <p className="text-[11.5px] text-slate-300">
+                Activando certificado para:{' '}
+                <span className="font-semibold text-[#99CC99]">
+                  {activeOptionLabel} — {activeSelectedLens.commercialName} (
+                  {formatCurrencyARS(activeSelectedLens.priceStockARS)})
+                </span>
+              </p>
+            </div>
+
             <p className="text-xs font-semibold text-center text-slate-200">
               Completá tu nombre y WhatsApp para activar tu certificado:
             </p>
@@ -414,6 +451,7 @@ export function QuoteResultStep({
                     aria-invalid={Boolean(nameError)}
                     aria-describedby={nameError ? 'coupon-fullname-error' : undefined}
                     value={fullName}
+                    onFocus={() => handleInputFocusScroll(nameInputRef.current)}
                     onChange={(e) => {
                       setFullName(e.target.value);
                       if (nameError) setNameError('');
@@ -422,12 +460,19 @@ export function QuoteResultStep({
                     autoComplete="name"
                     enterKeyHint="next"
                     className={cn(
-                      'min-h-[46px] w-full rounded-xl bg-white/10 pl-10 pr-3.5 py-2.5 text-base text-white placeholder:text-slate-400 transition-all focus:outline-none',
+                      'min-h-[46px] w-full rounded-xl bg-white/10 pl-10 pr-10 py-2.5 text-base text-white placeholder:text-slate-400 transition-all focus:outline-none',
                       nameError
                         ? 'border-2 border-rose-400 bg-rose-950/40'
-                        : 'border border-white/20 focus:border-[#99CC99] focus:bg-white/15'
+                        : isNameValid
+                          ? 'border border-[#99CC99]/70 bg-white/15 focus:border-[#99CC99]'
+                          : 'border border-white/20 focus:border-[#99CC99] focus:bg-white/15'
                     )}
                   />
+                  {isNameValid && !nameError ? (
+                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3.5 text-[#99CC99]">
+                      <Check weight="bold" className="h-4 w-4" />
+                    </div>
+                  ) : null}
                 </div>
                 {nameError ? (
                   <p
@@ -462,6 +507,7 @@ export function QuoteResultStep({
                     aria-invalid={Boolean(phoneError)}
                     aria-describedby={phoneError ? 'coupon-whatsapp-error' : undefined}
                     value={whatsapp}
+                    onFocus={() => handleInputFocusScroll(phoneInputRef.current)}
                     onChange={(e) => {
                       setWhatsapp(e.target.value);
                       if (phoneError) setPhoneError('');
@@ -470,12 +516,19 @@ export function QuoteResultStep({
                     autoComplete="tel"
                     enterKeyHint="done"
                     className={cn(
-                      'min-h-[46px] w-full rounded-xl bg-white/10 pl-10 pr-3.5 py-2.5 text-base text-white placeholder:text-slate-400 transition-all focus:outline-none',
+                      'min-h-[46px] w-full rounded-xl bg-white/10 pl-10 pr-10 py-2.5 text-base text-white placeholder:text-slate-400 transition-all focus:outline-none',
                       phoneError
                         ? 'border-2 border-rose-400 bg-rose-950/40'
-                        : 'border border-white/20 focus:border-[#99CC99] focus:bg-white/15'
+                        : isPhoneValid
+                          ? 'border border-[#99CC99]/70 bg-white/15 focus:border-[#99CC99]'
+                          : 'border border-white/20 focus:border-[#99CC99] focus:bg-white/15'
                     )}
                   />
+                  {isPhoneValid && !phoneError ? (
+                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3.5 text-[#99CC99]">
+                      <Check weight="bold" className="h-4 w-4" />
+                    </div>
+                  ) : null}
                 </div>
                 {phoneError ? (
                   <p
@@ -490,7 +543,7 @@ export function QuoteResultStep({
             </div>
 
             {/* Botón píldora blanco exacto al diseño del PDF de Solana */}
-            <div className="pt-2">
+            <div className="pt-2 space-y-2">
               <button
                 type="submit"
                 disabled={isSubmitting}
@@ -503,6 +556,9 @@ export function QuoteResultStep({
                 </span>
                 <ArrowRight weight="bold" className="h-4 w-4 text-[#336699]" />
               </button>
+              <p className="text-center text-[11px] text-slate-400">
+                Sin compromiso de compra · Atención directa por WhatsApp
+              </p>
             </div>
           </form>
         </div>
