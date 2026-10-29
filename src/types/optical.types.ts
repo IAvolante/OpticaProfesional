@@ -152,12 +152,23 @@ export interface WizardQuestionDefinition {
   readonly options: readonly WizardQuestionOption[];
 }
 
-export type LensFamily = 'DESCANSO' | 'MONOFOCAL' | 'BIFOCAL' | 'MULTIFOCAL';
+export type LensFamily =
+  | 'DESCANSO'
+  | 'MONOFOCAL'
+  | 'OCUPACIONAL'
+  | 'BIFOCAL'
+  | 'MULTIFOCAL';
 
-export type RefractiveIndex = '1.50' | '1.56' | '1.59' | '1.67' | '1.74';
+export type RefractiveIndex =
+  | '1.50'
+  | '1.56'
+  | '1.59'
+  | '1.61'
+  | '1.67'
+  | '1.74';
 
 /**
- * Ítem del catálogo de cristales sincronizado con Google Sheets.
+ * Ítem del catálogo de cristales sincronizado con Google Sheets y encuesta.xlsx.
  */
 export interface LensCatalogItem {
   readonly sku: string;
@@ -165,6 +176,10 @@ export interface LensCatalogItem {
   readonly shortBadge: string;
   readonly family: LensFamily;
   readonly refractiveIndex: RefractiveIndex;
+  /** Etiqueta de distancia/tipo tal cual la Columna B de encuesta.xlsx (ej: 'monofocal', 'lejos/intermedia', 'lejos/cerca', 'lejos/intermedia/cerca') */
+  readonly visionRangeLabel?: string;
+  /** Prefijo o modo de precio según Columna C de encuesta.xlsx ('DESDE' para Ocupacionales/Bifocales/Multifocales, 'CONSULTAR' para Policarbonato Ar si no tiene monto fijo) */
+  readonly pricePrefix?: 'DESDE' | 'CONSULTAR';
   readonly materialDescription: string;
   readonly treatments: readonly string[];
   readonly idealForSummary: string;
@@ -183,6 +198,13 @@ export interface ClinicalTag {
   readonly category: 'protection' | 'material' | 'optics' | 'range';
 }
 
+export interface RecommendedLensCardItem {
+  readonly optionNumber: number;
+  readonly lens: LensCatalogItem;
+  readonly tagline: string;
+  readonly matchedQuestions: readonly ('P1' | 'P2' | 'P3')[];
+}
+
 /**
  * Salida determinística del motor `calculateOpticalRecommendation()` para el Paso 6 (RESULTADO).
  */
@@ -191,6 +213,8 @@ export interface OpticalRecommendationResult {
   readonly primaryCardTagline: string;
   readonly alternativeOption: LensCatalogItem;
   readonly alternativeCardTagline: string;
+  /** Lista completa de opciones recomendadas según las 'x' de encuesta.xlsx (Opción 1, Opción 2 y adicionales si corresponden) */
+  readonly allMatchedOptions?: readonly RecommendedLensCardItem[];
   readonly advisorObservationParagraph: string;
   readonly advisorClosingParagraph: string;
   readonly alternativeUpgradeReason: string;

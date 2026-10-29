@@ -18,7 +18,7 @@ import type {
 import { cn } from '../../utils/cn';
 import {
   compressPrescriptionImageToDataUrl,
-  formatCurrencyARS,
+  formatLensPriceARS,
   sanitizeArgentinePhone,
   triggerHapticFeedback,
 } from '../../utils/formatters';
@@ -45,25 +45,38 @@ const BUDGET_BADGE_LABELS: Record<BudgetPreferenceAnswer, string> = {
   beneficio_pago_contado: 'Beneficio pago contado',
 };
 
-function resolveDefaultSelectedTier(
-  answers: CompletedOpticalAnswers
-): 'PRIMARY' | 'ALTERNATIVE' {
-  // Si el usuario eligió uso de pantallas o prioridad tecnología/moda, preseleccionar Opción 2 (con el tratamiento específico / Blue Cut AR)
+function resolveDefaultSelectedOptionNumber(
+  answers: CompletedOpticalAnswers,
+  recommendation: OpticalRecommendationResult
+): number {
+  const options = recommendation.allMatchedOptions;
+  if (!options || options.length < 2) {
+    return 1;
+  }
+
+  // Si el usuario eligió pantallas o prioridad tecnología/moda, preseleccionar la opción que más preguntas haya sumado (o Opción 2 cuando hay upgrade de filtro)
+  const highestMatch = [...options].sort(
+    (a, b) => b.matchedQuestions.length - a.matchedQuestions.length
+  )[0];
+  if (highestMatch && highestMatch.matchedQuestions.length >= 2) {
+    return highestMatch.optionNumber;
+  }
+
   if (
     answers.improvementGoal === 'organico_blue_ar' ||
     answers.activityContext === 'computadora_celular' ||
     answers.clientPriority === 'tecnologia' ||
     answers.clientPriority === 'moda'
   ) {
-    return 'ALTERNATIVE';
+    return 2;
   }
-  return 'PRIMARY';
+  return 1;
 }
 
 /**
- * Paso 6 ('QUOTE_RESULT') — Cierre del Asesor Virtual + Precios en Vivo de Google Sheets
+ * Paso 6 ('QUOTE_RESULT') — Cierre del Asesor Virtual + Precios de Matriz Oficial `encuesta.xlsx`
  * + Cupón de Garantía de Recambio 12 Meses Gratis + Registro de Nombre y Teléfono.
- * Respeta fielmente el Ejemplo de Cierre de la página 2 de PREGUNTAS .pdf.
+ * Respeta fielmente el Ejemplo de Cierre de la página 2 de PREGUNTAS .pdf y la matriz `encuesta.xlsx`.
  */
 export function QuoteResultStep({
   lead,
@@ -80,8 +93,8 @@ export function QuoteResultStep({
   const phoneInputRef = useRef<HTMLInputElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  const [selectedTier, setSelectedTier] = useState<'PRIMARY' | 'ALTERNATIVE'>(
-    () => resolveDefaultSelectedTier(answers)
+  const [selectedOptionNumber, setSelectedOptionNumber] = useState<number>(() =>
+    resolveDefaultSelectedOptionNumber(answers, recommendation)
   );
   const [fullName, setFullName] = useState<string>(lead?.fullName ?? '');
   const [whatsapp, setWhatsapp] = useState<string>(lead?.whatsapp ?? '');
@@ -93,16 +106,39 @@ export function QuoteResultStep({
     primaryCardTagline,
     alternativeOption,
     alternativeCardTagline,
+    allMatchedOptions,
     advisorObservationParagraph,
     advisorClosingParagraph,
   } = recommendation;
 
+  const displayOptions =
+    allMatchedOptions && allMatchedOptions.length >= 2
+      ? allMatchedOptions
+      : [
+          {
+            optionNumber: 1,
+            lens: primaryOption,
+            tagline: primaryCardTagline,
+            matchedQuestions: ['P1'] as const,
+          },
+          {
+            optionNumber: 2,
+            lens: alternativeOption,
+            tagline: alternativeCardTagline,
+            matchedQuestions: ['P2'] as const,
+          },
+        ];
+
   const isNameValid = fullName.trim().length >= 2;
   const isPhoneValid = sanitizeArgentinePhone(whatsapp).length >= 8;
-  const activeSelectedLens =
-    selectedTier === 'PRIMARY' ? primaryOption : alternativeOption;
-  const activeOptionLabel =
-    selectedTier === 'PRIMARY' ? 'Opción 1' : 'Opción 2';
+
+  const activeCardItem =
+    displayOptions.find((item) => item.optionNumber === selectedOptionNumber) ??
+    displayOptions[0]!;
+  const activeSelectedLens = activeCardItem.lens;
+  const activeOptionLabel = `Opción ${activeCardItem.optionNumber}`;
+  const selectedTier: 'PRIMARY' | 'ALTERNATIVE' =
+    activeCardItem.optionNumber === 1 ? 'PRIMARY' : 'ALTERNATIVE';
 
   const handleInputFocusScroll = (inputEl: HTMLInputElement | null) => {
     if (!inputEl) return;
@@ -167,6 +203,7 @@ export function QuoteResultStep({
       fullName: trimmedName,
       whatsapp: cleanDigits,
       selectedTier,
+      selectedOptionNumber: activeCardItem.optionNumber,
     });
   };
 
@@ -220,37 +257,28 @@ export function QuoteResultStep({
           </p>
         </div>
 
-        {/* Grilla de 2 Opciones lado a lado (grid-cols-2 gap-3) con precios alineados simétricamente */}
+        {/* Grilla de Opciones según la Matriz Oficial `encuesta.xlsx` */}
         <div className="grid grid-cols-2 gap-3 pt-1">
-          {(
-            [
-              {
-                tier: 'PRIMARY' as const,
-                stepTitle: 'Opción 1',
-                lens: primaryOption,
-                tagline: primaryCardTagline,
-              },
-              {
-                tier: 'ALTERNATIVE' as const,
-                stepTitle: 'Opción 2',
-                lens: alternativeOption,
-                tagline: alternativeCardTagline,
-              },
-            ] as const
-          ).map(({ tier, stepTitle, lens, tagline }) => {
-            const isSelected = selectedTier === tier;
+          {displayOptions.map(({ optionNumber, lens, tagline }, idx) => {
+            const isSelected = activeCardItem.optionNumber === optionNumber;
+            const isOddLastCard =
+              displayOptions.length % 2 === 1 &&
+              idx === displayOptions.length - 1;
+            const formattedPrice = formatLensPriceARS(lens);
+            const isNumericPrice = lens.priceStockARS > 0 && !lens.pricePrefix;
 
             return (
               <button
-                key={tier}
+                key={`${lens.sku}-${optionNumber}`}
                 type="button"
                 aria-pressed={isSelected}
                 onClick={() => {
                   triggerHapticFeedback(10);
-                  setSelectedTier(tier);
+                  setSelectedOptionNumber(optionNumber);
                 }}
                 className={cn(
                   'group relative flex flex-col justify-between rounded-2xl p-3.5 text-left transition-all duration-200 cursor-pointer border active:scale-[0.99]',
+                  isOddLastCard && 'col-span-2',
                   isSelected
                     ? 'optical-glass-card-active'
                     : 'border-[var(--brand-border)] bg-[var(--brand-surface)]/85 hover:border-[#336699]/60'
@@ -259,7 +287,7 @@ export function QuoteResultStep({
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between gap-1.5">
                     <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--brand-accent-foreground)]">
-                      {stepTitle}
+                      Opción {optionNumber}
                     </span>
                     <span
                       className={cn(
@@ -280,12 +308,19 @@ export function QuoteResultStep({
                     </span>
                   </div>
 
-                  <p className="font-brand-heading min-h-[38px] line-clamp-2 text-[13.5px] sm:text-[14.5px] font-semibold text-[var(--brand-text)] leading-snug">
+                  <p className="font-brand-heading min-h-[36px] line-clamp-2 text-[13.5px] sm:text-[14.5px] font-semibold text-[var(--brand-text)] leading-snug">
                     {lens.commercialName}
                   </p>
 
-                  <p className="font-brand-price tabular-nums text-[19px] sm:text-2xl leading-none font-bold tracking-tight text-[var(--brand-text)] pt-1">
-                    {formatCurrencyARS(lens.priceStockARS)}
+                  <p
+                    className={cn(
+                      'font-brand-price tabular-nums font-bold tracking-tight text-[var(--brand-text)] pt-0.5',
+                      isNumericPrice
+                        ? 'text-[19px] sm:text-2xl leading-none'
+                        : 'text-[15px] sm:text-[17px] leading-snug text-[var(--brand-accent-foreground)]'
+                    )}
+                  >
+                    {formattedPrice}
                   </p>
                 </div>
 
@@ -420,7 +455,7 @@ export function QuoteResultStep({
                 Activando certificado para:{' '}
                 <span className="font-semibold text-[#99CC99]">
                   {activeOptionLabel} — {activeSelectedLens.commercialName} (
-                  {formatCurrencyARS(activeSelectedLens.priceStockARS)})
+                  {formatLensPriceARS(activeSelectedLens)})
                 </span>
               </p>
             </div>

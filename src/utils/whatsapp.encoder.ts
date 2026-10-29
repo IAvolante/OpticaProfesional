@@ -8,13 +8,17 @@ import type {
   LeadContactData,
   OpticalRecommendationResult,
 } from '../types/optical.types';
-import { formatCurrencyARS, sanitizeArgentinePhone } from './formatters';
+import {
+  formatLensPriceARS,
+  sanitizeArgentinePhone,
+} from './formatters';
 
 export interface WhatsAppMessagePayload {
   readonly lead: LeadContactData;
   readonly answers: CompletedOpticalAnswers;
   readonly recommendation: OpticalRecommendationResult;
   readonly selectedLensType?: 'PRIMARY' | 'ALTERNATIVE';
+  readonly selectedOptionNumber?: number;
 }
 
 export const IMPROVEMENT_GOAL_LABELS: Record<ImprovementGoalAnswer, string> = {
@@ -22,11 +26,11 @@ export const IMPROVEMENT_GOAL_LABELS: Record<ImprovementGoalAnswer, string> = {
   organico_blue_ar:
     'Sentir mayor comodidad visual cuando uso pantallas (ORGÁNICO BLUE AR)',
   alto_indice:
-    'Tener cristales más finos y livianos (ORGÁNICOS ALTO ÍNDICE 1.67 y 1.74)',
+    'Tener cristales más finos y livianos (POLICARBONATO AR / ORGÁNICO 1,61 y 1,67)',
   bifocal_multifocal:
-    'Evitar cambiar de anteojos para distintas distancias (BIFOCAL Y MULTIFOCALES)',
+    'Evitar cambiar de anteojos para distintas distancias (OCUPACIONALES / BIFOCALES / MULTIFOCALES)',
   filtro_fotocromatico:
-    'Manejar mejor, reflejos o molestias del sol (ORGÁNICO CON FILTRO O FOTOCROMÁTICO)',
+    'Manejar mejor, reflejos o molestias del sol (ORGÁNICO FOTOCROMÁTICO AR)',
 };
 
 export const ACTIVITY_CONTEXT_LABELS: Record<ActivityContextAnswer, string> = {
@@ -65,12 +69,31 @@ export function buildWhatsAppQuoteMessage(
     answers,
     recommendation,
     selectedLensType = 'PRIMARY',
+    selectedOptionNumber,
   } = payload;
 
-  const chosenLens =
-    selectedLensType === 'ALTERNATIVE'
-      ? recommendation.alternativeOption
-      : recommendation.primaryOption;
+  const allOptions = recommendation.allMatchedOptions ?? [
+    {
+      optionNumber: 1,
+      lens: recommendation.primaryOption,
+      tagline: recommendation.primaryCardTagline,
+      matchedQuestions: ['P1'] as const,
+    },
+    {
+      optionNumber: 2,
+      lens: recommendation.alternativeOption,
+      tagline: recommendation.alternativeCardTagline,
+      matchedQuestions: ['P2'] as const,
+    },
+  ];
+
+  const activeOptionNumber =
+    selectedOptionNumber ?? (selectedLensType === 'ALTERNATIVE' ? 2 : 1);
+
+  const chosenItem =
+    allOptions.find((item) => item.optionNumber === activeOptionNumber) ??
+    allOptions[0]!;
+  const chosenLens = chosenItem.lens;
 
   const passportCode = lead.passportCode ?? 'OP-2026';
 
@@ -92,6 +115,11 @@ export function buildWhatsAppQuoteMessage(
       ? `Receta cargada en el cotizador (${photoName}) — La envío a continuación`
       : 'Aún no tengo la receta';
 
+  const optionLines = allOptions.map(
+    (item) =>
+      `- *Opción ${item.optionNumber}${item.optionNumber === activeOptionNumber ? ' (Elegida)' : ''}:* ${item.lens.commercialName} (${item.lens.visionRangeLabel ?? 'monofocal'}) — *${formatLensPriceARS(item.lens)}*`
+  );
+
   const lines: string[] = [
     `Hola *${ENV_CONFIG.brandNameB2C}*! Quiero aprovechar mi beneficio exclusivo del cotizador online.`,
     ``,
@@ -102,10 +130,9 @@ export function buildWhatsAppQuoteMessage(
     `- Nombre: *${lead.fullName.trim()}*`,
     `- WhatsApp: ${lead.whatsapp}`,
     ``,
-    `*ALTERNATIVAS COTIZADAS*`,
-    `- *Opción 1${selectedLensType === 'PRIMARY' ? ' (Elegida)' : ''}:* ${recommendation.primaryOption.commercialName} — *${formatCurrencyARS(recommendation.primaryOption.priceStockARS)}* (${recommendation.primaryCardTagline})`,
-    `- *Opción 2${selectedLensType === 'ALTERNATIVE' ? ' (Elegida)' : ''}:* ${recommendation.alternativeOption.commercialName} — *${formatCurrencyARS(recommendation.alternativeOption.priceStockARS)}* (${recommendation.alternativeCardTagline})`,
-    `- *Cristal Seleccionado:* *${chosenLens.commercialName}* (*${formatCurrencyARS(chosenLens.priceStockARS)}*)`,
+    `*ALTERNATIVAS SEGÚN MATRIZ ÓPTICA*`,
+    ...optionLines,
+    `- *Cristal Seleccionado:* *Opción ${chosenItem.optionNumber} — ${chosenLens.commercialName}* (*${formatLensPriceARS(chosenLens)}*)`,
     ``,
     `*RESPUESTAS DEL ASESOR VIRTUAL*`,
     `1. Mejora principal: ${IMPROVEMENT_GOAL_LABELS[answers.improvementGoal]}`,

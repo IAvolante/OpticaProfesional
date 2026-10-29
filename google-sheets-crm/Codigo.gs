@@ -274,14 +274,16 @@ function inicializarPlanillaCRM() {
     pricesSheet.getRange(1, 1, 1, pricesHeaders.length).setValues([pricesHeaders]);
 
     const initialCatalogRows = [
-      ['ORGANICO-AR', 'Orgánico con antirreflejo', 48000, 82000, 'Visión clara eliminando reflejos molestos', '24 a 48 hs hábiles', 12],
-      ['ORGANICO-BLUE-AR', 'Orgánico Blue Cut AR', 68000, 112000, 'Filtro de luz azul + Antirreflejo para pantallas', '24 a 48 hs hábiles', 12],
-      ['ALTO-INDICE-167', 'Orgánico Alto Índice 1.67 AR', 142000, 195000, 'Ultradelgado índice 1.67 (hasta 40% más fino)', '48 a 72 hs hábiles', 12],
-      ['ALTO-INDICE-174', 'Orgánico Alto Índice 1.74 AR', 215000, 278000, 'Máxima delgadez óptica índice 1.74', '5 a 7 días hábiles', 12],
-      ['BIFOCAL-AR', 'Bifocal Orgánico AR', 96000, 138000, 'Visión de lejos y cerca con antirreflejo', '4 a 6 días hábiles', 12],
-      ['MULTIFOCAL-AR', 'Multifocal Progresivo Digital AR', 168000, 225000, 'Lejos, intermedia y cerca sin líneas visibles', '5 a 7 días hábiles', 12],
-      ['ORGANICO-FILTRO-SOL', 'Orgánico con Filtro UV400 + AR', 74000, 118000, 'Protección solar UV400 y manejo diurno', '24 a 48 hs hábiles', 12],
-      ['ORGANICO-FOTOCROMATICO', 'Fotocromático Inteligente + Blue AR', 124000, 174000, 'Transparente adentro, se oscurece al sol', '48 a 72 hs hábiles', 12]
+      ['ORGANICO-BLANCO', 'Orgánico Blanco', 36000, 58000, 'monofocal · Equilibrio calidad y precio', '24 a 48 hs hábiles', 12],
+      ['ORGANICO-AR', 'Orgánico AR', 42000, 72000, 'monofocal · Visión clara con antirreflejo', '24 a 48 hs hábiles', 12],
+      ['ORGANICO-BLUE-AR', 'Orgánico Blue Ar', 51000, 86000, 'monofocal · Filtro de luz azul + Antirreflejo', '24 a 48 hs hábiles', 12],
+      ['ORGANICO-FOTOCROMATICO', 'Orgánico Fotocromático Ar', 104000, 156000, 'monofocal · Transparente adentro, se oscurece al sol', '48 a 72 hs hábiles', 12],
+      ['POLICARBONATO-AR', 'Policarbonato Ar', 'Según receta', 0, 'monofocal · Más fino, liviano y resistente', '48 a 72 hs hábiles', 12],
+      ['ORGANICO-161', 'Orgánico 1,61', 130000, 185000, 'monofocal · Delgado y estético para uso diario', '48 a 72 hs hábiles', 12],
+      ['ALTO-INDICE-167', 'Orgánico 1,67', 150000, 215000, 'monofocal · Alto índice 1,67 ultradelgado', '48 a 72 hs hábiles', 12],
+      ['OCUPACIONALES', 'Ocupacionales', 'Desde', 0, 'lejos/intermedia · Visión intermedia y cerca', '5 a 7 días hábiles', 12],
+      ['BIFOCAL-AR', 'Bifocales', 'Desde', 0, 'lejos/cerca · Visión de lejos y lectura de cerca', '4 a 6 días hábiles', 12],
+      ['MULTIFOCAL-AR', 'Multifocales', 'Desde', 0, 'lejos/intermedia/cerca · Progresivo todas las distancias', '5 a 7 días hábiles', 12]
     ];
 
     pricesSheet

@@ -33,24 +33,24 @@ export const OPTICAL_WIZARD_QUESTIONS: readonly WizardQuestionDefinition[] = [
         label: 'Tener cristales más finos y livianos',
         description:
           'Reducción de espesor y peso para una estética superior en tu armazón.',
-        clinicalHint: 'Ultradelgados Índices 1.67 y 1.74',
-        badgeText: 'ORGÁNICOS ALTO ÍNDICE (1.67 Y 1.74)',
+        clinicalHint: 'Policarbonato AR y Orgánicos 1,61 / 1,67',
+        badgeText: 'POLICARBONATO AR · ALTO ÍNDICE 1,61 Y 1,67',
       },
       {
         value: 'bifocal_multifocal',
         label: 'Evitar cambiar de anteojos para distintas distancias',
         description:
           'Ver bien de lejos, intermedia y cerca con un único par de anteojos.',
-        clinicalHint: 'Progresivos Multifocales y Bifocales',
-        badgeText: 'BIFOCAL Y MULTIFOCALES',
+        clinicalHint: 'Ocupacionales, Bifocales y Multifocales',
+        badgeText: 'OCUPACIONALES · BIFOCALES · MULTIFOCALES',
       },
       {
         value: 'filtro_fotocromatico',
         label: 'Manejar mejor, reflejos o molestias del sol',
         description:
           'Mayor confort al aire libre, reducción de encandilamiento y adaptación solar.',
-        clinicalHint: 'Filtro UV400 / Fotocromático Inteligente',
-        badgeText: 'ORGÁNICO CON FILTRO O FOTOCROMÁTICO',
+        clinicalHint: 'Orgánico Fotocromático con Antirreflejo',
+        badgeText: 'ORGÁNICO FOTOCROMÁTICO AR',
       },
     ],
   },

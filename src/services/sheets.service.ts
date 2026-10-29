@@ -7,7 +7,10 @@ import type {
   LensCatalogItem,
   OpticalRecommendationResult,
 } from '../types/optical.types';
-import { parseFlexibleARSPrice } from '../utils/formatters';
+import {
+  formatLensPriceARS,
+  parseFlexibleARSPrice,
+} from '../utils/formatters';
 import {
   ACTIVITY_CONTEXT_LABELS,
   BUDGET_PREFERENCE_LABELS,
@@ -15,7 +18,7 @@ import {
   IMPROVEMENT_GOAL_LABELS,
 } from '../utils/whatsapp.encoder';
 
-const CATALOG_CACHE_STORAGE_KEY = 'optica_profesional_catalog_cache_v2';
+const CATALOG_CACHE_STORAGE_KEY = 'optica_profesional_catalog_cache_v4';
 
 interface CachedCatalogEnvelope {
   readonly savedAtMs: number;
@@ -59,6 +62,7 @@ export interface SubmitLeadToSheetsPayload {
   readonly answers: CompletedOpticalAnswers;
   readonly recommendation: OpticalRecommendationResult;
   readonly selectedTier: 'PRIMARY' | 'ALTERNATIVE';
+  readonly selectedOptionNumber?: number;
   readonly activeTheme: BrandThemeId;
   readonly stage?: LeadSubmissionStage;
 }
@@ -165,6 +169,14 @@ function mergeRemotePricesIntoCatalog(
     }
   }
 
+  // Si la hoja remota de Google Sheets todavía tiene el catálogo viejo de 8 ítems (sin ORGANICO-BLANCO ni ORGANICO-161),
+  // respetamos los precios oficiales de `encuesta.xlsx` para que no pisen los $36.000, $42.000, $51.000, $104.000, $130.000 y $150.000.
+  const isUpdatedEncuestaSheet =
+    remoteMap.has('ORGANICO-BLANCO') || remoteMap.has('ORGANICO-161');
+  if (!isUpdatedEncuestaSheet) {
+    return FALLBACK_LENS_CATALOG;
+  }
+
   return FALLBACK_LENS_CATALOG.map((baseItem): LensCatalogItem => {
     const remote = remoteMap.get(baseItem.sku);
     if (!remote) {
@@ -183,11 +195,11 @@ function mergeRemotePricesIntoCatalog(
           ? remote.commercialName.trim()
           : baseItem.commercialName,
       priceStockARS:
-        Number.isFinite(priceStock) && priceStock > 0
+        Number.isFinite(priceStock) && priceStock >= 0
           ? priceStock
           : baseItem.priceStockARS,
       priceLabARS:
-        Number.isFinite(priceLab) && priceLab > 0
+        Number.isFinite(priceLab) && priceLab >= 0
           ? priceLab
           : baseItem.priceLabARS,
       stockRangeDescription:
@@ -327,10 +339,19 @@ export async function submitLeadToGoogleSheets(
     const isAnonymousPreview =
       stage === 'QUOTE_VIEWED' || !payload.lead.whatsapp.trim();
 
+    const activeOptNumber =
+      payload.selectedOptionNumber ??
+      (payload.selectedTier === 'ALTERNATIVE' ? 2 : 1);
+
+    const matchedCard = payload.recommendation.allMatchedOptions?.find(
+      (item) => item.optionNumber === activeOptNumber
+    );
+
     const chosenOption =
-      payload.selectedTier === 'ALTERNATIVE'
+      matchedCard?.lens ??
+      (payload.selectedTier === 'ALTERNATIVE'
         ? payload.recommendation.alternativeOption
-        : payload.recommendation.primaryOption;
+        : payload.recommendation.primaryOption);
 
     const step4Labels =
       payload.answers.budgetPreferences.length > 0
@@ -360,19 +381,25 @@ export async function submitLeadToGoogleSheets(
         : `https://wa.me/549${payload.lead.whatsapp}`,
       selectedTier: isAnonymousPreview
         ? 'Viendo cotización'
-        : payload.selectedTier === 'ALTERNATIVE'
-          ? 'Opción 2'
-          : 'Opción 1',
+        : `Opción ${activeOptNumber}`,
       selectedSku: chosenOption.sku,
       selectedCommercialName: chosenOption.commercialName,
-      selectedPriceARS: chosenOption.priceStockARS,
+      selectedPriceARS:
+        chosenOption.priceStockARS > 0
+          ? chosenOption.priceStockARS
+          : formatLensPriceARS(chosenOption),
       primarySku: payload.recommendation.primaryOption.sku,
       primaryName: payload.recommendation.primaryOption.commercialName,
-      priceStockARS: payload.recommendation.primaryOption.priceStockARS,
+      priceStockARS:
+        payload.recommendation.primaryOption.priceStockARS > 0
+          ? payload.recommendation.primaryOption.priceStockARS
+          : formatLensPriceARS(payload.recommendation.primaryOption),
       alternativeSku: payload.recommendation.alternativeOption.sku,
       alternativeName: payload.recommendation.alternativeOption.commercialName,
       alternativePriceARS:
-        payload.recommendation.alternativeOption.priceStockARS,
+        payload.recommendation.alternativeOption.priceStockARS > 0
+          ? payload.recommendation.alternativeOption.priceStockARS
+          : formatLensPriceARS(payload.recommendation.alternativeOption),
       improvementGoal: payload.answers.improvementGoal,
       step1Label: IMPROVEMENT_GOAL_LABELS[payload.answers.improvementGoal],
       activityContext: payload.answers.activityContext,

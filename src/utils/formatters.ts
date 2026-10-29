@@ -1,3 +1,5 @@
+import type { LensCatalogItem } from '../types/optical.types';
+
 /**
  * Formateador nativo de moneda para Pesos Argentinos (ARS) sin decimales,
  * según estándar de facturación de mostrador óptico en Argentina.
@@ -13,6 +15,34 @@ export function formatCurrencyARS(amount: number): string {
     return arsCurrencyFormatter.format(0);
   }
   return arsCurrencyFormatter.format(Math.round(amount));
+}
+
+/**
+ * Formatea el precio de un cristal respetando la columna Precio de encuesta.xlsx:
+ * - Si tiene monto numérico y prefijo 'DESDE': "Desde $ XX.XXX"
+ * - Si tiene prefijo 'DESDE' y monto 0 (Ocupacionales, Bifocales, Multifocales): "Desde · Según receta"
+ * - Si tiene prefijo 'CONSULTAR' y monto 0 (Policarbonato Ar): "Según receta"
+ * - Caso normal con monto > 0: "$ 36.000", "$ 42.000", "$ 51.000", "$ 104.000", "$ 130.000", "$ 150.000"
+ */
+export function formatLensPriceARS(
+  lens: Pick<LensCatalogItem, 'priceStockARS' | 'pricePrefix'>
+): string {
+  if (lens.pricePrefix === 'DESDE') {
+    if (lens.priceStockARS > 0) {
+      return `Desde ${formatCurrencyARS(lens.priceStockARS)}`;
+    }
+    return 'Desde · Según receta';
+  }
+
+  if (lens.pricePrefix === 'CONSULTAR' && lens.priceStockARS <= 0) {
+    return 'Según receta';
+  }
+
+  if (lens.priceStockARS <= 0) {
+    return 'Según receta';
+  }
+
+  return formatCurrencyARS(lens.priceStockARS);
 }
 
 /**

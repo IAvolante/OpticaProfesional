@@ -131,6 +131,7 @@ export interface ClaimBenefitParams {
   readonly fullName: string;
   readonly whatsapp: string;
   readonly selectedTier: 'PRIMARY' | 'ALTERNATIVE';
+  readonly selectedOptionNumber?: number;
 }
 
 export interface UseOpticalWizardParams {
@@ -529,17 +530,28 @@ export function useOpticalWizard({
   );
 
   const claimBenefitAndOpenWhatsApp = useCallback(
-    async ({ fullName, whatsapp, selectedTier }: ClaimBenefitParams) => {
+    async ({
+      fullName,
+      whatsapp,
+      selectedTier,
+      selectedOptionNumber,
+    }: ClaimBenefitParams) => {
       if (!isCompletedAnswers(snapshot.answers) || !recommendation) {
         return;
       }
 
       setIsSubmittingLead(true);
       const leadId = snapshot.lead?.passportCode ?? generateLeadId();
+      const activeOptionNumber =
+        selectedOptionNumber ?? (selectedTier === 'ALTERNATIVE' ? 2 : 1);
+      const matchedItem = recommendation.allMatchedOptions?.find(
+        (item) => item.optionNumber === activeOptionNumber
+      );
       const chosenOption =
-        selectedTier === 'ALTERNATIVE'
+        matchedItem?.lens ??
+        (selectedTier === 'ALTERNATIVE'
           ? recommendation.alternativeOption
-          : recommendation.primaryOption;
+          : recommendation.primaryOption);
 
       trackMetaPixelEvent('Lead', {
         content_name: chosenOption.commercialName,
@@ -579,6 +591,7 @@ export function useOpticalWizard({
           answers: snapshot.answers,
           recommendation,
           selectedTier,
+          selectedOptionNumber: activeOptionNumber,
           activeTheme,
         });
         uploadedPhotoUrl = submitResult.uploadedPhotoUrl ?? alreadyUploadedUrl;
@@ -591,6 +604,7 @@ export function useOpticalWizard({
           answers: snapshot.answers,
           recommendation,
           selectedTier,
+          selectedOptionNumber: activeOptionNumber,
           activeTheme,
         });
       }
@@ -616,6 +630,7 @@ export function useOpticalWizard({
         answers: finalAnswers,
         recommendation,
         selectedLensType: selectedTier,
+        selectedOptionNumber: activeOptionNumber,
       });
 
       setIsSubmittingLead(false);
