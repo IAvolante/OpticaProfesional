@@ -168,6 +168,20 @@ export type RefractiveIndex =
   | '1.74';
 
 /**
+ * Guía clínica y tips para cristales a medida (Ocupacionales, Bifocales y Multifocales),
+ * los cuales NO entran en la promo de recambio 12 meses gratis de monofocales y requieren medición en óptica.
+ */
+export interface MultiDistanceGuideInfo {
+  readonly badgeLabel: string;
+  readonly headline: string;
+  readonly subheadline: string;
+  readonly explanation: string;
+  readonly tips: readonly string[];
+  readonly measurementNotice: string;
+  readonly ctaButtonText: string;
+}
+
+/**
  * Ítem del catálogo de cristales sincronizado con Google Sheets y encuesta.xlsx.
  */
 export interface LensCatalogItem {
@@ -180,6 +194,10 @@ export interface LensCatalogItem {
   readonly visionRangeLabel?: string;
   /** Prefijo o modo de precio según Columna C de encuesta.xlsx ('DESDE' para Ocupacionales/Bifocales/Multifocales, 'CONSULTAR' para Policarbonato Ar si no tiene monto fijo) */
   readonly pricePrefix?: 'DESDE' | 'CONSULTAR';
+  /** Indica si el cristal participa de la promoción de Certificado Recambio 12 Meses Gratis (exclusivo para Monofocales según Solca) */
+  readonly hasAnnualReplacementPromo: boolean;
+  /** Guía de tips y características cuando el cristal es Ocupacional, Bifocal o Multifocal */
+  readonly multiDistanceGuide?: MultiDistanceGuideInfo;
   readonly materialDescription: string;
   readonly treatments: readonly string[];
   readonly idealForSummary: string;

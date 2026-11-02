@@ -1,7 +1,9 @@
 import type { WizardQuestionDefinition } from '../types/optical.types';
 
 /**
- * Árbol de preguntas oficial de Óptica Profesional (5 pasos definidos por Solana en PREGUNTAS .pdf).
+ * Árbol de preguntas oficial de Óptica Profesional (5 pasos definidos por Solana en PREGUNTAS .pdf y reunión del 30/10):
+ * - Sin cartelitos técnicos internos (`badgeText` eliminado en todas las opciones según pedido de Solana).
+ * - Selección única en las 5 preguntas (incluyendo el Paso 4 de presupuesto).
  */
 export const OPTICAL_WIZARD_QUESTIONS: readonly WizardQuestionDefinition[] = [
   {
@@ -18,7 +20,6 @@ export const OPTICAL_WIZARD_QUESTIONS: readonly WizardQuestionDefinition[] = [
         description:
           'Visión clara y definida eliminando los reflejos molestos de las luces.',
         clinicalHint: 'Orgánico con Antirreflejo (AR)',
-        badgeText: 'ORGÁNICO AR',
       },
       {
         value: 'organico_blue_ar',
@@ -26,7 +27,6 @@ export const OPTICAL_WIZARD_QUESTIONS: readonly WizardQuestionDefinition[] = [
         description:
           'Alivio frente al cansancio visual por uso de computadora, celular o tablet.',
         clinicalHint: 'Filtro de Luz Azul + Antirreflejo',
-        badgeText: 'ORGÁNICO BLUE AR',
       },
       {
         value: 'alto_indice',
@@ -34,7 +34,6 @@ export const OPTICAL_WIZARD_QUESTIONS: readonly WizardQuestionDefinition[] = [
         description:
           'Reducción de espesor y peso para una estética superior en tu armazón.',
         clinicalHint: 'Policarbonato AR y Orgánicos 1,61 / 1,67',
-        badgeText: 'POLICARBONATO AR · ALTO ÍNDICE 1,61 Y 1,67',
       },
       {
         value: 'bifocal_multifocal',
@@ -42,7 +41,6 @@ export const OPTICAL_WIZARD_QUESTIONS: readonly WizardQuestionDefinition[] = [
         description:
           'Ver bien de lejos, intermedia y cerca con un único par de anteojos.',
         clinicalHint: 'Ocupacionales, Bifocales y Multifocales',
-        badgeText: 'OCUPACIONALES · BIFOCALES · MULTIFOCALES',
       },
       {
         value: 'filtro_fotocromatico',
@@ -50,7 +48,6 @@ export const OPTICAL_WIZARD_QUESTIONS: readonly WizardQuestionDefinition[] = [
         description:
           'Mayor confort al aire libre, reducción de encandilamiento y adaptación solar.',
         clinicalHint: 'Orgánico Fotocromático con Antirreflejo',
-        badgeText: 'ORGÁNICO FOTOCROMÁTICO AR',
       },
     ],
   },
@@ -68,7 +65,6 @@ export const OPTICAL_WIZARD_QUESTIONS: readonly WizardQuestionDefinition[] = [
         description:
           'Jornadas de oficina, estudio o uso continuo de dispositivos digitales.',
         clinicalHint: 'Confort Digital y Enfoque Intermedio',
-        badgeText: 'USO DIGITAL',
       },
       {
         value: 'lectura_cerca',
@@ -76,7 +72,6 @@ export const OPTICAL_WIZARD_QUESTIONS: readonly WizardQuestionDefinition[] = [
         description:
           'Lectura prolongada, estudio o actividades manuales de precisión.',
         clinicalHint: 'Nitidez en Visión Próxima',
-        badgeText: 'VISIÓN DE CERCA',
       },
       {
         value: 'manejando_aire_libre',
@@ -84,7 +79,6 @@ export const OPTICAL_WIZARD_QUESTIONS: readonly WizardQuestionDefinition[] = [
         description:
           'Conducción en ciudad o ruta, exposición al sol y cambios de luz.',
         clinicalHint: 'Protección Exterior y Antirreflejo Vial',
-        badgeText: 'MANEJO Y EXTERIOR',
       },
       {
         value: 'actividades_diarias',
@@ -92,7 +86,6 @@ export const OPTICAL_WIZARD_QUESTIONS: readonly WizardQuestionDefinition[] = [
         description:
           'Uso permanente durante todo el día tanto en interiores como al salir.',
         clinicalHint: 'Solución Integral para Todo el Día',
-        badgeText: 'TODO EL DÍA',
       },
     ],
   },
@@ -102,7 +95,7 @@ export const OPTICAL_WIZARD_QUESTIONS: readonly WizardQuestionDefinition[] = [
     categoryBadge: 'Paso 3 de 5 · Tu Prioridad',
     title: '¿Cuál es tu prioridad a la hora de elegir tus anteojos?',
     subtitle:
-      'Así personalizamos las 2 alternativas que mejor se ajustan a lo que buscás.',
+      'Así personalizamos las alternativas que mejor se ajustan a lo que buscás.',
     options: [
       {
         value: 'precio',
@@ -110,7 +103,6 @@ export const OPTICAL_WIZARD_QUESTIONS: readonly WizardQuestionDefinition[] = [
         description:
           'Busco cuidar mi presupuesto sin resignar calidad óptica ni durabilidad.',
         clinicalHint: 'Mejor Relación Calidad / Precio',
-        badgeText: 'PRECIO',
       },
       {
         value: 'tecnologia',
@@ -118,7 +110,6 @@ export const OPTICAL_WIZARD_QUESTIONS: readonly WizardQuestionDefinition[] = [
         description:
           'Quiero la máxima protección visual, filtros avanzados y precisión digital.',
         clinicalHint: 'Innovación y Tratamientos Premium',
-        badgeText: 'TECNOLOGÍA',
       },
       {
         value: 'moda',
@@ -126,7 +117,6 @@ export const OPTICAL_WIZARD_QUESTIONS: readonly WizardQuestionDefinition[] = [
         description:
           'Priorizo cristales delgados, sin reflejos y con terminación estética impecable.',
         clinicalHint: 'Estética, Delgadez y Transparencia',
-        badgeText: 'MODA',
       },
       {
         value: 'solucion',
@@ -134,7 +124,6 @@ export const OPTICAL_WIZARD_QUESTIONS: readonly WizardQuestionDefinition[] = [
         description:
           'Quiero una recomendación clara, rápida y lista para usar cuanto antes.',
         clinicalHint: 'Practicidad y Rapidez de Entrega',
-        badgeText: 'SOLUCIÓN',
       },
     ],
   },
@@ -144,8 +133,7 @@ export const OPTICAL_WIZARD_QUESTIONS: readonly WizardQuestionDefinition[] = [
     categoryBadge: 'Paso 4 de 5 · Beneficios para tu Presupuesto',
     title: '¿Datos útiles para tu presupuesto?',
     subtitle:
-      'Podés seleccionar más de una opción para sumar todos tus beneficios en el cierre.',
-    isMultiSelect: true,
+      'Elegí la opción principal que te interesa consultar para tu presupuesto.',
     options: [
       {
         value: 'tengo_obra_social',
@@ -153,7 +141,6 @@ export const OPTICAL_WIZARD_QUESTIONS: readonly WizardQuestionDefinition[] = [
         description:
           'Si está en nuestra lista de prestadores, contás con un armazón estándar sin cargo al venir a probártelo.',
         clinicalHint: 'Beneficio Armazón Estándar Sin Cargo',
-        badgeText: 'OBRA SOCIAL',
       },
       {
         value: 'soy_particular',
@@ -161,7 +148,6 @@ export const OPTICAL_WIZARD_QUESTIONS: readonly WizardQuestionDefinition[] = [
         description:
           'Cotización directa con el precio más competitivo y entrega rápida.',
         clinicalHint: 'Atención Directa Particular',
-        badgeText: 'PARTICULAR',
       },
       {
         value: 'interes_cuotas_tarjeta',
@@ -169,7 +155,6 @@ export const OPTICAL_WIZARD_QUESTIONS: readonly WizardQuestionDefinition[] = [
         description:
           'Opciones de financiación en cuotas según tu tarjeta bancaria.',
         clinicalHint: 'Financiación con Tarjeta',
-        badgeText: 'CUOTAS',
       },
       {
         value: 'beneficio_pago_contado',
@@ -177,7 +162,6 @@ export const OPTICAL_WIZARD_QUESTIONS: readonly WizardQuestionDefinition[] = [
         description:
           'Bonificación especial abonando de contado en efectivo o transferencia.',
         clinicalHint: 'Descuento Especial Contado',
-        badgeText: 'PAGO CONTADO',
       },
     ],
   },
@@ -195,15 +179,13 @@ export const OPTICAL_WIZARD_QUESTIONS: readonly WizardQuestionDefinition[] = [
         description:
           'Tocá acá para sacar una foto o elegirla de tu galería en un solo paso.',
         clinicalHint: 'Subida Directa desde tu Celular',
-        badgeText: 'ADJUNTAR FOTO',
       },
       {
         value: 'aun_no_la_tengo',
         label: 'Aún no la tengo',
         description:
-          'Ver directamente mis 2 opciones recomendadas y mi certificado de garantía de 12 meses.',
+          'Ver directamente mis opciones recomendadas según mis respuestas.',
         clinicalHint: 'Ver Resultado Ahora',
-        badgeText: 'CONTINUAR SIN RECETA',
       },
     ],
   },

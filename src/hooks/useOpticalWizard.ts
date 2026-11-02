@@ -250,20 +250,19 @@ export function useOpticalWizard({
   const selectQuestionOption = useCallback(
     (questionId: QuestionId, value: QuestionOptionValue) => {
       setSnapshot((prev) => {
-        // Paso 4: Selección múltiple (se puede elegir más de una opción)
+        // Paso 4: Selección única acordada con Solana en la reunión del 30/10 (toca una opción y avanza directo al Paso 5)
         if (questionId === 'budgetPreferences') {
           const item = value as BudgetPreferenceAnswer;
-          const currentList = prev.answers.budgetPreferences ?? [];
-          const exists = currentList.includes(item);
-          const nextList = exists
-            ? currentList.filter((v) => v !== item)
-            : [...currentList, item];
-
           return {
             ...prev,
+            step: 'QUESTIONS',
+            activeQuestionIndex: Math.min(
+              prev.activeQuestionIndex + 1,
+              totalQuestions - 1
+            ),
             answers: {
               ...prev.answers,
-              budgetPreferences: nextList,
+              budgetPreferences: [item],
             },
           };
         }

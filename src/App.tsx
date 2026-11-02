@@ -72,9 +72,10 @@ export function App() {
     loadInitialDesignLabConfig()
   );
   const [isDesignLabEnabled, setIsDesignLabEnabled] = useState<boolean>(() => {
-    if (typeof window === 'undefined') return false;
+    if (typeof window === 'undefined') return true;
     const params = new URLSearchParams(window.location.search);
-    return params.get('lab') === '1';
+    if (params.get('lab') === '0') return false;
+    return true;
   });
   const [, setSecretTapCount] = useState<number>(0);
 
@@ -187,19 +188,15 @@ export function App() {
             />
           </div>
 
-          {/* Slot Derecho: Indicador del paso actual sin anticipar cuántos pasos hay (3 toques desbloquean el Modo Laboratorio) */}
+          {/* Slot Derecho: Sin indicador numérico de pasos (según acuerdo con Solana); 3 toques en la esquina derecha alternan el Modo Laboratorio */}
           <div className="flex min-w-10 items-center justify-end shrink-0 z-10">
             {wizardState.step === 'QUESTIONS' ? (
               <button
                 type="button"
                 onClick={handleStepBadgeSecretTap}
-                className="flex items-center gap-1.5 rounded-full border border-[var(--brand-accent-border)] bg-[var(--brand-accent)] px-2.5 py-1 text-[var(--brand-accent-foreground)] shadow-2xs select-none cursor-default"
-              >
-                <span className="h-1.5 w-1.5 rounded-full bg-[var(--brand-secondary)]" />
-                <span className="font-mono text-[11px] font-bold tracking-tight text-[var(--brand-primary)]">
-                  PASO {currentQuestion.stepNumber.toString().padStart(2, '0')}
-                </span>
-              </button>
+                aria-label="Alternar panel de laboratorio visual"
+                className="h-9 w-10 rounded-xl opacity-0 cursor-default select-none"
+              />
             ) : (
               <button
                 type="button"

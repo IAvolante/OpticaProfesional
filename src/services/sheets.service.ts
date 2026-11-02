@@ -18,7 +18,7 @@ import {
   IMPROVEMENT_GOAL_LABELS,
 } from '../utils/whatsapp.encoder';
 
-const CATALOG_CACHE_STORAGE_KEY = 'optica_profesional_catalog_cache_v4';
+const CATALOG_CACHE_STORAGE_KEY = 'optica_profesional_catalog_cache_v5';
 
 interface CachedCatalogEnvelope {
   readonly savedAtMs: number;
@@ -418,7 +418,9 @@ export async function submitLeadToGoogleSheets(
       prescriptionPhotoBase64: alreadyUploadedUrl
         ? ''
         : (payload.answers.prescriptionPhotoDataUrl ?? ''),
-      warrantyBenefit: 'CERTIFICADO RECAMBIO 12 MESES GRATIS',
+      warrantyBenefit: chosenOption.hasAnnualReplacementPromo
+        ? 'CERTIFICADO RECAMBIO 12 MESES GRATIS (MONOFOCAL)'
+        : 'ASESORAMIENTO Y MEDICIÓN A MEDIDA (NO APLICA PROMO 12 MESES)',
       activeTheme: payload.activeTheme,
       utmSource:
         typeof window !== 'undefined' && window.location.search

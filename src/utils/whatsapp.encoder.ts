@@ -120,11 +120,24 @@ export function buildWhatsAppQuoteMessage(
       `- *Opción ${item.optionNumber}${item.optionNumber === activeOptionNumber ? ' (Elegida)' : ''}:* ${item.lens.commercialName} (${item.lens.visionRangeLabel ?? 'monofocal'}) — *${formatLensPriceARS(item.lens)}*`
   );
 
+  const hasAnnualPromo = chosenLens.hasAnnualReplacementPromo;
+
+  const headerLines: string[] = hasAnnualPromo
+    ? [
+        `Hola *${ENV_CONFIG.brandNameB2C}*! Quiero aprovechar mi beneficio exclusivo del cotizador online.`,
+        ``,
+        `*CERTIFICADO BENEFICIO EXCLUSIVO #${passportCode}*`,
+        `*¡RENOVÁ TUS CRISTALES GRATIS!* (1 recambio sin cargo durante los próximos 12 meses en monofocales)`,
+      ]
+    : [
+        `Hola *${ENV_CONFIG.brandNameB2C}*! Hice mi consulta en el Asesor Virtual y quiero recibir asesoramiento para mis cristales *${chosenLens.commercialName}* (#${passportCode}).`,
+        ``,
+        `*ASESORAMIENTO Y MEDICIÓN A MEDIDA #${passportCode}*`,
+        `*Cristal de Laboratorio:* ${chosenLens.commercialName} (${chosenLens.visionRangeLabel ?? 'múltiples distancias'}) — Quiero conocer opciones según mi receta, planes de cuotas o beneficio de contado.`,
+      ];
+
   const lines: string[] = [
-    `Hola *${ENV_CONFIG.brandNameB2C}*! Quiero aprovechar mi beneficio exclusivo del cotizador online.`,
-    ``,
-    `*CERTIFICADO BENEFICIO EXCLUSIVO #${passportCode}*`,
-    `*¡RENOVÁ TUS CRISTALES GRATIS!* (1 recambio sin cargo durante los próximos 12 meses)`,
+    ...headerLines,
     `------------------------------------`,
     `*DATOS DEL CLIENTE*`,
     `- Nombre: *${lead.fullName.trim()}*`,

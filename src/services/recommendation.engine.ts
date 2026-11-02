@@ -371,8 +371,13 @@ export function calculateOpticalRecommendation(
 
   const requiresLabRangeWarning = isMultiDistanceNeed;
 
-  const estimatedRangeNote =
-    'Incluye Certificado de Garantía Exclusivo: 1 recambio de cristales sin cargo de la misma categoría y características durante los próximos 12 meses.';
+  const hasMonofocalOption = allMatchedOptions.some(
+    (item) => item.lens.hasAnnualReplacementPromo
+  );
+
+  const estimatedRangeNote = hasMonofocalOption
+    ? 'Incluye Certificado de Garantía Exclusivo en cristales monofocales: 1 recambio sin cargo de la misma categoría y características durante los próximos 12 meses.'
+    : 'Cristales fabricados a medida según graduación y mediciones oculares en gabinete óptico.';
 
   return {
     primaryOption: primaryItem.lens,

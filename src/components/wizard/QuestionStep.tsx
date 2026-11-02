@@ -27,9 +27,8 @@ import {
   compressPrescriptionImageToDataUrl,
   triggerHapticFeedback,
 } from '../../utils/formatters';
-import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
-import { Card, CardDescription, CardHeader, CardTitle } from '../ui/Card';
+import { Card, CardHeader, CardTitle } from '../ui/Card';
 import { OpticalOptionDiagram } from './OpticalOptionDiagram';
 
 export interface QuestionStepProps {
@@ -405,7 +404,6 @@ export function QuestionStep({
             }
             animate={{ opacity: 1, scale: 1, x: 0, y: 0, filter: 'blur(0px)' }}
             transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
-            className="space-y-1.5"
           >
             <CardTitle
               className={cn(
@@ -415,14 +413,6 @@ export function QuestionStep({
             >
               {question.title}
             </CardTitle>
-            <CardDescription
-              className={cn(
-                'leading-snug text-slate-200/95 drop-shadow-2xs transition-all duration-200',
-                scaleClasses.questionSubtitle
-              )}
-            >
-              {question.subtitle}
-            </CardDescription>
           </motion.div>
         </CardHeader>
       </Card>
@@ -501,12 +491,7 @@ export function QuestionStep({
 
                     <div className="min-w-0 flex-1 space-y-1">
                       <div className="flex items-start justify-between gap-2">
-                        <div className="space-y-1 min-w-0">
-                          {option.badgeText ? (
-                            <Badge variant="brand" className="mb-0.5">
-                              {option.badgeText}
-                            </Badge>
-                          ) : null}
+                        <div className="min-w-0">
                           <p
                             className={cn(
                               'font-brand-heading font-semibold text-[var(--brand-text)] leading-snug transition-all duration-200',

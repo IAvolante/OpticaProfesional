@@ -5,8 +5,13 @@ import {
   ArrowRight,
   Camera,
   Check,
+  CreditCard,
+  Info,
+  MapPin,
+  Money,
   Phone,
   ShieldCheck,
+  Sparkle,
   User,
 } from '@phosphor-icons/react';
 import type {
@@ -74,9 +79,10 @@ function resolveDefaultSelectedOptionNumber(
 }
 
 /**
- * Paso 6 ('QUOTE_RESULT') — Cierre del Asesor Virtual + Precios de Matriz Oficial `encuesta.xlsx`
- * + Cupón de Garantía de Recambio 12 Meses Gratis + Registro de Nombre y Teléfono.
- * Respeta fielmente el Ejemplo de Cierre de la página 2 de PREGUNTAS .pdf y la matriz `encuesta.xlsx`.
+ * Paso 6 ('QUOTE_RESULT') — Cierre del Asesor Virtual + Precios de Matriz Oficial `encuesta.xlsx`:
+ * - Si el cristal elegido es MONOFOCAL (`hasAnnualReplacementPromo === true`): muestra el Cupón de Garantía de Recambio 12 Meses Gratis.
+ * - Si el cristal elegido es OCUPACIONAL, BIFOCAL o MULTIFOCAL (`hasAnnualReplacementPromo === false`):
+ *   NO muestra la promo de 12 meses, y en su lugar muestra la Guía de Tips y Características + invitación a tomar mediciones en la óptica + facilidades de pago.
  */
 export function QuoteResultStep({
   lead,
@@ -140,6 +146,13 @@ export function QuoteResultStep({
   const selectedTier: 'PRIMARY' | 'ALTERNATIVE' =
     activeCardItem.optionNumber === 1 ? 'PRIMARY' : 'ALTERNATIVE';
 
+  const isMonofocalWithAnnualPromo =
+    activeSelectedLens.hasAnnualReplacementPromo;
+  const multiDistanceGuide = activeSelectedLens.multiDistanceGuide;
+  const hasAnyNumericStockPrice = displayOptions.some(
+    (opt) => opt.lens.priceStockARS > 0 && !opt.lens.pricePrefix
+  );
+
   const handleInputFocusScroll = (inputEl: HTMLInputElement | null) => {
     if (!inputEl) return;
     window.setTimeout(() => {
@@ -169,7 +182,11 @@ export function QuoteResultStep({
     let firstInvalidInput: HTMLInputElement | null = null;
 
     if (trimmedName.length < 2) {
-      setNameError('Completá tu nombre para emitir tu certificado de 12 meses.');
+      setNameError(
+        isMonofocalWithAnnualPromo
+          ? 'Completá tu nombre para emitir tu certificado de 12 meses.'
+          : 'Completá tu nombre para recibir tu asesoramiento personalizado.'
+      );
       firstInvalidInput = nameInputRef.current;
     } else {
       setNameError('');
@@ -223,7 +240,7 @@ export function QuoteResultStep({
       />
 
       {/* =====================================================================
-       * 1. TARJETA DEL ASESOR VIRTUAL + LAS 2 OPCIONES CON PRECIOS EN VIVO
+       * 1. TARJETA DEL ASESOR VIRTUAL + OPCIONES CON PRECIOS EN VIVO
        * ===================================================================== */}
       <div className="optical-glass-card rounded-3xl p-4 sm:p-5 space-y-4 border border-[var(--brand-border)]">
         {/* Encabezado con el Nuevo Logo 2026 */}
@@ -340,6 +357,20 @@ export function QuoteResultStep({
           })}
         </div>
 
+        {/* Aclaración clínica sutil sobre precios de Stock vs. Rango/Laboratorio acordada con Solana */}
+        {hasAnyNumericStockPrice ? (
+          <p className="flex items-center gap-1.5 text-[11px] text-[var(--brand-text-muted)] leading-snug">
+            <Info
+              weight="duotone"
+              className="h-3.5 w-3.5 shrink-0 text-[var(--brand-icon-primary)]"
+            />
+            <span>
+              Valores de referencia para graduaciones de stock. Pueden variar
+              según el rango de tu receta o tratamientos de laboratorio.
+            </span>
+          </p>
+        ) : null}
+
         {/* Resumen compacto de lo elegido en el Paso 4 + Foto de Receta del Paso 5 */}
         <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
           <div className="flex flex-wrap gap-1.5">
@@ -370,10 +401,12 @@ export function QuoteResultStep({
                   ) : null}
                   <div className="min-w-0">
                     <p className="text-[11.5px] font-semibold text-[var(--brand-text)]">
-                      Foto de receta lista ({answers.prescriptionPhotoName ?? 'receta.jpg'})
+                      Foto de receta lista (
+                      {answers.prescriptionPhotoName ?? 'receta.jpg'})
                     </p>
                     <p className="text-[11px] text-[var(--brand-text-muted)] leading-snug">
-                      Al abrirse WhatsApp podés enviarla directamente en el chat.
+                      Al abrirse WhatsApp podés enviarla directamente en el
+                      chat.
                     </p>
                   </div>
                 </div>
@@ -400,50 +433,128 @@ export function QuoteResultStep({
       </div>
 
       {/* =====================================================================
-       * 2. CUPÓN / CERTIFICADO EXCLUSIVO 12 MESES GRATIS + REGISTRO Y CIERRE
+       * 2. BLOQUE DINÁMICO SEGÚN TIPO DE CRISTAL (REGLA DE SOLANA 30/10):
+       *    - MONOFOCAL -> Cupón ¡RENOVÁ TUS CRISTALES GRATIS! (12 meses)
+       *    - OCUPACIONAL / BIFOCAL / MULTIFOCAL -> Tips y Características + Medición en Óptica + Beneficios de Pago
        * ===================================================================== */}
       <div className="relative overflow-hidden rounded-3xl bg-gradient-to-b from-[#0E2033] via-[#0B1929] to-[#081320] text-white p-5 sm:p-6 shadow-xl border border-[#336699]/40">
-        {/* Halo luminoso verde salvia y azul profesional detrás del cupón */}
+        {/* Halo luminoso verde salvia y azul profesional */}
         <div
           aria-hidden="true"
           className="pointer-events-none absolute -top-16 left-1/2 -translate-x-1/2 h-36 w-72 rounded-full bg-[#99CC99]/20 blur-3xl"
         />
 
-        <div className="relative z-10 space-y-4 text-center">
-          {/* Píldora BENEFICIO EXCLUSIVO idéntica al PDF de Solana */}
-          <div className="flex justify-center">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-[#99CC99]/20 border border-[#99CC99]/60 px-3.5 py-1 font-mono text-[11px] font-bold uppercase tracking-widest text-[#99CC99]">
-              BENEFICIO EXCLUSIVO
-            </span>
-          </div>
+        <div className="relative z-10 space-y-4">
+          {isMonofocalWithAnnualPromo ? (
+            /* ---------------------------------------------------------------
+             * CASO A: CRISTAL MONOFOCAL -> CERTIFICADO 12 MESES GRATIS
+             * --------------------------------------------------------------- */
+            <div className="space-y-4 text-center">
+              <div className="flex justify-center">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-[#99CC99]/20 border border-[#99CC99]/60 px-3.5 py-1 font-mono text-[11px] font-bold uppercase tracking-widest text-[#99CC99]">
+                  BENEFICIO EXCLUSIVO
+                </span>
+              </div>
 
-          <div className="space-y-1.5">
-            <h2 className="font-brand-heading text-xl sm:text-2xl font-extrabold tracking-tight text-white">
-              ¡RENOVÁ TUS CRISTALES GRATIS!
-            </h2>
-            <p className="text-sm sm:text-[15px] font-semibold text-[#99CC99]">
-              Comprá hoy y tenés un recambio sin cargo durante los próximos 12
-              meses.
-            </p>
-          </div>
+              <div className="space-y-1.5">
+                <h2 className="font-brand-heading text-xl sm:text-2xl font-extrabold tracking-tight text-white">
+                  ¡RENOVÁ TUS CRISTALES GRATIS!
+                </h2>
+                <p className="text-sm sm:text-[15px] font-semibold text-[#99CC99]">
+                  Comprá hoy y tenés un recambio sin cargo durante los próximos
+                  12 meses.
+                </p>
+              </div>
 
-          <div className="space-y-2 text-xs leading-relaxed text-slate-300 max-w-[410px] mx-auto">
-            <p>
-              Con la compra de tus anteojos con cristales incluidos, te llevás
-              un certificado para realizar un recambio de cristales de la misma
-              categoría y características, por única vez, dentro de los 12 meses
-              posteriores a tu compra.
-            </p>
-            <p className="text-[11px] text-slate-400">
-              Beneficio personal, no transferible. Sujeto a las condiciones del
-              certificado.
-            </p>
-          </div>
+              <div className="space-y-2 text-xs leading-relaxed text-slate-300 max-w-[410px] mx-auto">
+                <p>
+                  Con la compra de tus anteojos con cristales monofocales
+                  incluidos, te llevás un certificado para realizar un recambio
+                  de cristales de la misma categoría y características, por
+                  única vez, dentro de los 12 meses posteriores a tu compra.
+                </p>
+                <p className="text-[11px] text-slate-400">
+                  Beneficio personal, no transferible, exclusivo para cristales
+                  monofocales. Sujeto a las condiciones del certificado.
+                </p>
+              </div>
+            </div>
+          ) : (
+            /* ---------------------------------------------------------------
+             * CASO B: OCUPACIONAL / BIFOCAL / MULTIFOCAL -> TIPS + MEDICIÓN EN ÓPTICA
+             * --------------------------------------------------------------- */
+            <div className="space-y-3.5 text-left">
+              <div className="flex justify-center">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-[#99CC99]/20 border border-[#99CC99]/60 px-3.5 py-1 font-mono text-[10.5px] font-bold uppercase tracking-wider text-[#99CC99]">
+                  <Sparkle weight="fill" className="h-3 w-3" />
+                  <span>
+                    {multiDistanceGuide?.badgeLabel ??
+                      'TIPS Y CARACTERÍSTICAS · CRISTAL A MEDIDA'}
+                  </span>
+                </span>
+              </div>
 
-          {/* Separador tipo línea de troquel de cupón */}
+              <div className="space-y-1.5 text-center">
+                <h2 className="font-brand-heading text-lg sm:text-xl font-extrabold tracking-tight text-white">
+                  {multiDistanceGuide?.headline ??
+                    `TIPS PARA ELEGIR TUS ${activeSelectedLens.commercialName.toUpperCase()}`}
+                </h2>
+                <p className="text-xs sm:text-[13.5px] font-semibold text-[#99CC99] leading-snug">
+                  {multiDistanceGuide?.subheadline ??
+                    activeSelectedLens.idealForSummary}
+                </p>
+              </div>
+
+              <p className="text-xs leading-relaxed text-slate-200/95">
+                {multiDistanceGuide?.explanation ??
+                  activeSelectedLens.materialDescription}
+              </p>
+
+              {/* Lista de Tips específicos del cristal (Ocupacional / Bifocal / Multifocal) */}
+              {multiDistanceGuide?.tips && multiDistanceGuide.tips.length > 0 ? (
+                <ul className="space-y-2 rounded-2xl bg-white/[0.06] border border-white/12 p-3.5 text-xs text-slate-200">
+                  {multiDistanceGuide.tips.map((tip) => (
+                    <li key={tip} className="flex items-start gap-2">
+                      <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-[#99CC99]/25 text-[#99CC99]">
+                        <Check weight="bold" className="h-2.5 w-2.5" />
+                      </span>
+                      <span className="leading-snug">{tip}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+
+              {/* Invitación a pasar por la óptica + facilidades de pago (cuotas / contado) */}
+              <div className="rounded-2xl bg-[#336699]/25 border border-[#99CC99]/35 p-3 space-y-2">
+                <div className="flex items-start gap-2 text-xs text-slate-100">
+                  <MapPin
+                    weight="duotone"
+                    className="h-4 w-4 shrink-0 text-[#99CC99] mt-0.5"
+                  />
+                  <p className="leading-snug">
+                    {multiDistanceGuide?.measurementNotice ??
+                      'Para asesorarte mejor en este tipo de cristal y tomar las mediciones de tus ojos, te invitamos a visitarnos en la óptica.'}
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2 pt-1">
+                  <span className="inline-flex items-center gap-1 rounded-lg bg-white/10 px-2.5 py-1 text-[10.5px] font-semibold text-[#99CC99]">
+                    <CreditCard weight="duotone" className="h-3.5 w-3.5" />
+                    Planes de cuotas según tu tarjeta
+                  </span>
+                  <span className="inline-flex items-center gap-1 rounded-lg bg-white/10 px-2.5 py-1 text-[10.5px] font-semibold text-[#99CC99]">
+                    <Money weight="duotone" className="h-3.5 w-3.5" />
+                    Beneficio pago contado
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Separador tipo línea de troquel */}
           <div className="border-t border-dashed border-white/20 my-2" />
 
-          {/* Registro de Nombre y WhatsApp en el último paso para emitir el cupón */}
+          {/* Registro de Nombre y WhatsApp en el último paso */}
           <form
             onSubmit={(e) => void handleSubmit(e)}
             noValidate
@@ -452,7 +563,9 @@ export function QuoteResultStep({
             {/* Resumen dinámico de la opción seleccionada arriba */}
             <div className="rounded-xl bg-white/[0.07] border border-white/15 px-3 py-2 text-center">
               <p className="text-[11.5px] text-slate-300">
-                Activando certificado para:{' '}
+                {isMonofocalWithAnnualPromo
+                  ? 'Activando certificado para: '
+                  : 'Solicitando asesoramiento para: '}
                 <span className="font-semibold text-[#99CC99]">
                   {activeOptionLabel} — {activeSelectedLens.commercialName} (
                   {formatLensPriceARS(activeSelectedLens)})
@@ -461,7 +574,9 @@ export function QuoteResultStep({
             </div>
 
             <p className="text-xs font-semibold text-center text-slate-200">
-              Completá tu nombre y WhatsApp para activar tu certificado:
+              {isMonofocalWithAnnualPromo
+                ? 'Completá tu nombre y WhatsApp para activar tu certificado:'
+                : 'Completá tu nombre y WhatsApp para recibir tu cotización a medida:'}
             </p>
 
             <div className="space-y-2.5">
@@ -484,7 +599,9 @@ export function QuoteResultStep({
                     id="coupon-fullname"
                     type="text"
                     aria-invalid={Boolean(nameError)}
-                    aria-describedby={nameError ? 'coupon-fullname-error' : undefined}
+                    aria-describedby={
+                      nameError ? 'coupon-fullname-error' : undefined
+                    }
                     value={fullName}
                     onFocus={() => handleInputFocusScroll(nameInputRef.current)}
                     onChange={(e) => {
@@ -540,9 +657,13 @@ export function QuoteResultStep({
                     type="tel"
                     inputMode="tel"
                     aria-invalid={Boolean(phoneError)}
-                    aria-describedby={phoneError ? 'coupon-whatsapp-error' : undefined}
+                    aria-describedby={
+                      phoneError ? 'coupon-whatsapp-error' : undefined
+                    }
                     value={whatsapp}
-                    onFocus={() => handleInputFocusScroll(phoneInputRef.current)}
+                    onFocus={() =>
+                      handleInputFocusScroll(phoneInputRef.current)
+                    }
                     onChange={(e) => {
                       setWhatsapp(e.target.value);
                       if (phoneError) setPhoneError('');
@@ -577,7 +698,7 @@ export function QuoteResultStep({
               </div>
             </div>
 
-            {/* Botón píldora blanco exacto al diseño del PDF de Solana */}
+            {/* Botón píldora destacado */}
             <div className="pt-2 space-y-2">
               <button
                 type="submit"
@@ -586,8 +707,11 @@ export function QuoteResultStep({
               >
                 <span>
                   {isSubmitting
-                    ? 'Activando tu certificado...'
-                    : 'Quiero aprovechar mi beneficio'}
+                    ? 'Abriendo WhatsApp...'
+                    : isMonofocalWithAnnualPromo
+                      ? 'Quiero aprovechar mi beneficio'
+                      : (multiDistanceGuide?.ctaButtonText ??
+                        'Quiero recibir asesoramiento por WhatsApp')}
                 </span>
                 <ArrowRight weight="bold" className="h-4 w-4 text-[#336699]" />
               </button>
