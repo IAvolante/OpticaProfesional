@@ -328,11 +328,13 @@ export function QuestionStep({
   };
 
   const isOptionSelected = (value: QuestionOptionValue): boolean => {
-    if (pendingOption === value) {
-      return true;
+    if (!question.isMultiSelect && pendingOption !== null) {
+      return pendingOption === value;
     }
     if (question.id === 'budgetPreferences') {
-      return selectedBudgetList.includes(value as BudgetPreferenceAnswer);
+      return question.isMultiSelect
+        ? selectedBudgetList.includes(value as BudgetPreferenceAnswer)
+        : selectedBudgetList[0] === value;
     }
     return answers[question.id] === value;
   };
