@@ -26,12 +26,16 @@ const QuoteResultStep = lazy(
 const FIXED_LIGHT_THEME: BrandThemeId = 'theme-clinical';
 // Fuente #4 seleccionada por el cliente: Sora + DM Sans ('font-modern-atelier')
 const SELECTED_FONT_PAIR_4: FontPairId = 'font-modern-atelier';
-const DESIGN_LAB_STORAGE_KEY = 'optica_profesional_design_lab_v1';
+// Configuración visual definitiva elegida por Solana (04/11):
+// - Video 2: Intermedio ('balanced' · 204px)
+// - Letra 1: Sutil ('scale-sm' · 17px / 14px)
+// - FX 3: Cascada Viva ('transition-cascade')
+const DESIGN_LAB_STORAGE_KEY = 'optica_profesional_design_lab_v2';
 
 const DEFAULT_DESIGN_LAB_CONFIG: DesignLabConfig = {
   videoBoxSize: 'balanced',
-  fontScale: 'scale-md',
-  transitionStyle: 'transition-slide',
+  fontScale: 'scale-sm',
+  transitionStyle: 'transition-cascade',
 };
 
 function loadInitialDesignLabConfig(): DesignLabConfig {
@@ -47,19 +51,19 @@ function loadInitialDesignLabConfig(): DesignLabConfig {
       parsed.videoBoxSize === 'balanced' ||
       parsed.videoBoxSize === 'cinematic'
         ? parsed.videoBoxSize
-        : 'balanced';
+        : DEFAULT_DESIGN_LAB_CONFIG.videoBoxSize;
     const fontScale =
       parsed.fontScale === 'scale-sm' ||
       parsed.fontScale === 'scale-md' ||
       parsed.fontScale === 'scale-lg'
         ? parsed.fontScale
-        : 'scale-md';
+        : DEFAULT_DESIGN_LAB_CONFIG.fontScale;
     const transitionStyle =
       parsed.transitionStyle === 'transition-slide' ||
       parsed.transitionStyle === 'transition-lens' ||
       parsed.transitionStyle === 'transition-cascade'
         ? parsed.transitionStyle
-        : 'transition-slide';
+        : DEFAULT_DESIGN_LAB_CONFIG.transitionStyle;
 
     return { videoBoxSize, fontScale, transitionStyle };
   } catch {
@@ -72,10 +76,9 @@ export function App() {
     loadInitialDesignLabConfig()
   );
   const [isDesignLabEnabled, setIsDesignLabEnabled] = useState<boolean>(() => {
-    if (typeof window === 'undefined') return true;
+    if (typeof window === 'undefined') return false;
     const params = new URLSearchParams(window.location.search);
-    if (params.get('lab') === '0') return false;
-    return true;
+    return params.get('lab') === '1';
   });
   const [, setSecretTapCount] = useState<number>(0);
 

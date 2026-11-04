@@ -13,24 +13,15 @@ import type {
 /**
  * Matriz oficial de cruces ('x') provista por los profesionales de Óptica Profesional en `encuesta.xlsx`.
  *
- * - Pregunta 1 (a..e):
- *   a: organico_ar           -> ORGANICO-AR ($42.000)
- *   b: organico_blue_ar      -> ORGANICO-BLUE-AR ($51.000)
- *   c: alto_indice           -> POLICARBONATO-AR (Según receta), ALTO-INDICE-167 ($150.000)
- *   d: bifocal_multifocal    -> OCUPACIONALES (Desde), BIFOCAL-AR (Desde), MULTIFOCAL-AR (Desde)
- *   e: filtro_fotocromatico  -> ORGANICO-FOTOCROMATICO ($104.000)
- *
- * - Pregunta 2 (a..d):
- *   a: computadora_celular   -> ORGANICO-BLUE-AR ($51.000)
- *   b: lectura_cerca         -> OCUPACIONALES (Desde), BIFOCAL-AR (Desde), MULTIFOCAL-AR (Desde)
- *   c: manejando_aire_libre  -> ORGANICO-FOTOCROMATICO ($104.000)
- *   d: actividades_diarias   -> ORGANICO-161 ($130.000)
- *
- * - Pregunta 3 (a..d):
- *   a: precio                -> ORGANICO-BLANCO ($36.000)
- *   b: tecnologia            -> ALTO-INDICE-167 ($150.000), OCUPACIONALES (Desde), BIFOCAL-AR (Desde), MULTIFOCAL-AR (Desde)
- *   c: moda                  -> ORGANICO-161 ($130.000), ALTO-INDICE-167 ($150.000)
- *   d: solucion              -> ORGANICO-BLUE-AR ($51.000), ORGANICO-161 ($130.000)
+ * Jerarquía clínica estricta:
+ * 1. La Pregunta 1 (`improvementGoal`) actúa como filtro maestro de familia:
+ *    - Solo si el usuario elige `bifocal_multifocal` ("Evitar cambiar de anteojos para distintas distancias")
+ *      se habilitan Ocupacionales, Bifocales y Multifocales, devolviendo exactamente las 2 mejores opciones
+ *      multi-distancia según su actividad (P2).
+ *    - Si el usuario elige cualquiera de las otras 4 opciones en P1, busca un cristal MONOFOCAL y jamás
+ *      se le mezclan Ocupacionales, Bifocales ni Multifocales.
+ * 2. El resultado final devuelve SIEMPRE exactamente 2 opciones (`Opción 1` y `Opción 2`), tal cual el
+ *    diseño de cierre oficial de Solana en `PREGUNTAS .pdf`.
  */
 interface MatrixRowRule {
   readonly sku: string;
@@ -86,22 +77,27 @@ export const ENCUESTA_XLSX_MATRIX: readonly MatrixRowRule[] = [
   {
     sku: 'OCUPACIONALES',
     p1: ['bifocal_multifocal'],
-    p2: ['lectura_cerca'],
-    p3: ['tecnologia'],
+    p2: ['computadora_celular', 'lectura_cerca'],
+    p3: ['tecnologia', 'solucion'],
     isMultiDistanceGroup: true,
   },
   {
     sku: 'BIFOCAL-AR',
     p1: ['bifocal_multifocal'],
-    p2: ['lectura_cerca'],
-    p3: ['tecnologia'],
+    p2: ['lectura_cerca', 'manejando_aire_libre', 'actividades_diarias'],
+    p3: ['precio', 'solucion'],
     isMultiDistanceGroup: true,
   },
   {
     sku: 'MULTIFOCAL-AR',
     p1: ['bifocal_multifocal'],
-    p2: ['lectura_cerca'],
-    p3: ['tecnologia'],
+    p2: [
+      'computadora_celular',
+      'lectura_cerca',
+      'manejando_aire_libre',
+      'actividades_diarias',
+    ],
+    p3: ['tecnologia', 'moda', 'solucion', 'precio'],
     isMultiDistanceGroup: true,
   },
 ] as const;
@@ -192,125 +188,200 @@ function buildCardTaglineForSku(
   }
 }
 
+interface ScoredMatrixEntry {
+  readonly sku: string;
+  readonly lens: LensCatalogItem;
+  readonly matchedQuestions: readonly ('P1' | 'P2' | 'P3')[];
+  readonly score: number;
+  readonly tieBreakOrder: number;
+}
+
+/**
+ * Resuelve la segunda opción complementaria monofocal cuando solo 1 cristal tuvo coincidencia directa
+ * (ej: P1=organico_ar + P2=lectura_cerca + P3=tecnologia -> Opción 1: Orgánico AR, Opción 2: Orgánico Blue Ar).
+ */
+function resolveComplementaryMonofocalSku(
+  primarySku: string,
+  answers: CompletedOpticalAnswers
+): string {
+  if (answers.clientPriority === 'precio' && primarySku !== 'ORGANICO-BLANCO') {
+    return 'ORGANICO-BLANCO';
+  }
+  if (answers.clientPriority === 'tecnologia' && primarySku !== 'ALTO-INDICE-167') {
+    return 'ALTO-INDICE-167';
+  }
+  if (answers.clientPriority === 'moda' && primarySku !== 'ORGANICO-161') {
+    return 'ORGANICO-161';
+  }
+  if (primarySku === 'ORGANICO-AR') {
+    return 'ORGANICO-BLUE-AR';
+  }
+  if (primarySku === 'ORGANICO-BLUE-AR') {
+    return 'ORGANICO-AR';
+  }
+  if (primarySku === 'ORGANICO-FOTOCROMATICO') {
+    return answers.activityContext === 'computadora_celular'
+      ? 'ORGANICO-BLUE-AR'
+      : 'ORGANICO-AR';
+  }
+  return 'ORGANICO-BLUE-AR';
+}
+
 /**
  * MOTOR DETERMINÍSTICO DE RECOMENDACIÓN — ÓPTICA PROFESIONAL (2026)
- * Implementa 100% la matriz de `encuesta.xlsx` elaborada por los profesionales de la óptica.
+ * - Segmenta estrictamente por la Pregunta 1: Ocupacionales/Bifocales/Multifocales SOLO aparecen
+ *   si el cliente eligió `bifocal_multifocal` ("Evitar cambiar de anteojos para distintas distancias").
+ * - Garantiza que el resultado final contenga SIEMPRE exactamente 2 opciones (`Opción 1` y `Opción 2`).
  */
 export function calculateOpticalRecommendation(
   answers: CompletedOpticalAnswers,
   catalog: readonly LensCatalogItem[] = FALLBACK_LENS_CATALOG
 ): OpticalRecommendationResult {
+  // Filtro maestro excluyente: solo es multi-distancia si lo pidió explícitamente en la Pregunta 1
   const isMultiDistanceNeed =
-    answers.improvementGoal === 'bifocal_multifocal' ||
-    answers.activityContext === 'lectura_cerca';
+    answers.improvementGoal === 'bifocal_multifocal';
 
-  interface ScoredMatrixEntry {
-    readonly sku: string;
-    readonly lens: LensCatalogItem;
-    readonly matchedQuestions: readonly ('P1' | 'P2' | 'P3')[];
-    readonly score: number;
-    readonly tieBreakOrder: number;
-  }
+  let topTwoEntries: readonly [ScoredMatrixEntry, ScoredMatrixEntry];
 
-  // Orden de prioridad dentro del trío multi-distancia según la actividad (P2)
-  const multiDistanceOrder: Record<string, number> =
-    answers.activityContext === 'computadora_celular'
-      ? { 'OCUPACIONALES': 1, 'MULTIFOCAL-AR': 2, 'BIFOCAL-AR': 3 }
-      : { 'BIFOCAL-AR': 1, 'MULTIFOCAL-AR': 2, 'OCUPACIONALES': 3 };
+  if (isMultiDistanceNeed) {
+    // Si pidió evitar cambiar de anteojos para distintas distancias, seleccionamos exactamente 2 opciones
+    // entre Ocupacionales, Bifocales y Multifocales según su actividad principal (P2):
+    // - Uso de computadora/celular o lectura de cerca -> Opción 1: Ocupacionales | Opción 2: Multifocales
+    // - Manejando/aire libre o Todas las actividades diarias -> Opción 1: Bifocales | Opción 2: Multifocales
+    const firstMultiSku =
+      answers.activityContext === 'computadora_celular' ||
+      answers.activityContext === 'lectura_cerca'
+        ? 'OCUPACIONALES'
+        : 'BIFOCAL-AR';
+    const secondMultiSku = 'MULTIFOCAL-AR';
 
-  const scoredEntries: ScoredMatrixEntry[] = [];
+    topTwoEntries = [
+      {
+        sku: firstMultiSku,
+        lens: resolveLensBySku(firstMultiSku, catalog),
+        matchedQuestions: ['P1', 'P2'],
+        score: 175,
+        tieBreakOrder: 1,
+      },
+      {
+        sku: secondMultiSku,
+        lens: resolveLensBySku(secondMultiSku, catalog),
+        matchedQuestions: ['P1', 'P2', 'P3'],
+        score: 225,
+        tieBreakOrder: 2,
+      },
+    ];
+  } else {
+    // Caso Monofocal (las otras 4 opciones de la Pregunta 1): jamás se incluyen Ocupacionales, Bifocales ni Multifocales
+    const scoredEntries: ScoredMatrixEntry[] = [];
 
-  ENCUESTA_XLSX_MATRIX.forEach((rule, idx) => {
-    const hitP1 = rule.p1.includes(answers.improvementGoal);
-    const hitP2 = rule.p2.includes(answers.activityContext);
-    const hitP3 = rule.p3.includes(answers.clientPriority);
-
-    // En la columna P3b ("Últimas tecnologías"), encuesta.xlsx marca Orgánico 1,67 (monofocal)
-    // y Ocupacionales/Bifocales/Multifocales (múltiples distancias).
-    // Si el usuario NO pidió múltiples distancias en P1 ni lectura de cerca en P2,
-    // aplicamos el cruce de P3b al monofocal (Orgánico 1,67) para no sugerir bifocales a quien busca monofocales.
-    if (rule.isMultiDistanceGroup && !isMultiDistanceNeed) {
-      return;
-    }
-
-    const matchedQuestions: ('P1' | 'P2' | 'P3')[] = [];
-    if (hitP1) matchedQuestions.push('P1');
-    if (hitP2) matchedQuestions.push('P2');
-    if (hitP3) matchedQuestions.push('P3');
-
-    if (matchedQuestions.length === 0) {
-      return;
-    }
-
-    // Ponderación clínica:
-    // - P1 (mejora principal elegida) asegura presencia en las opciones principales (+100)
-    // - P2 (actividad diaria) define la solución (+75)
-    // - P3 (prioridad del cliente) refina o desempata (+50)
-    let score =
-      (hitP1 ? 100 : 0) + (hitP2 ? 75 : 0) + (hitP3 ? 50 : 0);
-
-    // Si en P1 eligió "Tener cristales más finos y livianos" (alto_indice) y en P2+P3 sumó doble coincidencia en Orgánico 1,61,
-    // elevamos Orgánico 1,61 para acompañar a Orgánico 1,67 y Policarbonato Ar.
-    if (
-      answers.improvementGoal === 'alto_indice' &&
-      rule.sku === 'ORGANICO-161' &&
-      hitP2 &&
-      hitP3
-    ) {
-      score += 20;
-    }
-
-    const lens = resolveLensBySku(rule.sku, catalog);
-    const tieBreakOrder = rule.isMultiDistanceGroup
-      ? 20 + (multiDistanceOrder[rule.sku] ?? idx)
-      : idx;
-
-    scoredEntries.push({
-      sku: rule.sku,
-      lens,
-      matchedQuestions,
-      score,
-      tieBreakOrder,
-    });
-  });
-
-  // Ordenar de mayor puntaje clínico a menor
-  scoredEntries.sort(
-    (a, b) => b.score - a.score || a.tieBreakOrder - b.tieBreakOrder
-  );
-
-  // Garantía defensiva: siempre al menos 2 opciones
-  if (scoredEntries.length < 2) {
-    const fallbackSkus = ['ORGANICO-AR', 'ORGANICO-BLUE-AR'];
-    for (const fSku of fallbackSkus) {
-      if (!scoredEntries.some((e) => e.sku === fSku)) {
-        scoredEntries.push({
-          sku: fSku,
-          lens: resolveLensBySku(fSku, catalog),
-          matchedQuestions: ['P1'],
-          score: 10,
-          tieBreakOrder: 99,
-        });
+    ENCUESTA_XLSX_MATRIX.forEach((rule, idx) => {
+      if (rule.isMultiDistanceGroup) {
+        return;
       }
-      if (scoredEntries.length >= 2) break;
+
+      const hitP1 = rule.p1.includes(answers.improvementGoal);
+      const hitP2 = rule.p2.includes(answers.activityContext);
+      const hitP3 = rule.p3.includes(answers.clientPriority);
+
+      const matchedQuestions: ('P1' | 'P2' | 'P3')[] = [];
+      if (hitP1) matchedQuestions.push('P1');
+      if (hitP2) matchedQuestions.push('P2');
+      if (hitP3) matchedQuestions.push('P3');
+
+      if (matchedQuestions.length === 0) {
+        return;
+      }
+
+      // Ponderación clínica según encuesta.xlsx:
+      // - P1 (mejora principal elegida en el Paso 1) asegura que el cristal pedido esté siempre en las 2 tarjetas (+150)
+      // - P2 (actividad diaria) define la segunda opción o desempata (+75)
+      // - P3 (prioridad del cliente: Precio, Tecnología, Moda, Solución) define el complemento (+55)
+      let score =
+        (hitP1 ? 150 : 0) + (hitP2 ? 75 : 0) + (hitP3 ? 55 : 0);
+
+      // Si en P1 eligió "Tener cristales más finos y livianos" (alto_indice):
+      // encuesta.xlsx marca 'x' en Policarbonato Ar y Orgánico 1,67.
+      // Si además sumó 'x' en Orgánico 1,61 (por P2d "Todo el día" o P3c/d "Moda/Solución"):
+      // - Cuando prioriza Moda o Tecnología, mostramos Orgánico 1,61 ($130.000) + Orgánico 1,67 ($150.000).
+      // - Cuando prioriza Precio o Solución, mostramos Policarbonato Ar + Orgánico 1,67 (o 1,61 si sumó doble coincidencia).
+      if (answers.improvementGoal === 'alto_indice') {
+        if (
+          rule.sku === 'ORGANICO-161' &&
+          (answers.clientPriority === 'moda' ||
+            answers.clientPriority === 'tecnologia')
+        ) {
+          score += 105;
+        }
+        if (
+          rule.sku === 'POLICARBONATO-AR' &&
+          (answers.clientPriority === 'moda' ||
+            answers.clientPriority === 'tecnologia')
+        ) {
+          score -= 40;
+        }
+      }
+
+      scoredEntries.push({
+        sku: rule.sku,
+        lens: resolveLensBySku(rule.sku, catalog),
+        matchedQuestions,
+        score,
+        tieBreakOrder: idx,
+      });
+    });
+
+    // Ordenar de mayor puntaje clínico a menor
+    scoredEntries.sort(
+      (a, b) => b.score - a.score || a.tieBreakOrder - b.tieBreakOrder
+    );
+
+    // Si solo hubo 1 cristal con 'x', agregamos su complemento natural para tener siempre exactamente 2 opciones
+    if (scoredEntries.length === 1) {
+      const onlyEntry = scoredEntries[0]!;
+      const compSku = resolveComplementaryMonofocalSku(onlyEntry.sku, answers);
+      scoredEntries.push({
+        sku: compSku,
+        lens: resolveLensBySku(compSku, catalog),
+        matchedQuestions: ['P2'],
+        score: 40,
+        tieBreakOrder: 99,
+      });
+    } else if (scoredEntries.length === 0) {
+      scoredEntries.push(
+        {
+          sku: 'ORGANICO-AR',
+          lens: resolveLensBySku('ORGANICO-AR', catalog),
+          matchedQuestions: ['P1'],
+          score: 100,
+          tieBreakOrder: 1,
+        },
+        {
+          sku: 'ORGANICO-BLUE-AR',
+          lens: resolveLensBySku('ORGANICO-BLUE-AR', catalog),
+          matchedQuestions: ['P2'],
+          score: 80,
+          tieBreakOrder: 2,
+        }
+      );
     }
+
+    // Recorte estricto a las 2 mejores opciones (Opción 1 y Opción 2)
+    const firstCandidate = scoredEntries[0]!;
+    const secondCandidate = scoredEntries[1]!;
+
+    // Ordenamos las 2 tarjetas de menor a mayor precio numérico (Opción 1 accesible a la izquierda, Opción 2 superadora a la derecha)
+    const shouldSwapByPrice =
+      firstCandidate.lens.priceStockARS > 0 &&
+      secondCandidate.lens.priceStockARS > 0 &&
+      firstCandidate.lens.priceStockARS > secondCandidate.lens.priceStockARS;
+
+    topTwoEntries = shouldSwapByPrice
+      ? [secondCandidate, firstCandidate]
+      : [firstCandidate, secondCandidate];
   }
 
-  // Tomamos las 2 opciones principales y, si son ambas monofocales con precio numérico,
-  // ponemos la de menor valor como Opción 1 y la superior como Opción 2 (tal cual el Ejemplo de Cierre del PDF de Solana).
-  const firstCandidate = scoredEntries[0]!;
-  const secondCandidate = scoredEntries[1]!;
-
-  const shouldSwapFirstTwoByPrice =
-    firstCandidate.lens.priceStockARS > 0 &&
-    secondCandidate.lens.priceStockARS > 0 &&
-    firstCandidate.lens.priceStockARS > secondCandidate.lens.priceStockARS;
-
-  const orderedEntries: ScoredMatrixEntry[] = shouldSwapFirstTwoByPrice
-    ? [secondCandidate, firstCandidate, ...scoredEntries.slice(2)]
-    : scoredEntries;
-
-  const allMatchedOptions: RecommendedLensCardItem[] = orderedEntries.map(
+  const allMatchedOptions: RecommendedLensCardItem[] = topTwoEntries.map(
     (entry, index) => ({
       optionNumber: index + 1,
       lens: entry.lens,
@@ -330,7 +401,7 @@ export function calculateOpticalRecommendation(
     `Recomendación calculada según la matriz profesional de Óptica Profesional combinando tus respuestas de Mejora Principal, Actividad Diaria y Prioridad.`,
   ];
 
-  const tags: ClinicalTag[] = allMatchedOptions.slice(0, 3).map((item) => ({
+  const tags: ClinicalTag[] = allMatchedOptions.map((item) => ({
     id: `tag-${item.lens.sku.toLowerCase()}`,
     label: `${item.lens.commercialName} (${item.lens.visionRangeLabel ?? 'monofocal'})`,
     category: item.lens.family === 'MONOFOCAL' ? 'material' : 'optics',
@@ -365,9 +436,7 @@ export function calculateOpticalRecommendation(
 
   const advisorObservationParagraph = buildAdvisorObservation(answers);
   const advisorClosingParagraph =
-    allMatchedOptions.length > 2
-      ? 'Por eso, seleccionamos las alternativas de nuestra matriz óptica que se adaptan a tu rutina, para que puedas elegir la que mejor se ajuste a lo que necesitás.'
-      : 'Por eso, seleccionamos dos alternativas que se adaptan a tu rutina, para que puedas elegir la que mejor se ajuste a lo que necesitás.';
+    'Por eso, seleccionamos dos alternativas que se adaptan a tu rutina, para que puedas elegir la que mejor se ajuste a lo que necesitás.';
 
   const requiresLabRangeWarning = isMultiDistanceNeed;
 

@@ -219,9 +219,9 @@ export function QuestionStep({
   const activeVideoBoxSize: VideoBoxSizeId =
     designLabConfig?.videoBoxSize ?? 'balanced';
   const activeFontScale: FontScaleId =
-    designLabConfig?.fontScale ?? 'scale-md';
+    designLabConfig?.fontScale ?? 'scale-sm';
   const activeTransitionStyle: TransitionStyleId =
-    designLabConfig?.transitionStyle ?? 'transition-slide';
+    designLabConfig?.transitionStyle ?? 'transition-cascade';
   const scaleClasses = FONT_SCALE_CLASSES[activeFontScale];
 
   const videoRefs = useRef<Record<ShowcasePoolId, HTMLVideoElement | null>>({
