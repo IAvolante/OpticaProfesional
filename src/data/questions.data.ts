@@ -12,7 +12,9 @@ export const OPTICAL_WIZARD_QUESTIONS: readonly WizardQuestionDefinition[] = [
     categoryBadge: 'Paso 1 de 5 · Material y Mejora Visual',
     title: '¿Qué es lo principal que querés mejorar con tus nuevos anteojos?',
     subtitle:
-      'Seleccioná el aspecto principal que querés lograr con tus nuevos cristales.',
+      'Podés seleccionar hasta 2 opciones para tus nuevos cristales.',
+    isMultiSelect: true,
+    maxSelections: 2,
     options: [
       {
         value: 'organico_ar',
@@ -57,7 +59,9 @@ export const OPTICAL_WIZARD_QUESTIONS: readonly WizardQuestionDefinition[] = [
     categoryBadge: 'Paso 2 de 5 · Tu Rutina Diaria',
     title: '¿En qué actividades necesitás mayor comodidad visual?',
     subtitle:
-      'Contanos en qué momento del día sentís que más necesitás tus cristales.',
+      'Podés seleccionar hasta 2 actividades principales de tu día a día.',
+    isMultiSelect: true,
+    maxSelections: 2,
     options: [
       {
         value: 'computadora_celular',
@@ -95,7 +99,9 @@ export const OPTICAL_WIZARD_QUESTIONS: readonly WizardQuestionDefinition[] = [
     categoryBadge: 'Paso 3 de 5 · Tu Prioridad',
     title: '¿Cuál es tu prioridad a la hora de elegir tus anteojos?',
     subtitle:
-      'Así personalizamos las alternativas que mejor se ajustan a lo que buscás.',
+      'Podés seleccionar hasta 2 prioridades para personalizar tus alternativas.',
+    isMultiSelect: true,
+    maxSelections: 2,
     options: [
       {
         value: 'precio',
@@ -133,7 +139,8 @@ export const OPTICAL_WIZARD_QUESTIONS: readonly WizardQuestionDefinition[] = [
     categoryBadge: 'Paso 4 de 5 · Beneficios para tu Presupuesto',
     title: '¿Datos útiles para tu presupuesto?',
     subtitle:
-      'Elegí la opción principal que te interesa consultar para tu presupuesto.',
+      'Podés seleccionar todas las opciones que quieras sumar a tu presupuesto.',
+    isMultiSelect: true,
     options: [
       {
         value: 'tengo_obra_social',

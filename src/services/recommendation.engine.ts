@@ -11,93 +11,191 @@ import type {
 } from '../types/optical.types';
 
 /**
- * Matriz oficial de cruces ('x') provista por los profesionales de Óptica Profesional en `encuesta.xlsx`.
+ * ============================================================================
+ * SISTEMA OFICIAL DE SCORING POR PUNTOS — ÓPTICA PROFESIONAL (`MATRICES CON PUNTOS.pdf`)
+ * ============================================================================
+ * Cada cristal suma los puntos (1 o 2) de todas las opciones seleccionadas por el
+ * cliente en la Pregunta 1 (hasta 2 opciones), Pregunta 2 (hasta 2 opciones) y
+ * Pregunta 3 (hasta 2 opciones), proponiendo siempre los 2 cristales con mayor puntaje.
  *
- * Jerarquía clínica estricta:
- * 1. La Pregunta 1 (`improvementGoal`) actúa como filtro maestro de familia:
- *    - Solo si el usuario elige `bifocal_multifocal` ("Evitar cambiar de anteojos para distintas distancias")
- *      se habilitan Ocupacionales, Bifocales y Multifocales, devolviendo exactamente las 2 mejores opciones
- *      multi-distancia según su actividad (P2).
- *    - Si el usuario elige cualquiera de las otras 4 opciones en P1, busca un cristal MONOFOCAL y jamás
- *      se le mezclan Ocupacionales, Bifocales ni Multifocales.
- * 2. El resultado final devuelve SIEMPRE exactamente 2 opciones (`Opción 1` y `Opción 2`), tal cual el
- *    diseño de cierre oficial de Solana en `PREGUNTAS .pdf`.
+ * TABLA 1 — Pregunta 1: ¿Qué es lo principal que querés mejorar con tus nuevos anteojos?
+ * - A Nitidez (`organico_ar`):          Orgánico Blanco (1), Orgánico AR (2), Orgánico Blue AR (1)
+ * - B Pantallas (`organico_blue_ar`):   Orgánico AR (1), Orgánico Blue AR (2), Ocupacionales (1)
+ * - C Finos (`alto_indice`):            Policarbonato AR (1), Orgánico 1.61 (2), Orgánico 1.67 (2)
+ * - D Distancias (`bifocal_multifocal`):Ocupacionales (1), Bifocales (1), Multifocales (2)
+ * - E Sol (`filtro_fotocromatico`):     Orgánico Fotocromático AR (2)
+ *
+ * TABLA 2 — Pregunta 2: ¿En qué actividades necesitás mayor comodidad visual?
+ * - A Pantallas (`computadora_celular`):Orgánico AR (1), Orgánico Blue AR (2)
+ * - B Lectura (`lectura_cerca`):        Orgánico Blanco (1), Orgánico AR (2), Orgánico Blue AR (1), Ocupacionales (2), Bifocales (2), Multifocales (1)
+ * - C Manejar (`manejando_aire_libre`): Orgánico AR (2), Policarbonato AR (1)
+ * - D Todas (`actividades_diarias`):    Orgánico Blanco (1), Orgánico AR (1), Orgánico Blue AR (1), Orgánico Fotocromático AR (1), Orgánico 1.61 (1), Orgánico 1.67 (1), Bifocales (1), Multifocales (2)
+ *
+ * TABLA 3 — Pregunta 3: ¿Cuál es tu prioridad a la hora de elegir tus anteojos?
+ * - A Precio/calidad (`precio`):        Orgánico Blanco (2), Orgánico AR (2), Orgánico Blue AR (1), Policarbonato AR (1), Bifocales (1)
+ * - B Tecnología (`tecnologia`):        Orgánico AR (1), Orgánico Blue AR (2), Orgánico Fotocromático AR (2), Policarbonato AR (1), Orgánico 1.61 (1), Orgánico 1.67 (2), Ocupacionales (2), Multifocales (2)
+ * - C Moda (`moda`):                    Orgánico Fotocromático AR (1), Policarbonato AR (2), Orgánico 1.61 (2), Orgánico 1.67 (2), Multifocales (1)
+ * - D Practicidad (`solucion`):         Orgánico Blanco (1), Orgánico AR (2), Orgánico Blue AR (2), Orgánico Fotocromático AR (2), Policarbonato AR (1), Orgánico 1.61 (1), Orgánico 1.67 (1), Ocupacionales (2), Bifocales (2), Multifocales (2)
  */
-interface MatrixRowRule {
+export interface ScoringMatrixRow {
   readonly sku: string;
-  readonly p1: readonly ImprovementGoalAnswer[];
-  readonly p2: readonly ActivityContextAnswer[];
-  readonly p3: readonly ClientPriorityAnswer[];
+  readonly p1Scores: Readonly<Partial<Record<ImprovementGoalAnswer, number>>>;
+  readonly p2Scores: Readonly<Partial<Record<ActivityContextAnswer, number>>>;
+  readonly p3Scores: Readonly<Partial<Record<ClientPriorityAnswer, number>>>;
   readonly isMultiDistanceGroup?: boolean;
 }
 
-export const ENCUESTA_XLSX_MATRIX: readonly MatrixRowRule[] = [
+export const MATRICES_CON_PUNTOS: readonly ScoringMatrixRow[] = [
   {
     sku: 'ORGANICO-BLANCO',
-    p1: [],
-    p2: [],
-    p3: ['precio'],
+    p1Scores: {
+      organico_ar: 1,
+    },
+    p2Scores: {
+      lectura_cerca: 1,
+      actividades_diarias: 1,
+    },
+    p3Scores: {
+      precio: 2,
+      solucion: 1,
+    },
   },
   {
     sku: 'ORGANICO-AR',
-    p1: ['organico_ar'],
-    p2: [],
-    p3: [],
+    p1Scores: {
+      organico_ar: 2,
+      organico_blue_ar: 1,
+    },
+    p2Scores: {
+      computadora_celular: 1,
+      lectura_cerca: 2,
+      manejando_aire_libre: 2,
+      actividades_diarias: 1,
+    },
+    p3Scores: {
+      precio: 2,
+      tecnologia: 1,
+      solucion: 2,
+    },
   },
   {
     sku: 'ORGANICO-BLUE-AR',
-    p1: ['organico_blue_ar'],
-    p2: ['computadora_celular'],
-    p3: ['solucion'],
+    p1Scores: {
+      organico_ar: 1,
+      organico_blue_ar: 2,
+    },
+    p2Scores: {
+      computadora_celular: 2,
+      lectura_cerca: 1,
+      actividades_diarias: 1,
+    },
+    p3Scores: {
+      precio: 1,
+      tecnologia: 2,
+      solucion: 2,
+    },
   },
   {
     sku: 'ORGANICO-FOTOCROMATICO',
-    p1: ['filtro_fotocromatico'],
-    p2: ['manejando_aire_libre'],
-    p3: [],
+    p1Scores: {
+      filtro_fotocromatico: 2,
+    },
+    p2Scores: {
+      actividades_diarias: 1,
+    },
+    p3Scores: {
+      tecnologia: 2,
+      moda: 1,
+      solucion: 2,
+    },
   },
   {
     sku: 'POLICARBONATO-AR',
-    p1: ['alto_indice'],
-    p2: [],
-    p3: [],
+    p1Scores: {
+      alto_indice: 1,
+    },
+    p2Scores: {
+      manejando_aire_libre: 1,
+    },
+    p3Scores: {
+      precio: 1,
+      tecnologia: 1,
+      moda: 2,
+      solucion: 1,
+    },
   },
   {
     sku: 'ORGANICO-161',
-    p1: [],
-    p2: ['actividades_diarias'],
-    p3: ['moda', 'solucion'],
+    p1Scores: {
+      alto_indice: 2,
+    },
+    p2Scores: {
+      actividades_diarias: 1,
+    },
+    p3Scores: {
+      tecnologia: 1,
+      moda: 2,
+      solucion: 1,
+    },
   },
   {
     sku: 'ALTO-INDICE-167',
-    p1: ['alto_indice'],
-    p2: [],
-    p3: ['tecnologia', 'moda'],
+    p1Scores: {
+      alto_indice: 2,
+    },
+    p2Scores: {
+      actividades_diarias: 1,
+    },
+    p3Scores: {
+      tecnologia: 2,
+      moda: 2,
+      solucion: 1,
+    },
   },
   {
     sku: 'OCUPACIONALES',
-    p1: ['bifocal_multifocal'],
-    p2: ['computadora_celular', 'lectura_cerca'],
-    p3: ['tecnologia', 'solucion'],
+    p1Scores: {
+      organico_blue_ar: 1,
+      bifocal_multifocal: 1,
+    },
+    p2Scores: {
+      lectura_cerca: 2,
+    },
+    p3Scores: {
+      tecnologia: 2,
+      solucion: 2,
+    },
     isMultiDistanceGroup: true,
   },
   {
     sku: 'BIFOCAL-AR',
-    p1: ['bifocal_multifocal'],
-    p2: ['lectura_cerca', 'manejando_aire_libre', 'actividades_diarias'],
-    p3: ['precio', 'solucion'],
+    p1Scores: {
+      bifocal_multifocal: 1,
+    },
+    p2Scores: {
+      lectura_cerca: 2,
+      actividades_diarias: 1,
+    },
+    p3Scores: {
+      precio: 1,
+      solucion: 2,
+    },
     isMultiDistanceGroup: true,
   },
   {
     sku: 'MULTIFOCAL-AR',
-    p1: ['bifocal_multifocal'],
-    p2: [
-      'computadora_celular',
-      'lectura_cerca',
-      'manejando_aire_libre',
-      'actividades_diarias',
-    ],
-    p3: ['tecnologia', 'moda', 'solucion', 'precio'],
+    p1Scores: {
+      bifocal_multifocal: 2,
+    },
+    p2Scores: {
+      lectura_cerca: 1,
+      actividades_diarias: 2,
+    },
+    p3Scores: {
+      tecnologia: 2,
+      moda: 1,
+      solucion: 2,
+    },
     isMultiDistanceGroup: true,
   },
 ] as const;
@@ -125,11 +223,10 @@ function resolveLensBySku(
 }
 
 /**
- * Construye el párrafo empático personalizado del Asesor Virtual siguiendo el tono exacto
- * del ejemplo de cierre de Solana en PREGUNTAS .pdf.
+ * Construye el párrafo empático personalizado del Asesor Virtual contemplando hasta 2 elecciones por paso.
  */
 function buildAdvisorObservation(answers: CompletedOpticalAnswers): string {
-  const activityClause: Record<CompletedOpticalAnswers['activityContext'], string> = {
+  const activityClause: Record<ActivityContextAnswer, string> = {
     computadora_celular:
       'pasás muchas horas frente a la computadora o el celular',
     lectura_cerca:
@@ -140,7 +237,7 @@ function buildAdvisorObservation(answers: CompletedOpticalAnswers): string {
       'usás tus anteojos de forma continua en todas tus actividades diarias',
   };
 
-  const priorityClause: Record<CompletedOpticalAnswers['clientPriority'], string> = {
+  const priorityClause: Record<ClientPriorityAnswer, string> = {
     precio: 'buscás mayor comodidad visual durante el día, sin gastar de más',
     tecnologia:
       'priorizás contar con las últimas tecnologías ópticas para cuidar tu vista',
@@ -149,11 +246,22 @@ function buildAdvisorObservation(answers: CompletedOpticalAnswers): string {
       'querés resolver tu necesidad visual de forma práctica, rápida y sin complicaciones',
   };
 
-  return `Por lo que nos contás, ${activityClause[answers.activityContext]} y ${priorityClause[answers.clientPriority]}.`;
+  const selectedActivities =
+    answers.activityContexts && answers.activityContexts.length > 0
+      ? answers.activityContexts
+      : [answers.activityContext];
+
+  const firstActivityText = activityClause[selectedActivities[0]!];
+  const secondActivityText =
+    selectedActivities.length > 1 && selectedActivities[1]
+      ? `, además de que ${activityClause[selectedActivities[1]]}`
+      : '';
+
+  return `Por lo que nos contás, ${firstActivityText}${secondActivityText}, y ${priorityClause[answers.clientPriority]}.`;
 }
 
 /**
- * Devuelve el subtítulo corto de cada tarjeta en base a la columna B de `encuesta.xlsx` y su beneficio.
+ * Devuelve el subtítulo corto de cada tarjeta en base a su distancia y beneficio.
  */
 function buildCardTaglineForSku(
   sku: string,
@@ -188,200 +296,106 @@ function buildCardTaglineForSku(
   }
 }
 
-interface ScoredMatrixEntry {
+interface ScoredLensCandidate {
   readonly sku: string;
   readonly lens: LensCatalogItem;
+  readonly totalPoints: number;
+  readonly p1Points: number;
+  readonly p2Points: number;
+  readonly p3Points: number;
   readonly matchedQuestions: readonly ('P1' | 'P2' | 'P3')[];
-  readonly score: number;
-  readonly tieBreakOrder: number;
+  readonly matrixIndex: number;
 }
 
 /**
- * Resuelve la segunda opción complementaria monofocal cuando solo 1 cristal tuvo coincidencia directa
- * (ej: P1=organico_ar + P2=lectura_cerca + P3=tecnologia -> Opción 1: Orgánico AR, Opción 2: Orgánico Blue Ar).
- */
-function resolveComplementaryMonofocalSku(
-  primarySku: string,
-  answers: CompletedOpticalAnswers
-): string {
-  if (answers.clientPriority === 'precio' && primarySku !== 'ORGANICO-BLANCO') {
-    return 'ORGANICO-BLANCO';
-  }
-  if (answers.clientPriority === 'tecnologia' && primarySku !== 'ALTO-INDICE-167') {
-    return 'ALTO-INDICE-167';
-  }
-  if (answers.clientPriority === 'moda' && primarySku !== 'ORGANICO-161') {
-    return 'ORGANICO-161';
-  }
-  if (primarySku === 'ORGANICO-AR') {
-    return 'ORGANICO-BLUE-AR';
-  }
-  if (primarySku === 'ORGANICO-BLUE-AR') {
-    return 'ORGANICO-AR';
-  }
-  if (primarySku === 'ORGANICO-FOTOCROMATICO') {
-    return answers.activityContext === 'computadora_celular'
-      ? 'ORGANICO-BLUE-AR'
-      : 'ORGANICO-AR';
-  }
-  return 'ORGANICO-BLUE-AR';
-}
-
-/**
- * MOTOR DETERMINÍSTICO DE RECOMENDACIÓN — ÓPTICA PROFESIONAL (2026)
- * - Segmenta estrictamente por la Pregunta 1: Ocupacionales/Bifocales/Multifocales SOLO aparecen
- *   si el cliente eligió `bifocal_multifocal` ("Evitar cambiar de anteojos para distintas distancias").
- * - Garantiza que el resultado final contenga SIEMPRE exactamente 2 opciones (`Opción 1` y `Opción 2`).
+ * MOTOR DETERMINÍSTICO DE SCORING POR PUNTOS — ÓPTICA PROFESIONAL (`MATRICES CON PUNTOS.pdf`)
+ * Suma los puntos de las respuestas seleccionadas en la Pregunta 1 (hasta 2),
+ * Pregunta 2 (hasta 2) y Pregunta 3 (hasta 2), y propone las 2 opciones que más puntos tengan.
  */
 export function calculateOpticalRecommendation(
   answers: CompletedOpticalAnswers,
   catalog: readonly LensCatalogItem[] = FALLBACK_LENS_CATALOG
 ): OpticalRecommendationResult {
-  // Filtro maestro excluyente: solo es multi-distancia si lo pidió explícitamente en la Pregunta 1
-  const isMultiDistanceNeed =
-    answers.improvementGoal === 'bifocal_multifocal';
+  const selectedP1: readonly ImprovementGoalAnswer[] =
+    answers.improvementGoals && answers.improvementGoals.length > 0
+      ? answers.improvementGoals.slice(0, 2)
+      : [answers.improvementGoal];
 
-  let topTwoEntries: readonly [ScoredMatrixEntry, ScoredMatrixEntry];
+  const selectedP2: readonly ActivityContextAnswer[] =
+    answers.activityContexts && answers.activityContexts.length > 0
+      ? answers.activityContexts.slice(0, 2)
+      : [answers.activityContext];
 
-  if (isMultiDistanceNeed) {
-    // Si pidió evitar cambiar de anteojos para distintas distancias, seleccionamos exactamente 2 opciones
-    // entre Ocupacionales, Bifocales y Multifocales según su actividad principal (P2):
-    // - Uso de computadora/celular o lectura de cerca -> Opción 1: Ocupacionales | Opción 2: Multifocales
-    // - Manejando/aire libre o Todas las actividades diarias -> Opción 1: Bifocales | Opción 2: Multifocales
-    const firstMultiSku =
-      answers.activityContext === 'computadora_celular' ||
-      answers.activityContext === 'lectura_cerca'
-        ? 'OCUPACIONALES'
-        : 'BIFOCAL-AR';
-    const secondMultiSku = 'MULTIFOCAL-AR';
+  const selectedP3: readonly ClientPriorityAnswer[] =
+    answers.clientPriorities && answers.clientPriorities.length > 0
+      ? answers.clientPriorities.slice(0, 2)
+      : [answers.clientPriority];
 
-    topTwoEntries = [
-      {
-        sku: firstMultiSku,
-        lens: resolveLensBySku(firstMultiSku, catalog),
-        matchedQuestions: ['P1', 'P2'],
-        score: 175,
-        tieBreakOrder: 1,
-      },
-      {
-        sku: secondMultiSku,
-        lens: resolveLensBySku(secondMultiSku, catalog),
-        matchedQuestions: ['P1', 'P2', 'P3'],
-        score: 225,
-        tieBreakOrder: 2,
-      },
-    ];
-  } else {
-    // Caso Monofocal (las otras 4 opciones de la Pregunta 1): jamás se incluyen Ocupacionales, Bifocales ni Multifocales
-    const scoredEntries: ScoredMatrixEntry[] = [];
+  const scoredCandidates: ScoredLensCandidate[] = MATRICES_CON_PUNTOS.map(
+    (row, matrixIndex) => {
+      const p1Points = selectedP1.reduce(
+        (sum, ans) => sum + (row.p1Scores[ans] ?? 0),
+        0
+      );
+      const p2Points = selectedP2.reduce(
+        (sum, ans) => sum + (row.p2Scores[ans] ?? 0),
+        0
+      );
+      const p3Points = selectedP3.reduce(
+        (sum, ans) => sum + (row.p3Scores[ans] ?? 0),
+        0
+      );
 
-    ENCUESTA_XLSX_MATRIX.forEach((rule, idx) => {
-      if (rule.isMultiDistanceGroup) {
-        return;
-      }
-
-      const hitP1 = rule.p1.includes(answers.improvementGoal);
-      const hitP2 = rule.p2.includes(answers.activityContext);
-      const hitP3 = rule.p3.includes(answers.clientPriority);
+      const totalPoints = p1Points + p2Points + p3Points;
 
       const matchedQuestions: ('P1' | 'P2' | 'P3')[] = [];
-      if (hitP1) matchedQuestions.push('P1');
-      if (hitP2) matchedQuestions.push('P2');
-      if (hitP3) matchedQuestions.push('P3');
+      if (p1Points > 0) matchedQuestions.push('P1');
+      if (p2Points > 0) matchedQuestions.push('P2');
+      if (p3Points > 0) matchedQuestions.push('P3');
 
-      if (matchedQuestions.length === 0) {
-        return;
-      }
-
-      // Ponderación clínica según encuesta.xlsx:
-      // - P1 (mejora principal elegida en el Paso 1) asegura que el cristal pedido esté siempre en las 2 tarjetas (+150)
-      // - P2 (actividad diaria) define la segunda opción o desempata (+75)
-      // - P3 (prioridad del cliente: Precio, Tecnología, Moda, Solución) define el complemento (+55)
-      let score =
-        (hitP1 ? 150 : 0) + (hitP2 ? 75 : 0) + (hitP3 ? 55 : 0);
-
-      // Si en P1 eligió "Tener cristales más finos y livianos" (alto_indice):
-      // encuesta.xlsx marca 'x' en Policarbonato Ar y Orgánico 1,67.
-      // Si además sumó 'x' en Orgánico 1,61 (por P2d "Todo el día" o P3c/d "Moda/Solución"):
-      // - Cuando prioriza Moda o Tecnología, mostramos Orgánico 1,61 ($130.000) + Orgánico 1,67 ($150.000).
-      // - Cuando prioriza Precio o Solución, mostramos Policarbonato Ar + Orgánico 1,67 (o 1,61 si sumó doble coincidencia).
-      if (answers.improvementGoal === 'alto_indice') {
-        if (
-          rule.sku === 'ORGANICO-161' &&
-          (answers.clientPriority === 'moda' ||
-            answers.clientPriority === 'tecnologia')
-        ) {
-          score += 105;
-        }
-        if (
-          rule.sku === 'POLICARBONATO-AR' &&
-          (answers.clientPriority === 'moda' ||
-            answers.clientPriority === 'tecnologia')
-        ) {
-          score -= 40;
-        }
-      }
-
-      scoredEntries.push({
-        sku: rule.sku,
-        lens: resolveLensBySku(rule.sku, catalog),
+      return {
+        sku: row.sku,
+        lens: resolveLensBySku(row.sku, catalog),
+        totalPoints,
+        p1Points,
+        p2Points,
+        p3Points,
         matchedQuestions,
-        score,
-        tieBreakOrder: idx,
-      });
-    });
-
-    // Ordenar de mayor puntaje clínico a menor
-    scoredEntries.sort(
-      (a, b) => b.score - a.score || a.tieBreakOrder - b.tieBreakOrder
-    );
-
-    // Si solo hubo 1 cristal con 'x', agregamos su complemento natural para tener siempre exactamente 2 opciones
-    if (scoredEntries.length === 1) {
-      const onlyEntry = scoredEntries[0]!;
-      const compSku = resolveComplementaryMonofocalSku(onlyEntry.sku, answers);
-      scoredEntries.push({
-        sku: compSku,
-        lens: resolveLensBySku(compSku, catalog),
-        matchedQuestions: ['P2'],
-        score: 40,
-        tieBreakOrder: 99,
-      });
-    } else if (scoredEntries.length === 0) {
-      scoredEntries.push(
-        {
-          sku: 'ORGANICO-AR',
-          lens: resolveLensBySku('ORGANICO-AR', catalog),
-          matchedQuestions: ['P1'],
-          score: 100,
-          tieBreakOrder: 1,
-        },
-        {
-          sku: 'ORGANICO-BLUE-AR',
-          lens: resolveLensBySku('ORGANICO-BLUE-AR', catalog),
-          matchedQuestions: ['P2'],
-          score: 80,
-          tieBreakOrder: 2,
-        }
-      );
+        matrixIndex,
+      };
     }
+  );
 
-    // Recorte estricto a las 2 mejores opciones (Opción 1 y Opción 2)
-    const firstCandidate = scoredEntries[0]!;
-    const secondCandidate = scoredEntries[1]!;
+  // Ordenamos de mayor a menor puntaje total.
+  // En caso de empate exacto en puntos totales, desempatamos por:
+  // 1) Mayor puntaje en la Pregunta 1 (lo principal que quiere mejorar)
+  // 2) Mayor puntaje en la Pregunta 2 (su actividad principal)
+  // 3) Mayor puntaje en la Pregunta 3 (su prioridad)
+  // 4) Orden en la tabla oficial del PDF
+  const sortedByScore = [...scoredCandidates].sort(
+    (a, b) =>
+      b.totalPoints - a.totalPoints ||
+      b.p1Points - a.p1Points ||
+      b.p2Points - a.p2Points ||
+      b.p3Points - a.p3Points ||
+      a.matrixIndex - b.matrixIndex
+  );
 
-    // Ordenamos las 2 tarjetas de menor a mayor precio numérico (Opción 1 accesible a la izquierda, Opción 2 superadora a la derecha)
-    const shouldSwapByPrice =
-      firstCandidate.lens.priceStockARS > 0 &&
-      secondCandidate.lens.priceStockARS > 0 &&
-      firstCandidate.lens.priceStockARS > secondCandidate.lens.priceStockARS;
+  const firstWinner = sortedByScore[0]!;
+  const secondWinner = sortedByScore[1]!;
 
-    topTwoEntries = shouldSwapByPrice
-      ? [secondCandidate, firstCandidate]
-      : [firstCandidate, secondCandidate];
-  }
+  // Si ambos ganadores tienen precio numérico de stock, mostramos el más accesible como Opción 1 y el superador como Opción 2
+  const shouldSwapByPrice =
+    firstWinner.lens.priceStockARS > 0 &&
+    secondWinner.lens.priceStockARS > 0 &&
+    firstWinner.lens.priceStockARS > secondWinner.lens.priceStockARS;
 
-  const allMatchedOptions: RecommendedLensCardItem[] = topTwoEntries.map(
+  const topTwoWinners: readonly [ScoredLensCandidate, ScoredLensCandidate] =
+    shouldSwapByPrice
+      ? [secondWinner, firstWinner]
+      : [firstWinner, secondWinner];
+
+  const allMatchedOptions: RecommendedLensCardItem[] = topTwoWinners.map(
     (entry, index) => ({
       optionNumber: index + 1,
       lens: entry.lens,
@@ -390,7 +404,9 @@ export function calculateOpticalRecommendation(
         entry.lens,
         entry.matchedQuestions
       ),
-      matchedQuestions: entry.matchedQuestions,
+      matchedQuestions:
+        entry.matchedQuestions.length > 0 ? entry.matchedQuestions : ['P1'],
+      totalPoints: entry.totalPoints,
     })
   );
 
@@ -398,7 +414,7 @@ export function calculateOpticalRecommendation(
   const alternativeItem = allMatchedOptions[1]!;
 
   const reasoning: string[] = [
-    `Recomendación calculada según la matriz profesional de Óptica Profesional combinando tus respuestas de Mejora Principal, Actividad Diaria y Prioridad.`,
+    `Recomendación calculada con el sistema de puntuación clínica de Óptica Profesional (${primaryItem.lens.commercialName}: ${primaryItem.totalPoints ?? 0} pts · ${alternativeItem.lens.commercialName}: ${alternativeItem.totalPoints ?? 0} pts).`,
   ];
 
   const tags: ClinicalTag[] = allMatchedOptions.map((item) => ({
@@ -436,9 +452,11 @@ export function calculateOpticalRecommendation(
 
   const advisorObservationParagraph = buildAdvisorObservation(answers);
   const advisorClosingParagraph =
-    'Por eso, seleccionamos dos alternativas que se adaptan a tu rutina, para que puedas elegir la que mejor se ajuste a lo que necesitás.';
+    'Por eso, seleccionamos las dos alternativas con mayor puntaje para tu rutina, para que puedas elegir la que mejor se ajuste a lo que necesitás.';
 
-  const requiresLabRangeWarning = isMultiDistanceNeed;
+  const requiresLabRangeWarning = allMatchedOptions.some(
+    (item) => !item.lens.hasAnnualReplacementPromo
+  );
 
   const hasMonofocalOption = allMatchedOptions.some(
     (item) => item.lens.hasAnnualReplacementPromo

@@ -12,9 +12,12 @@ import {
   CircleNotch,
 } from '@phosphor-icons/react';
 import type {
+  ActivityContextAnswer,
   BudgetPreferenceAnswer,
+  ClientPriorityAnswer,
   DesignLabConfig,
   FontScaleId,
+  ImprovementGoalAnswer,
   QuestionId,
   QuestionOptionValue,
   TransitionStyleId,
@@ -233,6 +236,29 @@ export function QuestionStep({
   const showcase = QUESTION_VIDEO_SHOWCASE[question.id];
   const selectedBudgetList = answers.budgetPreferences ?? [];
 
+  const currentMultiSelectedList: readonly QuestionOptionValue[] =
+    question.id === 'improvementGoal'
+      ? answers.improvementGoals && answers.improvementGoals.length > 0
+        ? answers.improvementGoals
+        : answers.improvementGoal
+          ? [answers.improvementGoal]
+          : []
+      : question.id === 'activityContext'
+        ? answers.activityContexts && answers.activityContexts.length > 0
+          ? answers.activityContexts
+          : answers.activityContext
+            ? [answers.activityContext]
+            : []
+        : question.id === 'clientPriority'
+          ? answers.clientPriorities && answers.clientPriorities.length > 0
+            ? answers.clientPriorities
+            : answers.clientPriority
+              ? [answers.clientPriority]
+              : []
+          : question.id === 'budgetPreferences'
+            ? selectedBudgetList
+            : [];
+
   useEffect(() => {
     setPendingOption(null);
     setPhotoError('');
@@ -331,10 +357,26 @@ export function QuestionStep({
     if (!question.isMultiSelect && pendingOption !== null) {
       return pendingOption === value;
     }
+    if (question.id === 'improvementGoal') {
+      return (
+        answers.improvementGoals?.includes(value as ImprovementGoalAnswer) ??
+        answers.improvementGoal === value
+      );
+    }
+    if (question.id === 'activityContext') {
+      return (
+        answers.activityContexts?.includes(value as ActivityContextAnswer) ??
+        answers.activityContext === value
+      );
+    }
+    if (question.id === 'clientPriority') {
+      return (
+        answers.clientPriorities?.includes(value as ClientPriorityAnswer) ??
+        answers.clientPriority === value
+      );
+    }
     if (question.id === 'budgetPreferences') {
-      return question.isMultiSelect
-        ? selectedBudgetList.includes(value as BudgetPreferenceAnswer)
-        : selectedBudgetList[0] === value;
+      return selectedBudgetList.includes(value as BudgetPreferenceAnswer);
     }
     return answers[question.id] === value;
   };
@@ -418,6 +460,22 @@ export function QuestionStep({
           </motion.div>
         </CardHeader>
       </Card>
+
+      {/* 2. Indicador sutil de selección cuando el paso permite elegir hasta 2 opciones o múltiples sin límite */}
+      {question.isMultiSelect ? (
+        <div className="flex items-center justify-between px-1 text-[11.5px] font-medium text-[var(--brand-text-muted)]">
+          <span>
+            {question.maxSelections
+              ? `Podés seleccionar hasta ${question.maxSelections} opciones`
+              : 'Podés seleccionar todas las opciones que quieras'}
+          </span>
+          <span className="font-mono text-[11px] font-semibold text-[var(--brand-accent-foreground)]">
+            {question.maxSelections
+              ? `${currentMultiSelectedList.length}/${question.maxSelections}`
+              : `${currentMultiSelectedList.length} ${currentMultiSelectedList.length === 1 ? 'elegida' : 'elegidas'}`}
+          </span>
+        </div>
+      ) : null}
 
       {/* 3. Opciones del Paso Actual */}
       <motion.div
@@ -601,7 +659,7 @@ export function QuestionStep({
           </div>
         )}
 
-      {/* 4. En el Paso 4 (Selección Múltiple), barra Sticky inferior para avanzar siempre visible */}
+      {/* 4. En los pasos con selección múltiple (Pasos 1, 2 y 3 hasta 2 opciones; Paso 4 sin límite), barra Sticky inferior para avanzar */}
       {question.isMultiSelect && (
         <div className="sticky bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-30 pt-2">
           <div className="rounded-2xl bg-[var(--brand-canvas)]/85 p-1.5 backdrop-blur-md shadow-lg border border-[var(--brand-border)]">
@@ -610,15 +668,21 @@ export function QuestionStep({
               variant="primary"
               size="lg"
               fullWidth
+              disabled={
+                question.id !== 'budgetPreferences' &&
+                currentMultiSelectedList.length === 0
+              }
               onClick={() => {
                 triggerHapticFeedback(15);
                 onConfirmBudgetStep();
               }}
               rightIcon={<ArrowRight weight="bold" className="h-4 w-4" />}
             >
-              {selectedBudgetList.length > 0
-                ? `Continuar con ${selectedBudgetList.length} ${selectedBudgetList.length === 1 ? 'opción seleccionada' : 'opciones seleccionadas'}`
-                : 'Continuar al último paso'}
+              {currentMultiSelectedList.length > 0
+                ? `Continuar (${currentMultiSelectedList.length}${question.maxSelections ? `/${question.maxSelections}` : ''} ${currentMultiSelectedList.length === 1 ? 'seleccionada' : 'seleccionadas'})`
+                : question.id === 'budgetPreferences'
+                  ? 'Continuar al último paso'
+                  : 'Seleccioná al menos 1 opción para continuar'}
             </Button>
           </div>
         </div>

@@ -24,7 +24,7 @@ import { generateLeadId } from '../utils/formatters';
 import { trackMetaPixelEvent } from '../utils/metaPixel.tracker';
 import { buildWhatsAppDeepLink } from '../utils/whatsapp.encoder';
 
-const WIZARD_SESSION_STORAGE_KEY = 'optica_profesional_wizard_state_v4';
+const WIZARD_SESSION_STORAGE_KEY = 'optica_profesional_wizard_state_v5';
 
 interface PersistedWizardSnapshot {
   readonly step: WizardStepType;
@@ -36,10 +36,23 @@ interface PersistedWizardSnapshot {
 function isCompletedAnswers(
   answers: UserOpticalAnswers
 ): answers is CompletedOpticalAnswers {
+  const hasP1 =
+    typeof answers.improvementGoal === 'string' ||
+    (Array.isArray(answers.improvementGoals) &&
+      answers.improvementGoals.length > 0);
+  const hasP2 =
+    typeof answers.activityContext === 'string' ||
+    (Array.isArray(answers.activityContexts) &&
+      answers.activityContexts.length > 0);
+  const hasP3 =
+    typeof answers.clientPriority === 'string' ||
+    (Array.isArray(answers.clientPriorities) &&
+      answers.clientPriorities.length > 0);
+
   return (
-    typeof answers.improvementGoal === 'string' &&
-    typeof answers.activityContext === 'string' &&
-    typeof answers.clientPriority === 'string' &&
+    hasP1 &&
+    hasP2 &&
+    hasP3 &&
     Array.isArray(answers.budgetPreferences) &&
     answers.budgetPreferences.length > 0 &&
     typeof answers.prescriptionAttachment === 'string'
@@ -250,34 +263,117 @@ export function useOpticalWizard({
   const selectQuestionOption = useCallback(
     (questionId: QuestionId, value: QuestionOptionValue) => {
       setSnapshot((prev) => {
-        // Paso 4: Selección única acordada con Solana en la reunión del 30/10 (toca una opción y avanza directo al Paso 5)
-        if (questionId === 'budgetPreferences') {
-          const item = value as BudgetPreferenceAnswer;
+        // Paso 1: Selección de hasta 2 opciones (`improvementGoals`)
+        if (questionId === 'improvementGoal') {
+          const item = value as ImprovementGoalAnswer;
+          const currentList =
+            prev.answers.improvementGoals &&
+            prev.answers.improvementGoals.length > 0
+              ? prev.answers.improvementGoals
+              : prev.answers.improvementGoal
+                ? [prev.answers.improvementGoal]
+                : [];
+          const exists = currentList.includes(item);
+          let nextList: readonly ImprovementGoalAnswer[];
+          if (exists) {
+            nextList = currentList.filter((v) => v !== item);
+          } else if (currentList.length >= 2) {
+            // Si ya había 2 seleccionadas y toca una tercera, reemplazamos la segunda por la nueva
+            nextList = [currentList[0]!, item];
+          } else {
+            nextList = [...currentList, item];
+          }
+
           return {
             ...prev,
-            step: 'QUESTIONS',
-            activeQuestionIndex: Math.min(
-              prev.activeQuestionIndex + 1,
-              totalQuestions - 1
-            ),
             answers: {
               ...prev.answers,
-              budgetPreferences: [item],
+              improvementGoal: nextList[0],
+              improvementGoals: nextList,
+            },
+          };
+        }
+
+        // Paso 2: Selección de hasta 2 opciones (`activityContexts`)
+        if (questionId === 'activityContext') {
+          const item = value as ActivityContextAnswer;
+          const currentList =
+            prev.answers.activityContexts &&
+            prev.answers.activityContexts.length > 0
+              ? prev.answers.activityContexts
+              : prev.answers.activityContext
+                ? [prev.answers.activityContext]
+                : [];
+          const exists = currentList.includes(item);
+          let nextList: readonly ActivityContextAnswer[];
+          if (exists) {
+            nextList = currentList.filter((v) => v !== item);
+          } else if (currentList.length >= 2) {
+            nextList = [currentList[0]!, item];
+          } else {
+            nextList = [...currentList, item];
+          }
+
+          return {
+            ...prev,
+            answers: {
+              ...prev.answers,
+              activityContext: nextList[0],
+              activityContexts: nextList,
+            },
+          };
+        }
+
+        // Paso 3: Selección de hasta 2 opciones (`clientPriorities`)
+        if (questionId === 'clientPriority') {
+          const item = value as ClientPriorityAnswer;
+          const currentList =
+            prev.answers.clientPriorities &&
+            prev.answers.clientPriorities.length > 0
+              ? prev.answers.clientPriorities
+              : prev.answers.clientPriority
+                ? [prev.answers.clientPriority]
+                : [];
+          const exists = currentList.includes(item);
+          let nextList: readonly ClientPriorityAnswer[];
+          if (exists) {
+            nextList = currentList.filter((v) => v !== item);
+          } else if (currentList.length >= 2) {
+            nextList = [currentList[0]!, item];
+          } else {
+            nextList = [...currentList, item];
+          }
+
+          return {
+            ...prev,
+            answers: {
+              ...prev.answers,
+              clientPriority: nextList[0],
+              clientPriorities: nextList,
+            },
+          };
+        }
+
+        // Paso 4: Selección múltiple sin límite (`budgetPreferences`)
+        if (questionId === 'budgetPreferences') {
+          const item = value as BudgetPreferenceAnswer;
+          const currentList = prev.answers.budgetPreferences ?? [];
+          const exists = currentList.includes(item);
+          const nextList = exists
+            ? currentList.filter((v) => v !== item)
+            : [...currentList, item];
+
+          return {
+            ...prev,
+            answers: {
+              ...prev.answers,
+              budgetPreferences: nextList,
             },
           };
         }
 
         const updatedAnswers: UserOpticalAnswers = {
           ...prev.answers,
-          ...(questionId === 'improvementGoal'
-            ? { improvementGoal: value as ImprovementGoalAnswer }
-            : {}),
-          ...(questionId === 'activityContext'
-            ? { activityContext: value as ActivityContextAnswer }
-            : {}),
-          ...(questionId === 'clientPriority'
-            ? { clientPriority: value as ClientPriorityAnswer }
-            : {}),
           ...(questionId === 'prescriptionAttachment'
             ? { prescriptionAttachment: value as PrescriptionAttachmentAnswer }
             : {}),
@@ -344,10 +440,29 @@ export function useOpticalWizard({
 
   const confirmBudgetPreferencesStep = useCallback(() => {
     setSnapshot((prev) => {
-      const currentList = prev.answers.budgetPreferences ?? [];
-      const ensuredList: readonly BudgetPreferenceAnswer[] =
-        currentList.length > 0 ? currentList : ['soy_particular'];
+      const currentQ = OPTICAL_WIZARD_QUESTIONS[prev.activeQuestionIndex];
 
+      // Si estamos en el Paso 4 (presupuesto), aseguramos al menos 'soy_particular' si no marcó nada
+      if (currentQ?.id === 'budgetPreferences') {
+        const currentList = prev.answers.budgetPreferences ?? [];
+        const ensuredList: readonly BudgetPreferenceAnswer[] =
+          currentList.length > 0 ? currentList : ['soy_particular'];
+
+        return {
+          ...prev,
+          step: 'QUESTIONS',
+          activeQuestionIndex: Math.min(
+            prev.activeQuestionIndex + 1,
+            totalQuestions - 1
+          ),
+          answers: {
+            ...prev.answers,
+            budgetPreferences: ensuredList,
+          },
+        };
+      }
+
+      // En los Pasos 1, 2 y 3 (selección de hasta 2 opciones), avanzamos al siguiente paso
       return {
         ...prev,
         step: 'QUESTIONS',
@@ -355,10 +470,6 @@ export function useOpticalWizard({
           prev.activeQuestionIndex + 1,
           totalQuestions - 1
         ),
-        answers: {
-          ...prev.answers,
-          budgetPreferences: ensuredList,
-        },
       };
     });
   }, [totalQuestions]);

@@ -102,11 +102,17 @@ export type QuestionOptionValue =
 
 /**
  * Mapa tipado de respuestas del usuario durante el flujo de los 5 pasos.
+ * - Pasos 1, 2 y 3: Selección de hasta 2 opciones (`maxSelections: 2`)
+ * - Paso 4: Selección múltiple sin límite (`maxSelections: undefined`)
+ * - Paso 5: Selección única (adjuntar foto de receta o continuar sin receta)
  */
 export interface UserOpticalAnswers {
   readonly improvementGoal?: ImprovementGoalAnswer;
+  readonly improvementGoals?: readonly ImprovementGoalAnswer[];
   readonly activityContext?: ActivityContextAnswer;
+  readonly activityContexts?: readonly ActivityContextAnswer[];
   readonly clientPriority?: ClientPriorityAnswer;
+  readonly clientPriorities?: readonly ClientPriorityAnswer[];
   readonly budgetPreferences?: readonly BudgetPreferenceAnswer[];
   readonly prescriptionAttachment?: PrescriptionAttachmentAnswer;
   readonly prescriptionPhotoName?: string;
@@ -119,8 +125,11 @@ export interface UserOpticalAnswers {
  */
 export interface CompletedOpticalAnswers {
   readonly improvementGoal: ImprovementGoalAnswer;
+  readonly improvementGoals?: readonly ImprovementGoalAnswer[];
   readonly activityContext: ActivityContextAnswer;
+  readonly activityContexts?: readonly ActivityContextAnswer[];
   readonly clientPriority: ClientPriorityAnswer;
+  readonly clientPriorities?: readonly ClientPriorityAnswer[];
   readonly budgetPreferences: readonly BudgetPreferenceAnswer[];
   readonly prescriptionAttachment: PrescriptionAttachmentAnswer;
   readonly prescriptionPhotoName?: string;
@@ -149,6 +158,8 @@ export interface WizardQuestionDefinition {
   readonly title: string;
   readonly subtitle: string;
   readonly isMultiSelect?: boolean;
+  /** Límite máximo de opciones seleccionables en este paso (ej. 2 en los pasos 1, 2 y 3; sin límite en el paso 4) */
+  readonly maxSelections?: number;
   readonly options: readonly WizardQuestionOption[];
 }
 
@@ -221,6 +232,8 @@ export interface RecommendedLensCardItem {
   readonly lens: LensCatalogItem;
   readonly tagline: string;
   readonly matchedQuestions: readonly ('P1' | 'P2' | 'P3')[];
+  /** Puntaje total acumulado según las 3 matrices con puntos de `MATRICES CON PUNTOS.pdf` */
+  readonly totalPoints?: number;
 }
 
 /**
