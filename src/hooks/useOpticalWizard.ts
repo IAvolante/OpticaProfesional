@@ -24,7 +24,7 @@ import { generateLeadId } from '../utils/formatters';
 import { trackMetaPixelEvent } from '../utils/metaPixel.tracker';
 import { buildWhatsAppDeepLink } from '../utils/whatsapp.encoder';
 
-const WIZARD_SESSION_STORAGE_KEY = 'optica_profesional_wizard_state_v5';
+const WIZARD_SESSION_STORAGE_KEY = 'optica_profesional_wizard_state_v6';
 
 interface PersistedWizardSnapshot {
   readonly step: WizardStepType;
@@ -33,30 +33,71 @@ interface PersistedWizardSnapshot {
   readonly lead: LeadContactData | null;
 }
 
+function normalizeToCompletedAnswers(
+  answers: UserOpticalAnswers
+): CompletedOpticalAnswers | null {
+  const improvementGoals: readonly ImprovementGoalAnswer[] =
+    Array.isArray(answers.improvementGoals) &&
+    answers.improvementGoals.length > 0
+      ? answers.improvementGoals
+      : typeof answers.improvementGoal === 'string'
+        ? [answers.improvementGoal]
+        : [];
+
+  const activityContexts: readonly ActivityContextAnswer[] =
+    Array.isArray(answers.activityContexts) &&
+    answers.activityContexts.length > 0
+      ? answers.activityContexts
+      : typeof answers.activityContext === 'string'
+        ? [answers.activityContext]
+        : [];
+
+  const clientPriorities: readonly ClientPriorityAnswer[] =
+    Array.isArray(answers.clientPriorities) &&
+    answers.clientPriorities.length > 0
+      ? answers.clientPriorities
+      : typeof answers.clientPriority === 'string'
+        ? [answers.clientPriority]
+        : [];
+
+  const improvementGoal = improvementGoals[0];
+  const activityContext = activityContexts[0];
+  const clientPriority = clientPriorities[0];
+
+  if (
+    !improvementGoal ||
+    !activityContext ||
+    !clientPriority ||
+    typeof answers.prescriptionAttachment !== 'string'
+  ) {
+    return null;
+  }
+
+  const budgetPreferences: readonly BudgetPreferenceAnswer[] =
+    Array.isArray(answers.budgetPreferences) &&
+    answers.budgetPreferences.length > 0
+      ? answers.budgetPreferences
+      : ['soy_particular'];
+
+  return {
+    improvementGoal,
+    improvementGoals,
+    activityContext,
+    activityContexts,
+    clientPriority,
+    clientPriorities,
+    budgetPreferences,
+    prescriptionAttachment: answers.prescriptionAttachment,
+    prescriptionPhotoName: answers.prescriptionPhotoName,
+    prescriptionPhotoDataUrl: answers.prescriptionPhotoDataUrl,
+    prescriptionPhotoRemoteUrl: answers.prescriptionPhotoRemoteUrl,
+  };
+}
+
 function isCompletedAnswers(
   answers: UserOpticalAnswers
 ): answers is CompletedOpticalAnswers {
-  const hasP1 =
-    typeof answers.improvementGoal === 'string' ||
-    (Array.isArray(answers.improvementGoals) &&
-      answers.improvementGoals.length > 0);
-  const hasP2 =
-    typeof answers.activityContext === 'string' ||
-    (Array.isArray(answers.activityContexts) &&
-      answers.activityContexts.length > 0);
-  const hasP3 =
-    typeof answers.clientPriority === 'string' ||
-    (Array.isArray(answers.clientPriorities) &&
-      answers.clientPriorities.length > 0);
-
-  return (
-    hasP1 &&
-    hasP2 &&
-    hasP3 &&
-    Array.isArray(answers.budgetPreferences) &&
-    answers.budgetPreferences.length > 0 &&
-    typeof answers.prescriptionAttachment === 'string'
-  );
+  return normalizeToCompletedAnswers(answers) !== null;
 }
 
 function loadInitialSnapshot(): PersistedWizardSnapshot {
@@ -218,23 +259,31 @@ export function useOpticalWizard({
     return OPTICAL_WIZARD_QUESTIONS[0] as WizardQuestionDefinition;
   }, [snapshot.activeQuestionIndex]);
 
+  const normalizedCompletedAnswers = useMemo(
+    () => normalizeToCompletedAnswers(snapshot.answers),
+    [snapshot.answers]
+  );
+
   const recommendation: OpticalRecommendationResult | null = useMemo(() => {
-    if (!isCompletedAnswers(snapshot.answers)) {
+    if (!normalizedCompletedAnswers) {
       return null;
     }
-    return calculateOpticalRecommendation(snapshot.answers, catalogItems);
-  }, [snapshot.answers, catalogItems]);
+    return calculateOpticalRecommendation(
+      normalizedCompletedAnswers,
+      catalogItems
+    );
+  }, [normalizedCompletedAnswers, catalogItems]);
 
   const wizardState: WizardStateDiscriminated = useMemo(() => {
     if (
       snapshot.step === 'QUOTE_RESULT' &&
-      isCompletedAnswers(snapshot.answers) &&
+      normalizedCompletedAnswers &&
       recommendation
     ) {
       return {
         step: 'QUOTE_RESULT',
         activeQuestionIndex: snapshot.activeQuestionIndex,
-        answers: snapshot.answers,
+        answers: normalizedCompletedAnswers,
         lead: snapshot.lead,
         recommendation,
       };
@@ -246,7 +295,7 @@ export function useOpticalWizard({
       answers: snapshot.answers,
       lead: snapshot.lead,
     };
-  }, [snapshot, recommendation]);
+  }, [snapshot, normalizedCompletedAnswers, recommendation]);
 
   const progressPercentage = useMemo(() => {
     if (wizardState.step === 'QUOTE_RESULT') {
@@ -381,18 +430,18 @@ export function useOpticalWizard({
 
         // Paso 5: Si elige "Aún no la tengo", pasamos directo al Paso 6 (RESULTADO)
         if (questionId === 'prescriptionAttachment') {
-          const ensuredAnswers: UserOpticalAnswers = {
+          const normalized = normalizeToCompletedAnswers({
             ...updatedAnswers,
             budgetPreferences:
               updatedAnswers.budgetPreferences &&
               updatedAnswers.budgetPreferences.length > 0
                 ? updatedAnswers.budgetPreferences
                 : ['soy_particular'],
-          };
+          });
 
-          if (isCompletedAnswers(ensuredAnswers)) {
+          if (normalized) {
             const previewRec = calculateOpticalRecommendation(
-              ensuredAnswers,
+              normalized,
               catalogItems
             );
             trackMetaPixelEvent('ViewContent', {
@@ -412,7 +461,7 @@ export function useOpticalWizard({
             return {
               ...prev,
               step: 'QUOTE_RESULT',
-              answers: ensuredAnswers,
+              answers: normalized,
               lead: prev.lead
                 ? { ...prev.lead, passportCode: sessionPassportCode }
                 : {
@@ -490,9 +539,10 @@ export function useOpticalWizard({
           prescriptionPhotoRemoteUrl: undefined,
         };
 
-        if (isCompletedAnswers(updatedAnswers) && prev.step !== 'QUOTE_RESULT') {
+        const normalized = normalizeToCompletedAnswers(updatedAnswers);
+        if (normalized && prev.step !== 'QUOTE_RESULT') {
           const previewRec = calculateOpticalRecommendation(
-            updatedAnswers,
+            normalized,
             catalogItems
           );
           trackMetaPixelEvent('ViewContent', {
@@ -513,7 +563,7 @@ export function useOpticalWizard({
         return {
           ...prev,
           step: 'QUOTE_RESULT',
-          answers: updatedAnswers,
+          answers: normalized ?? updatedAnswers,
           lead: prev.lead
             ? {
                 ...prev.lead,

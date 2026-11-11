@@ -1,5 +1,4 @@
-import { lazy, Suspense, useEffect, useState } from 'react';
-import { AnimatePresence } from 'framer-motion';
+import { useEffect, useState } from 'react';
 import { ArrowLeft } from '@phosphor-icons/react';
 import { ENV_CONFIG } from './config/env';
 import { useCatalogPrices } from './hooks/useCatalogPrices';
@@ -16,12 +15,8 @@ import {
 import { BackgroundVideoStage } from './components/ui/BackgroundVideoStage';
 import { DesignLabSwitcher } from './components/ui/DesignLabSwitcher';
 import { OpticalBrandTransition } from './components/ui/OpticalBrandTransition';
-import { WizardStepSkeleton } from './components/ui/WizardStepSkeleton';
 import { QuestionStep } from './components/wizard/QuestionStep';
-
-const QuoteResultStep = lazy(
-  () => import('./components/wizard/QuoteResultStep')
-);
+import { QuoteResultStep } from './components/wizard/QuoteResultStep';
 
 const FIXED_LIGHT_THEME: BrandThemeId = 'theme-clinical';
 // Fuente #4 seleccionada por el cliente: Sora + DM Sans ('font-modern-atelier')
@@ -219,37 +214,33 @@ export function App() {
           isDesignLabEnabled ? 'pb-16' : 'pb-8'
         }`}
       >
-        <Suspense fallback={<WizardStepSkeleton />}>
-          <AnimatePresence mode="wait">
-            {wizardState.step === 'QUESTIONS' && (
-              <QuestionStep
-                key="step-questions"
-                question={currentQuestion}
-                answers={wizardState.answers}
-                designLabConfig={designLabConfig}
-                onSelectOption={selectQuestionOption}
-                onConfirmBudgetStep={confirmBudgetPreferencesStep}
-                onAttachPrescriptionPhoto={attachPrescriptionPhotoAndAdvance}
-                onSwipeBack={goToPreviousStep}
-                onJumpToStep={goToQuestionIndex}
-              />
-            )}
+        {wizardState.step === 'QUESTIONS' && (
+          <QuestionStep
+            key="step-questions"
+            question={currentQuestion}
+            answers={wizardState.answers}
+            designLabConfig={designLabConfig}
+            onSelectOption={selectQuestionOption}
+            onConfirmBudgetStep={confirmBudgetPreferencesStep}
+            onAttachPrescriptionPhoto={attachPrescriptionPhotoAndAdvance}
+            onSwipeBack={goToPreviousStep}
+            onJumpToStep={goToQuestionIndex}
+          />
+        )}
 
-            {wizardState.step === 'QUOTE_RESULT' && (
-              <QuoteResultStep
-                key="step-quote-result"
-                lead={wizardState.lead}
-                answers={wizardState.answers}
-                recommendation={wizardState.recommendation}
-                catalogSourceLabel={catalogSourceLabel}
-                isSubmitting={isSubmittingLead}
-                onClaimBenefit={claimBenefitAndOpenWhatsApp}
-                onUpdatePrescriptionPhoto={attachPrescriptionPhotoAndAdvance}
-                onResetWizard={resetWizard}
-              />
-            )}
-          </AnimatePresence>
-        </Suspense>
+        {wizardState.step === 'QUOTE_RESULT' && (
+          <QuoteResultStep
+            key="step-quote-result"
+            lead={wizardState.lead}
+            answers={wizardState.answers}
+            recommendation={wizardState.recommendation}
+            catalogSourceLabel={catalogSourceLabel}
+            isSubmitting={isSubmittingLead}
+            onClaimBenefit={claimBenefitAndOpenWhatsApp}
+            onUpdatePrescriptionPhoto={attachPrescriptionPhotoAndAdvance}
+            onResetWizard={resetWizard}
+          />
+        )}
       </main>
 
       {/* Panel Flotante de Laboratorio (oculto al público; se activa con ?lab=1 o tocando 3 veces PASO 0X) */}
