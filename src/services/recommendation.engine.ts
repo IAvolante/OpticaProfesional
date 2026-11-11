@@ -426,18 +426,18 @@ export function calculateOpticalRecommendation(
   if (answers.budgetPreferences.includes('tengo_obra_social')) {
     tags.push({
       id: 'tag-obra-social',
-      label: 'Obra Social · Armazón Estándar Sin Cargo',
+      label: 'Obra Social · ¡Armazón Sin Cargo Seleccionado!',
       category: 'range',
     });
     reasoning.push(
-      'Recordá que si tu Obra Social está en nuestra lista de prestadores, contás con un armazón estándar sin cargo al probarlo en la óptica.'
+      '¡Si tenés obra social, tenés un armazón sin cargo seleccionado!'
     );
   }
 
   if (answers.budgetPreferences.includes('beneficio_pago_contado')) {
     tags.push({
       id: 'tag-contado',
-      label: 'Beneficio Pago Contado',
+      label: 'Contado · Consultar Beneficios por WhatsApp',
       category: 'range',
     });
   }
@@ -445,7 +445,7 @@ export function calculateOpticalRecommendation(
   if (answers.budgetPreferences.includes('interes_cuotas_tarjeta')) {
     tags.push({
       id: 'tag-cuotas',
-      label: 'Financiación según Tarjeta',
+      label: '12 Cuotas Naranja X · 6 Cuotas Macro',
       category: 'range',
     });
   }

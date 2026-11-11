@@ -146,8 +146,8 @@ export const OPTICAL_WIZARD_QUESTIONS: readonly WizardQuestionDefinition[] = [
         value: 'tengo_obra_social',
         label: 'Tengo obra social',
         description:
-          'Si está en nuestra lista de prestadores, contás con un armazón estándar sin cargo al venir a probártelo.',
-        clinicalHint: 'Beneficio Armazón Estándar Sin Cargo',
+          '¡Si tenés obra social, tenés un armazón sin cargo seleccionado!',
+        clinicalHint: 'Armazón Seleccionado Sin Cargo',
       },
       {
         value: 'soy_particular',
@@ -160,15 +160,15 @@ export const OPTICAL_WIZARD_QUESTIONS: readonly WizardQuestionDefinition[] = [
         value: 'interes_cuotas_tarjeta',
         label: 'Me interesa conocer cuotas según mi tarjeta',
         description:
-          'Opciones de financiación en cuotas según tu tarjeta bancaria.',
-        clinicalHint: 'Financiación con Tarjeta',
+          'Si pagás con tarjeta tenés 2 promos: 12 cuotas con Naranja X y 6 cuotas con Banco Macro.',
+        clinicalHint: '12 Cuotas Naranja X · 6 Cuotas Macro',
       },
       {
         value: 'beneficio_pago_contado',
         label: 'Beneficio pago contado',
         description:
-          'Bonificación especial abonando de contado en efectivo o transferencia.',
-        clinicalHint: 'Descuento Especial Contado',
+          'Consultanos por beneficios de contado a nuestro WhatsApp.',
+        clinicalHint: 'Beneficios de Contado por WhatsApp',
       },
     ],
   },

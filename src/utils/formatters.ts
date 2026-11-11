@@ -18,16 +18,27 @@ export function formatCurrencyARS(amount: number): string {
 }
 
 /**
- * Formatea el precio de un cristal respetando la columna Precio de encuesta.xlsx:
+ * Formatea el precio de un cristal respetando la columna Precio de encuesta.xlsx y los rangos de Solana:
+ * - Si tiene prefijo 'DESDE' y rango (priceStockARS > 0 y priceLabARS > priceStockARS):
+ *   "Desde $ 102.000 hasta $ 500.000"
  * - Si tiene monto numérico y prefijo 'DESDE': "Desde $ XX.XXX"
- * - Si tiene prefijo 'DESDE' y monto 0 (Ocupacionales, Bifocales, Multifocales): "Desde · Según receta"
+ * - Si tiene prefijo 'DESDE' y monto 0: "Desde · Según receta"
  * - Si tiene prefijo 'CONSULTAR' y monto 0 (Policarbonato Ar): "Según receta"
  * - Caso normal con monto > 0: "$ 36.000", "$ 42.000", "$ 51.000", "$ 104.000", "$ 130.000", "$ 150.000"
  */
 export function formatLensPriceARS(
-  lens: Pick<LensCatalogItem, 'priceStockARS' | 'pricePrefix'>
+  lens: Pick<LensCatalogItem, 'priceStockARS' | 'pricePrefix'> & {
+    readonly priceLabARS?: number;
+  }
 ): string {
   if (lens.pricePrefix === 'DESDE') {
+    if (
+      lens.priceStockARS > 0 &&
+      typeof lens.priceLabARS === 'number' &&
+      lens.priceLabARS > lens.priceStockARS
+    ) {
+      return `Desde ${formatCurrencyARS(lens.priceStockARS)} hasta ${formatCurrencyARS(lens.priceLabARS)}`;
+    }
     if (lens.priceStockARS > 0) {
       return `Desde ${formatCurrencyARS(lens.priceStockARS)}`;
     }

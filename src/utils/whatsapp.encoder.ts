@@ -48,10 +48,12 @@ export const CLIENT_PRIORITY_LABELS: Record<ClientPriorityAnswer, string> = {
 };
 
 export const BUDGET_PREFERENCE_LABELS: Record<BudgetPreferenceAnswer, string> = {
-  tengo_obra_social: 'Tengo obra social',
+  tengo_obra_social: 'Tengo obra social (¡Armazón sin cargo seleccionado!)',
   soy_particular: 'Soy particular',
-  interes_cuotas_tarjeta: 'Me interesa conocer cuotas según mi tarjeta',
-  beneficio_pago_contado: 'Beneficio pago contado',
+  interes_cuotas_tarjeta:
+    'Me interesa conocer cuotas según mi tarjeta (12 cuotas Naranja X / 6 cuotas Macro)',
+  beneficio_pago_contado:
+    'Beneficio pago contado (Consultar beneficios de contado por WhatsApp)',
 };
 
 /**
@@ -136,6 +138,27 @@ export function buildWhatsAppQuoteMessage(
         `*Cristal de Laboratorio:* ${chosenLens.commercialName} (${chosenLens.visionRangeLabel ?? 'múltiples distancias'}) — Quiero conocer opciones según mi receta, planes de cuotas o beneficio de contado.`,
       ];
 
+  const step1Goals =
+    answers.improvementGoals && answers.improvementGoals.length > 0
+      ? answers.improvementGoals
+          .map((g) => IMPROVEMENT_GOAL_LABELS[g])
+          .join(' + ')
+      : IMPROVEMENT_GOAL_LABELS[answers.improvementGoal];
+
+  const step2Activities =
+    answers.activityContexts && answers.activityContexts.length > 0
+      ? answers.activityContexts
+          .map((a) => ACTIVITY_CONTEXT_LABELS[a])
+          .join(' + ')
+      : ACTIVITY_CONTEXT_LABELS[answers.activityContext];
+
+  const step3Priorities =
+    answers.clientPriorities && answers.clientPriorities.length > 0
+      ? answers.clientPriorities
+          .map((p) => CLIENT_PRIORITY_LABELS[p])
+          .join(' + ')
+      : CLIENT_PRIORITY_LABELS[answers.clientPriority];
+
   const lines: string[] = [
     ...headerLines,
     `------------------------------------`,
@@ -148,9 +171,9 @@ export function buildWhatsAppQuoteMessage(
     `- *Cristal Seleccionado:* *Opción ${chosenItem.optionNumber} — ${chosenLens.commercialName}* (*${formatLensPriceARS(chosenLens)}*)`,
     ``,
     `*RESPUESTAS DEL ASESOR VIRTUAL*`,
-    `1. Mejora principal: ${IMPROVEMENT_GOAL_LABELS[answers.improvementGoal]}`,
-    `2. Actividad principal: ${ACTIVITY_CONTEXT_LABELS[answers.activityContext]}`,
-    `3. Prioridad: ${CLIENT_PRIORITY_LABELS[answers.clientPriority]}`,
+    `1. Mejora principal: ${step1Goals}`,
+    `2. Actividad principal: ${step2Activities}`,
+    `3. Prioridad: ${step3Priorities}`,
     `4. Datos para presupuesto: *${budgetLabels}*`,
     `5. Receta: *${prescriptionLine}*`,
   ];

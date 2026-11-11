@@ -31,6 +31,7 @@ import {
   triggerHapticFeedback,
 } from '../../utils/formatters';
 import { Button } from '../ui/Button';
+import { BankPromoLogos } from '../ui/BankPromoLogos';
 import { Card, CardHeader, CardTitle } from '../ui/Card';
 import { OpticalOptionDiagram } from './OpticalOptionDiagram';
 
@@ -600,6 +601,10 @@ export function QuestionStep({
                       >
                         {option.description}
                       </p>
+
+                      {option.value === 'interes_cuotas_tarjeta' ? (
+                        <BankPromoLogos variant="light" />
+                      ) : null}
 
                       {isUploadRxButton && photoError ? (
                         <p

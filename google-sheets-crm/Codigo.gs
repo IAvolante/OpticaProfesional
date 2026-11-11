@@ -254,42 +254,53 @@ function inicializarPlanillaCRM() {
   trackingSheet.setColumnWidth(4, 230);
   trackingSheet.setColumnWidth(5, 250);
 
-  // 3. Asegurar PRECIOS_CRISTALES
+  // 3. Asegurar y actualizar PRECIOS_CRISTALES con los 10 ítems oficiales y rangos completos
+  actualizarCatalogoPrecios();
+
+  obtenerOCrearCarpetaRecetas_();
+}
+
+/**
+ * EJECUTAR ESTA FUNCIÓN ("actualizarCatalogoPrecios") PARA CARGAR O ACTUALIZAR
+ * LOS 10 CRISTALES EN LA PESTAÑA PRECIOS_CRISTALES (INCLUYENDO RANGOS DESDE/HASTA
+ * DE OCUPACIONALES, BIFOCALES Y MULTIFOCALES) SIN BORRAR LOS CLIENTES.
+ */
+function actualizarCatalogoPrecios() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
   let pricesSheet = ss.getSheetByName(SHEET_PRICES_NAME);
   if (!pricesSheet) {
     pricesSheet = ss.insertSheet(SHEET_PRICES_NAME, 2);
+  } else {
+    pricesSheet.clear();
   }
 
   const pricesHeaders = [
     'SKU (No modificar)',
     'Nombre Comercial en la Web',
-    'Precio Vigente (ARS)',
-    'Precio Laboratorio (ARS)',
+    'Precio Fijo / Desde (ARS)',
+    'Precio Hasta (Solo Ocupacional / Bifocal / Multifocal)',
     'Descripción / Rango',
     'Tiempo Entrega Stock',
     'Garantía (Meses)'
   ];
 
-  if (pricesSheet.getLastRow() === 0) {
-    pricesSheet.getRange(1, 1, 1, pricesHeaders.length).setValues([pricesHeaders]);
+  const initialCatalogRows = [
+    ['ORGANICO-BLANCO', 'Orgánico Blanco', 36000, '', 'monofocal · Equilibrio calidad y precio', '24 a 48 hs hábiles', 12],
+    ['ORGANICO-AR', 'Orgánico AR', 42000, '', 'monofocal · Visión clara con antirreflejo', '24 a 48 hs hábiles', 12],
+    ['ORGANICO-BLUE-AR', 'Orgánico Blue Ar', 51000, '', 'monofocal · Filtro de luz azul + Antirreflejo', '24 a 48 hs hábiles', 12],
+    ['ORGANICO-FOTOCROMATICO', 'Orgánico Fotocromático Ar', 104000, '', 'monofocal · Transparente adentro, se oscurece al sol', '48 a 72 hs hábiles', 12],
+    ['POLICARBONATO-AR', 'Policarbonato Ar', 64000, '', 'monofocal · Más fino, liviano y resistente', '48 a 72 hs hábiles', 12],
+    ['ORGANICO-161', 'Orgánico 1,61', 130000, '', 'monofocal · Delgado y estético para uso diario', '48 a 72 hs hábiles', 12],
+    ['ALTO-INDICE-167', 'Orgánico 1,67', 150000, '', 'monofocal · Alto índice 1,67 ultradelgado', '48 a 72 hs hábiles', 12],
+    ['OCUPACIONALES', 'Ocupacionales', 102000, 500000, 'lejos/intermedia · Desde $ 102.000 hasta $ 500.000', '5 a 7 días hábiles', 12],
+    ['BIFOCAL-AR', 'Bifocales', 60000, 400000, 'lejos/cerca · Desde $ 60.000 hasta $ 400.000', '4 a 6 días hábiles', 12],
+    ['MULTIFOCAL-AR', 'Multifocales', 180000, 1050000, 'lejos/intermedia/cerca · Desde $ 180.000 hasta $ 1.050.000', '5 a 7 días hábiles', 12]
+  ];
 
-    const initialCatalogRows = [
-      ['ORGANICO-BLANCO', 'Orgánico Blanco', 36000, 58000, 'monofocal · Equilibrio calidad y precio', '24 a 48 hs hábiles', 12],
-      ['ORGANICO-AR', 'Orgánico AR', 42000, 72000, 'monofocal · Visión clara con antirreflejo', '24 a 48 hs hábiles', 12],
-      ['ORGANICO-BLUE-AR', 'Orgánico Blue Ar', 51000, 86000, 'monofocal · Filtro de luz azul + Antirreflejo', '24 a 48 hs hábiles', 12],
-      ['ORGANICO-FOTOCROMATICO', 'Orgánico Fotocromático Ar', 104000, 156000, 'monofocal · Transparente adentro, se oscurece al sol', '48 a 72 hs hábiles', 12],
-      ['POLICARBONATO-AR', 'Policarbonato Ar', 'Según receta', 0, 'monofocal · Más fino, liviano y resistente', '48 a 72 hs hábiles', 12],
-      ['ORGANICO-161', 'Orgánico 1,61', 130000, 185000, 'monofocal · Delgado y estético para uso diario', '48 a 72 hs hábiles', 12],
-      ['ALTO-INDICE-167', 'Orgánico 1,67', 150000, 215000, 'monofocal · Alto índice 1,67 ultradelgado', '48 a 72 hs hábiles', 12],
-      ['OCUPACIONALES', 'Ocupacionales', 'Desde', 0, 'lejos/intermedia · Visión intermedia y cerca', '5 a 7 días hábiles', 12],
-      ['BIFOCAL-AR', 'Bifocales', 'Desde', 0, 'lejos/cerca · Visión de lejos y lectura de cerca', '4 a 6 días hábiles', 12],
-      ['MULTIFOCAL-AR', 'Multifocales', 'Desde', 0, 'lejos/intermedia/cerca · Progresivo todas las distancias', '5 a 7 días hábiles', 12]
-    ];
-
-    pricesSheet
-      .getRange(2, 1, initialCatalogRows.length, pricesHeaders.length)
-      .setValues(initialCatalogRows);
-  }
+  pricesSheet.getRange(1, 1, 1, pricesHeaders.length).setValues([pricesHeaders]);
+  pricesSheet
+    .getRange(2, 1, initialCatalogRows.length, pricesHeaders.length)
+    .setValues(initialCatalogRows);
 
   const priceHeaderRange = pricesSheet.getRange(1, 1, 1, pricesHeaders.length);
   priceHeaderRange
@@ -300,8 +311,6 @@ function inicializarPlanillaCRM() {
 
   pricesSheet.setFrozenRows(1);
   pricesSheet.setRowHeight(1, 34);
-
-  obtenerOCrearCarpetaRecetas_();
 }
 
 /**

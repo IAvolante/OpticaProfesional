@@ -6,6 +6,7 @@ import {
   Camera,
   Check,
   CreditCard,
+  DownloadSimple,
   Info,
   MapPin,
   Money,
@@ -27,7 +28,9 @@ import {
   sanitizeArgentinePhone,
   triggerHapticFeedback,
 } from '../../utils/formatters';
+import { downloadQuoteSummaryImage } from '../../utils/quoteImage.generator';
 import type { ClaimBenefitParams } from '../../hooks/useOpticalWizard';
+import { BankPromoLogos } from '../ui/BankPromoLogos';
 
 export interface QuoteResultStepProps {
   readonly lead: LeadContactData | null;
@@ -44,10 +47,10 @@ export interface QuoteResultStepProps {
 }
 
 const BUDGET_BADGE_LABELS: Record<BudgetPreferenceAnswer, string> = {
-  tengo_obra_social: 'Tengo obra social',
+  tengo_obra_social: '¡Con obra social tenés un armazón sin cargo seleccionado!',
   soy_particular: 'Soy particular',
-  interes_cuotas_tarjeta: 'Cuotas con tarjeta',
-  beneficio_pago_contado: 'Beneficio pago contado',
+  interes_cuotas_tarjeta: '12 cuotas Naranja X · 6 cuotas Macro',
+  beneficio_pago_contado: 'Consultanos por beneficios de contado a nuestro WhatsApp',
 };
 
 function resolveDefaultSelectedOptionNumber(
@@ -106,6 +109,8 @@ export function QuoteResultStep({
   const [whatsapp, setWhatsapp] = useState<string>(lead?.whatsapp ?? '');
   const [nameError, setNameError] = useState<string>('');
   const [phoneError, setPhoneError] = useState<string>('');
+  const [isDownloadingCard, setIsDownloadingCard] = useState<boolean>(false);
+  const [hasDownloadedCard, setHasDownloadedCard] = useState<boolean>(false);
 
   const {
     primaryOption,
@@ -170,6 +175,27 @@ export function QuoteResultStep({
       onUpdatePrescriptionPhoto(file.name, dataUrl);
     } catch {
       // Ignorar error de lectura
+    }
+  };
+
+  const handleDownloadQuoteImage = async () => {
+    if (isDownloadingCard) return;
+    triggerHapticFeedback(15);
+    setIsDownloadingCard(true);
+    try {
+      const ok = await downloadQuoteSummaryImage({
+        answers,
+        recommendation,
+        selectedOptionNumber: activeCardItem.optionNumber,
+        fullName,
+        whatsapp,
+        lead,
+      });
+      if (ok) {
+        setHasDownloadedCard(true);
+      }
+    } finally {
+      setIsDownloadingCard(false);
     }
   };
 
@@ -334,7 +360,7 @@ export function QuoteResultStep({
                       'font-brand-price tabular-nums font-bold tracking-tight text-[var(--brand-text)] pt-0.5',
                       isNumericPrice
                         ? 'text-[19px] sm:text-2xl leading-none'
-                        : 'text-[15px] sm:text-[17px] leading-snug text-[var(--brand-accent-foreground)]'
+                        : 'text-[13px] sm:text-[15px] leading-snug text-[var(--brand-accent-foreground)]'
                     )}
                   >
                     {formattedPrice}
@@ -371,21 +397,27 @@ export function QuoteResultStep({
           </p>
         ) : null}
 
-        {/* Resumen compacto de lo elegido en el Paso 4 + Foto de Receta del Paso 5 */}
+        {/* Resumen compacto de lo elegido en el Paso 4 + Logos Bancarios + Foto de Receta del Paso 5 */}
         <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
-          <div className="flex flex-wrap gap-1.5">
-            {answers.budgetPreferences.map((pref) => (
-              <span
-                key={pref}
-                className="inline-flex items-center gap-1 rounded-lg bg-[var(--brand-surface-elevated)] border border-[var(--brand-border)] px-2.5 py-1 text-[11px] font-medium text-[var(--brand-accent-foreground)]"
-              >
-                <ShieldCheck
-                  weight="duotone"
-                  className="h-3.5 w-3.5 text-[var(--brand-icon-primary)]"
-                />
-                {BUDGET_BADGE_LABELS[pref]}
-              </span>
-            ))}
+          <div className="flex flex-col gap-2 w-full">
+            <div className="flex flex-wrap gap-1.5">
+              {answers.budgetPreferences.map((pref) => (
+                <span
+                  key={pref}
+                  className="inline-flex items-center gap-1 rounded-lg bg-[var(--brand-surface-elevated)] border border-[var(--brand-border)] px-2.5 py-1 text-[11px] font-medium text-[var(--brand-accent-foreground)]"
+                >
+                  <ShieldCheck
+                    weight="duotone"
+                    className="h-3.5 w-3.5 shrink-0 text-[var(--brand-icon-primary)]"
+                  />
+                  <span>{BUDGET_BADGE_LABELS[pref]}</span>
+                </span>
+              ))}
+            </div>
+
+            {answers.budgetPreferences.includes('interes_cuotas_tarjeta') ? (
+              <BankPromoLogos variant="light" className="pt-0" />
+            ) : null}
           </div>
 
           {answers.prescriptionPhotoDataUrl || answers.prescriptionPhotoName ? (
@@ -429,6 +461,42 @@ export function QuoteResultStep({
               <span>¿Querés sumar foto de tu receta?</span>
             </button>
           )}
+        </div>
+
+        {/* Botón directo para descargar la ficha en imagen y traerla a la óptica (pedido de Solana y su papá) */}
+        <div className="pt-1 border-t border-[var(--brand-border)]/80">
+          <button
+            type="button"
+            disabled={isDownloadingCard}
+            onClick={() => void handleDownloadQuoteImage()}
+            className={cn(
+              'flex min-h-[46px] w-full items-center justify-center gap-2 rounded-2xl border px-4 py-2.5 text-xs sm:text-[13px] font-bold transition-all active:scale-[0.99] cursor-pointer shadow-2xs',
+              hasDownloadedCard
+                ? 'border-[#3B693B]/50 bg-[#EFF7EF] text-[#234723]'
+                : 'border-[#336699]/45 bg-[#336699]/10 text-[var(--brand-accent-foreground)] hover:bg-[#336699]/15'
+            )}
+          >
+            {hasDownloadedCard ? (
+              <>
+                <Check weight="bold" className="h-4 w-4 shrink-0 text-[#2E6B2E]" />
+                <span>
+                  ¡Ficha descargada! Tocá si querés volver a guardarla
+                </span>
+              </>
+            ) : (
+              <>
+                <DownloadSimple weight="bold" className="h-4 w-4 shrink-0" />
+                <span>
+                  {isDownloadingCard
+                    ? 'Generando tu ficha de presupuesto...'
+                    : 'Descargar mi presupuesto en imagen (Para mostrar en la óptica)'}
+                </span>
+              </>
+            )}
+          </button>
+          <p className="mt-1 text-center text-[10.5px] text-[var(--brand-text-muted)]">
+            Guardá una imagen con tus precios, opciones y respuestas para tenerla a mano cuando nos visites.
+          </p>
         </div>
       </div>
 
@@ -537,14 +605,16 @@ export function QuoteResultStep({
                   </p>
                 </div>
 
+                <BankPromoLogos variant="dark" className="pt-0.5" />
+
                 <div className="flex flex-wrap items-center gap-2 pt-1">
                   <span className="inline-flex items-center gap-1 rounded-lg bg-white/10 px-2.5 py-1 text-[10.5px] font-semibold text-[#99CC99]">
-                    <CreditCard weight="duotone" className="h-3.5 w-3.5" />
-                    Planes de cuotas según tu tarjeta
+                    <CreditCard weight="duotone" className="h-3.5 w-3.5 shrink-0" />
+                    <span>12 cuotas con Naranja X y 6 con Macro</span>
                   </span>
                   <span className="inline-flex items-center gap-1 rounded-lg bg-white/10 px-2.5 py-1 text-[10.5px] font-semibold text-[#99CC99]">
-                    <Money weight="duotone" className="h-3.5 w-3.5" />
-                    Beneficio pago contado
+                    <Money weight="duotone" className="h-3.5 w-3.5 shrink-0" />
+                    <span>Efectivo: consultanos por beneficios de contado a nuestro WhatsApp</span>
                   </span>
                 </div>
               </div>
@@ -698,8 +768,8 @@ export function QuoteResultStep({
               </div>
             </div>
 
-            {/* Botón píldora destacado */}
-            <div className="pt-2 space-y-2">
+            {/* Botón píldora destacado + botón secundario de descarga de ficha */}
+            <div className="pt-2 space-y-2.5">
               <button
                 type="submit"
                 disabled={isSubmitting}
@@ -715,8 +785,23 @@ export function QuoteResultStep({
                 </span>
                 <ArrowRight weight="bold" className="h-4 w-4 text-[#336699]" />
               </button>
+
+              <button
+                type="button"
+                disabled={isDownloadingCard}
+                onClick={() => void handleDownloadQuoteImage()}
+                className="flex min-h-[44px] w-full items-center justify-center gap-2 rounded-full border border-[#99CC99]/50 bg-white/[0.08] px-5 py-2.5 text-xs sm:text-[13px] font-semibold text-[#99CC99] hover:bg-white/[0.14] active:scale-[0.99] transition-all cursor-pointer"
+              >
+                <DownloadSimple weight="bold" className="h-4 w-4 shrink-0" />
+                <span>
+                  {hasDownloadedCard
+                    ? 'Ficha descargada en tu celular · Volver a descargar'
+                    : 'Descargar ficha de presupuesto para llevar a la óptica'}
+                </span>
+              </button>
+
               <p className="text-center text-[11px] text-slate-400">
-                Sin compromiso de compra · Atención directa por WhatsApp
+                Sin compromiso de compra · Atención directa por WhatsApp o en el local
               </p>
             </div>
           </form>

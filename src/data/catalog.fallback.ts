@@ -8,17 +8,17 @@ import type { LensCatalogItem } from '../types/optical.types';
  * Fila 6:  Orgánico AR                | monofocal              | $ 42.000
  * Fila 7:  Orgánico Blue Ar           | monofocal              | $ 51.000
  * Fila 8:  Orgánico Fotocromático Ar  | monofocal              | $ 104.000
- * Fila 9:  Policarbonato Ar           | monofocal              | Según receta
+ * Fila 9:  Policarbonato Ar           | monofocal              | $ 64.000
  * Fila 10: Orgánico 1,61              | monofocal              | $ 130.000
  * Fila 11: Orgánico 1,67              | monofocal              | $ 150.000
- * Fila 12: Ocupacionales              | lejos/intermedia       | Desde (según receta)
- * Fila 13: Bifocales                  | lejos/cerca            | Desde (según receta)
- * Fila 14: Multifocales               | lejos/intermedia/cerca | Desde (según receta)
+ * Fila 12: Ocupacionales              | lejos/intermedia       | Desde $ 102.000 hasta $ 500.000
+ * Fila 13: Bifocales                  | lejos/cerca            | Desde $ 60.000 hasta $ 400.000
+ * Fila 14: Multifocales               | lejos/intermedia/cerca | Desde $ 180.000 hasta $ 1.050.000
  *
- * Regla acordada con Solana Casal (reunión 30/10):
+ * Regla acordada con Solana Casal:
  * - Los cristales Monofocales (Filas 5 a 11) incluyen la promoción de Certificado Recambio 12 Meses Gratis (`hasAnnualReplacementPromo: true`).
  * - Los cristales Ocupacionales, Bifocales y Multifocales (Filas 12 a 14) NO entran en la promo de 12 meses (`hasAnnualReplacementPromo: false`);
- *   muestran su precio con prefijo "Desde" y despliegan un bloque específico de Tips, Características y Medición Personalizada en la óptica.
+ *   muestran su rango de precio ("Desde $ ... hasta $ ...") y despliegan un bloque específico de Tips, Características y Medición Personalizada en la óptica.
  */
 export const FALLBACK_LENS_CATALOG: readonly LensCatalogItem[] = [
   {
@@ -39,9 +39,9 @@ export const FALLBACK_LENS_CATALOG: readonly LensCatalogItem[] = [
     idealForSummary:
       'La alternativa más económica para resolver tu necesidad visual cuidando tu presupuesto.',
     priceStockARS: 36000,
-    priceLabARS: 58000,
-    stockRangeDescription: 'Monofocal de stock',
-    labRangeDescription: 'Graduaciones de rango o laboratorio',
+    priceLabARS: 0,
+    stockRangeDescription: 'Monofocal',
+    labRangeDescription: 'Precio único monofocal',
     deliveryTimeStock: 'Entrega rápida en 24 a 48 hs',
     deliveryTimeLab: '5 a 7 días hábiles',
     warrantyMonths: 12,
@@ -64,9 +64,9 @@ export const FALLBACK_LENS_CATALOG: readonly LensCatalogItem[] = [
     idealForSummary:
       'Visión clara y definida eliminando los reflejos molestos de las luces artificiales.',
     priceStockARS: 42000,
-    priceLabARS: 72000,
+    priceLabARS: 0,
     stockRangeDescription: 'Monofocal con antirreflejo',
-    labRangeDescription: 'Graduaciones de rango o laboratorio',
+    labRangeDescription: 'Precio único monofocal',
     deliveryTimeStock: 'Entrega rápida en 24 a 48 hs',
     deliveryTimeLab: '5 a 7 días hábiles',
     warrantyMonths: 12,
@@ -90,9 +90,9 @@ export const FALLBACK_LENS_CATALOG: readonly LensCatalogItem[] = [
     idealForSummary:
       'Mayor comodidad visual cuando trabajás con la computadora o usás el celular.',
     priceStockARS: 51000,
-    priceLabARS: 86000,
+    priceLabARS: 0,
     stockRangeDescription: 'Monofocal Blue Cut + AR',
-    labRangeDescription: 'Graduaciones de rango o laboratorio',
+    labRangeDescription: 'Precio único monofocal',
     deliveryTimeStock: 'Entrega rápida en 24 a 48 hs',
     deliveryTimeLab: '5 a 7 días hábiles',
     warrantyMonths: 12,
@@ -116,9 +116,9 @@ export const FALLBACK_LENS_CATALOG: readonly LensCatalogItem[] = [
     idealForSummary:
       'Comodidad total manejando o realizando actividades al aire libre sin molestias del sol.',
     priceStockARS: 104000,
-    priceLabARS: 156000,
+    priceLabARS: 0,
     stockRangeDescription: 'Monofocal Fotocromático + AR',
-    labRangeDescription: 'Graduaciones de rango o laboratorio',
+    labRangeDescription: 'Precio único monofocal',
     deliveryTimeStock: '48 a 72 hs hábiles',
     deliveryTimeLab: '6 a 8 días hábiles',
     warrantyMonths: 12,
@@ -130,7 +130,6 @@ export const FALLBACK_LENS_CATALOG: readonly LensCatalogItem[] = [
     family: 'MONOFOCAL',
     refractiveIndex: '1.59',
     visionRangeLabel: 'monofocal',
-    pricePrefix: 'CONSULTAR',
     hasAnnualReplacementPromo: true,
     materialDescription:
       'Cristal monofocal de policarbonato con antirreflejo: más fino, liviano y de alta resistencia',
@@ -142,10 +141,10 @@ export const FALLBACK_LENS_CATALOG: readonly LensCatalogItem[] = [
     ],
     idealForSummary:
       'Cristales más finos, livianos y resistentes para mayor comodidad y durabilidad.',
-    priceStockARS: 0,
+    priceStockARS: 64000,
     priceLabARS: 0,
     stockRangeDescription: 'Monofocal Policarbonato AR',
-    labRangeDescription: 'Cotización personalizada según tu receta',
+    labRangeDescription: 'Precio único monofocal',
     deliveryTimeStock: '48 a 72 hs hábiles',
     deliveryTimeLab: '5 a 7 días hábiles',
     warrantyMonths: 12,
@@ -169,9 +168,9 @@ export const FALLBACK_LENS_CATALOG: readonly LensCatalogItem[] = [
     idealForSummary:
       'Ideal para todas tus actividades diarias combinando estética, liviandad y practicidad.',
     priceStockARS: 130000,
-    priceLabARS: 185000,
+    priceLabARS: 0,
     stockRangeDescription: 'Monofocal Índice 1,61',
-    labRangeDescription: 'Tallado especial según receta',
+    labRangeDescription: 'Precio único monofocal',
     deliveryTimeStock: '48 a 72 hs hábiles',
     deliveryTimeLab: '6 a 8 días hábiles',
     warrantyMonths: 12,
@@ -195,9 +194,9 @@ export const FALLBACK_LENS_CATALOG: readonly LensCatalogItem[] = [
     idealForSummary:
       'La máxima tecnología en cristales finos, livianos y estéticos que combinan con tu estilo.',
     priceStockARS: 150000,
-    priceLabARS: 215000,
+    priceLabARS: 0,
     stockRangeDescription: 'Monofocal Alto Índice 1,67',
-    labRangeDescription: 'Tallado digital para graduaciones extendidas',
+    labRangeDescription: 'Precio único monofocal',
     deliveryTimeStock: '48 a 72 hs hábiles',
     deliveryTimeLab: '7 a 10 días hábiles',
     warrantyMonths: 12,
@@ -224,7 +223,7 @@ export const FALLBACK_LENS_CATALOG: readonly LensCatalogItem[] = [
         'Requieren tomar mediciones oculares presenciales en la óptica para calibrar tu altura y ángulo de mirada.',
       ],
       measurementNotice:
-        'Para asesorarte mejor y cotizar tu cristal exacto con beneficios en cuotas con tarjeta o descuento de contado, te invitamos a visitarnos en la óptica.',
+        'Para asesorarte mejor y cotizar tu cristal exacto con 12 cuotas con Naranja X, 6 cuotas con Banco Macro o beneficios de contado por WhatsApp, te invitamos a visitarnos en la óptica.',
       ctaButtonText: 'Quiero asesoramiento para mis Ocupacionales',
     },
     materialDescription:
@@ -236,10 +235,10 @@ export const FALLBACK_LENS_CATALOG: readonly LensCatalogItem[] = [
     ],
     idealForSummary:
       'Ideales para leer, trabajar en escritorio y computadora evitando cambiar de anteojos.',
-    priceStockARS: 0,
-    priceLabARS: 0,
+    priceStockARS: 102000,
+    priceLabARS: 500000,
     stockRangeDescription: 'Lejos / Intermedia',
-    labRangeDescription: 'Cotización Desde según tu graduación y tratamientos',
+    labRangeDescription: 'Desde $ 102.000 hasta $ 500.000 según receta y tratamientos',
     deliveryTimeStock: '5 a 7 días hábiles',
     deliveryTimeLab: '7 a 10 días hábiles',
     warrantyMonths: 12,
@@ -266,7 +265,7 @@ export const FALLBACK_LENS_CATALOG: readonly LensCatalogItem[] = [
         'Para fabricarlos es indispensable tomar las medidas de tu ojo y del armazón en la óptica para ubicar la línea de lectura exacta.',
       ],
       measurementNotice:
-        'Para asesorarte mejor sobre el tipo de bifocal ideal y conocer las cuotas con tarjeta o el beneficio por pago contado, pasá a visitarnos.',
+        'Para asesorarte mejor sobre el tipo de bifocal ideal y aprovechar 12 cuotas con Naranja X, 6 cuotas con Banco Macro o beneficios de contado por WhatsApp, pasá a visitarnos.',
       ctaButtonText: 'Quiero asesoramiento para mis Bifocales',
     },
     materialDescription:
@@ -278,10 +277,10 @@ export const FALLBACK_LENS_CATALOG: readonly LensCatalogItem[] = [
     ],
     idealForSummary:
       'Solución práctica para ver bien de lejos y de cerca sin cambiar de anteojos.',
-    priceStockARS: 0,
-    priceLabARS: 0,
+    priceStockARS: 60000,
+    priceLabARS: 400000,
     stockRangeDescription: 'Lejos / Cerca',
-    labRangeDescription: 'Cotización Desde según tu graduación y tratamientos',
+    labRangeDescription: 'Desde $ 60.000 hasta $ 400.000 según receta y tratamientos',
     deliveryTimeStock: '4 a 6 días hábiles',
     deliveryTimeLab: '6 a 8 días hábiles',
     warrantyMonths: 12,
@@ -308,7 +307,7 @@ export const FALLBACK_LENS_CATALOG: readonly LensCatalogItem[] = [
         'Requieren mediciones precisas en nuestro gabinete óptico para registrar dónde mirás hacia arriba y hacia abajo con tu armazón puesto.',
       ],
       measurementNotice:
-        'Te esperamos en la óptica para tomar tus mediciones sin cargo y brindarte todas las opciones de cuotas con tarjeta o beneficio de contado.',
+        'Te esperamos en la óptica para tomar tus mediciones sin cargo y brindarte 12 cuotas con Naranja X, 6 cuotas con Banco Macro o beneficios de contado por WhatsApp.',
       ctaButtonText: 'Quiero asesoramiento para mis Multifocales',
     },
     materialDescription:
@@ -320,10 +319,10 @@ export const FALLBACK_LENS_CATALOG: readonly LensCatalogItem[] = [
     ],
     idealForSummary:
       'La tecnología más completa para todas las distancias (lejos, intermedia y cerca) en un solo anteojo.',
-    priceStockARS: 0,
-    priceLabARS: 0,
+    priceStockARS: 180000,
+    priceLabARS: 1050000,
     stockRangeDescription: 'Lejos / Intermedia / Cerca',
-    labRangeDescription: 'Cotización Desde según tu graduación y tratamientos',
+    labRangeDescription: 'Desde $ 180.000 hasta $ 1.050.000 según receta y tratamientos',
     deliveryTimeStock: '5 a 7 días hábiles',
     deliveryTimeLab: '7 a 10 días hábiles',
     warrantyMonths: 12,

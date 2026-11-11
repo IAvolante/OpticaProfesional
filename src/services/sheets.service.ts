@@ -18,7 +18,7 @@ import {
   IMPROVEMENT_GOAL_LABELS,
 } from '../utils/whatsapp.encoder';
 
-const CATALOG_CACHE_STORAGE_KEY = 'optica_profesional_catalog_cache_v5';
+const CATALOG_CACHE_STORAGE_KEY = 'optica_profesional_catalog_cache_v8';
 
 interface CachedCatalogEnvelope {
   readonly savedAtMs: number;
@@ -153,6 +153,25 @@ function saveCatalogToCache(
   }
 }
 
+function parsePriceRangeIfPresent(raw: unknown): {
+  readonly minPrice: number;
+  readonly maxPrice: number;
+} | null {
+  if (typeof raw !== 'string') {
+    return null;
+  }
+  const matches = raw.match(/\d[\d.,]*/g);
+  if (!matches || matches.length < 2) {
+    return null;
+  }
+  const first = parseFlexibleARSPrice(matches[0]);
+  const second = parseFlexibleARSPrice(matches[1]);
+  if (Number.isFinite(first) && first > 0 && Number.isFinite(second) && second > first) {
+    return { minPrice: first, maxPrice: second };
+  }
+  return null;
+}
+
 function mergeRemotePricesIntoCatalog(
   remoteItems: readonly RemoteSheetItemRaw[]
 ): readonly LensCatalogItem[] {
@@ -183,8 +202,13 @@ function mergeRemotePricesIntoCatalog(
       return baseItem;
     }
 
-    const priceStock = parseFlexibleARSPrice(remote.priceStockARS);
-    const priceLab = parseFlexibleARSPrice(remote.priceLabARS);
+    const rangeFromSingleCell = parsePriceRangeIfPresent(remote.priceStockARS);
+    const priceStock = rangeFromSingleCell
+      ? rangeFromSingleCell.minPrice
+      : parseFlexibleARSPrice(remote.priceStockARS);
+    const priceLab = rangeFromSingleCell
+      ? rangeFromSingleCell.maxPrice
+      : parseFlexibleARSPrice(remote.priceLabARS);
     const warranty = Number(remote.warrantyMonths);
 
     return {
@@ -195,13 +219,15 @@ function mergeRemotePricesIntoCatalog(
           ? remote.commercialName.trim()
           : baseItem.commercialName,
       priceStockARS:
-        Number.isFinite(priceStock) && priceStock >= 0
+        Number.isFinite(priceStock) && priceStock > 0
           ? priceStock
           : baseItem.priceStockARS,
       priceLabARS:
-        Number.isFinite(priceLab) && priceLab >= 0
-          ? priceLab
-          : baseItem.priceLabARS,
+        baseItem.pricePrefix === 'DESDE'
+          ? Number.isFinite(priceLab) && priceLab > 0
+            ? priceLab
+            : baseItem.priceLabARS
+          : 0,
       stockRangeDescription:
         typeof remote.stockRangeDescription === 'string' &&
         remote.stockRangeDescription.trim().length > 0
@@ -400,12 +426,42 @@ export async function submitLeadToGoogleSheets(
         payload.recommendation.alternativeOption.priceStockARS > 0
           ? payload.recommendation.alternativeOption.priceStockARS
           : formatLensPriceARS(payload.recommendation.alternativeOption),
-      improvementGoal: payload.answers.improvementGoal,
-      step1Label: IMPROVEMENT_GOAL_LABELS[payload.answers.improvementGoal],
-      activityContext: payload.answers.activityContext,
-      step2Label: ACTIVITY_CONTEXT_LABELS[payload.answers.activityContext],
-      clientPriority: payload.answers.clientPriority,
-      step3Label: CLIENT_PRIORITY_LABELS[payload.answers.clientPriority],
+      improvementGoal:
+        payload.answers.improvementGoals &&
+        payload.answers.improvementGoals.length > 0
+          ? payload.answers.improvementGoals.join(', ')
+          : payload.answers.improvementGoal,
+      step1Label:
+        payload.answers.improvementGoals &&
+        payload.answers.improvementGoals.length > 0
+          ? payload.answers.improvementGoals
+              .map((g) => IMPROVEMENT_GOAL_LABELS[g])
+              .join(' + ')
+          : IMPROVEMENT_GOAL_LABELS[payload.answers.improvementGoal],
+      activityContext:
+        payload.answers.activityContexts &&
+        payload.answers.activityContexts.length > 0
+          ? payload.answers.activityContexts.join(', ')
+          : payload.answers.activityContext,
+      step2Label:
+        payload.answers.activityContexts &&
+        payload.answers.activityContexts.length > 0
+          ? payload.answers.activityContexts
+              .map((a) => ACTIVITY_CONTEXT_LABELS[a])
+              .join(' + ')
+          : ACTIVITY_CONTEXT_LABELS[payload.answers.activityContext],
+      clientPriority:
+        payload.answers.clientPriorities &&
+        payload.answers.clientPriorities.length > 0
+          ? payload.answers.clientPriorities.join(', ')
+          : payload.answers.clientPriority,
+      step3Label:
+        payload.answers.clientPriorities &&
+        payload.answers.clientPriorities.length > 0
+          ? payload.answers.clientPriorities
+              .map((p) => CLIENT_PRIORITY_LABELS[p])
+              .join(' + ')
+          : CLIENT_PRIORITY_LABELS[payload.answers.clientPriority],
       budgetPreferences: payload.answers.budgetPreferences.join(', '),
       step4Label: step4Labels,
       prescriptionAttachment: payload.answers.prescriptionAttachment,
