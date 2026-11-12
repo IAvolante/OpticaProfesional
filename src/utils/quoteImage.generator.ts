@@ -396,13 +396,36 @@ export async function downloadQuoteSummaryImage(
   ctx.font = '800 20px "DM Sans", system-ui, sans-serif';
   ctx.fillText('Naranja X · 12 cuotas', cardX + 96, cursorY + 87);
 
-  // Badge Macro
-  drawRoundedRect(ctx, cardX + 352, cursorY + 58, 250, 44, 14);
-  ctx.fillStyle = '#003057';
+  // Badge Macro (con isotipo oficial doble arco + círculo)
+  drawRoundedRect(ctx, cardX + 352, cursorY + 58, 286, 44, 14);
+  ctx.fillStyle = '#003058';
   ctx.fill();
+
+  const macroCx = cardX + 382;
+  const macroCy = cursorY + 84;
+  ctx.save();
+  ctx.fillStyle = '#FFFFFF';
+  // Arco exterior
+  ctx.beginPath();
+  ctx.arc(macroCx, macroCy, 13.5, Math.PI, 0, false);
+  ctx.arc(macroCx, macroCy, 9.7, 0, Math.PI, true);
+  ctx.closePath();
+  ctx.fill();
+  // Arco interior
+  ctx.beginPath();
+  ctx.arc(macroCx, macroCy, 8.6, Math.PI, 0, false);
+  ctx.arc(macroCx, macroCy, 4.9, 0, Math.PI, true);
+  ctx.closePath();
+  ctx.fill();
+  // Círculo central
+  ctx.beginPath();
+  ctx.arc(macroCx, macroCy + 0.5, 3.8, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
   ctx.fillStyle = '#FFFFFF';
   ctx.font = '800 20px "DM Sans", system-ui, sans-serif';
-  ctx.fillText('Banco Macro · 6 cuotas', cardX + 372, cursorY + 87);
+  ctx.fillText('Banco Macro · 6 cuotas', cardX + 404, cursorY + 87);
 
   ctx.fillStyle = '#1E293B';
   ctx.font = '600 19px "DM Sans", system-ui, sans-serif';
