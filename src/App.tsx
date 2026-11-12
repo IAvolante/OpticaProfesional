@@ -10,6 +10,7 @@ import type {
 } from './types/optical.types';
 import {
   initClarityHeatmaps,
+  initMetaPixel,
   tagClaritySession,
 } from './utils/metaPixel.tracker';
 import { BackgroundVideoStage } from './components/ui/BackgroundVideoStage';
@@ -94,6 +95,7 @@ export function App() {
       'data-font-pair',
       SELECTED_FONT_PAIR_4
     );
+    initMetaPixel();
     initClarityHeatmaps();
   }, []);
 

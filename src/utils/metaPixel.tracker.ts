@@ -73,6 +73,56 @@ export function initClarityHeatmaps(): void {
 }
 
 /**
+ * Garantiza que Meta Pixel (fbevents.js) esté inicializado con `ENV_CONFIG.metaPixelId`
+ * si aún no fue inyectado desde `index.html`.
+ */
+export function initMetaPixel(): void {
+  const pixelId = ENV_CONFIG.metaPixelId;
+  if (typeof window === 'undefined' || !pixelId) {
+    return;
+  }
+
+  if (
+    typeof window.fbq === 'function' ||
+    document.getElementById('meta-pixel-script')
+  ) {
+    return;
+  }
+
+  try {
+    const win = window as unknown as Record<string, unknown>;
+    const fbqQueue: unknown[][] = [];
+    const fbqFn = (...args: unknown[]) => {
+      fbqQueue.push(args);
+    };
+    const typedFbq = fbqFn as unknown as {
+      callMethod?: (...args: unknown[]) => void;
+      queue: unknown[][];
+      push: typeof fbqFn;
+      loaded: boolean;
+      version: string;
+    };
+    typedFbq.push = fbqFn;
+    typedFbq.loaded = true;
+    typedFbq.version = '2.0';
+    typedFbq.queue = fbqQueue;
+    win['fbq'] = fbqFn;
+    win['_fbq'] = fbqFn;
+
+    const script = document.createElement('script');
+    script.id = 'meta-pixel-script';
+    script.async = true;
+    script.src = 'https://connect.facebook.net/en_US/fbevents.js';
+    document.head.appendChild(script);
+
+    fbqFn('init', pixelId);
+    fbqFn('track', 'PageView');
+  } catch {
+    // Fallo silencioso ante bloqueadores de anuncios
+  }
+}
+
+/**
  * Etiqueta la grabación de video en Microsoft Clarity con datos del embudo
  * (por ejemplo, el código `#OP-XXXX` para poder buscar el video exacto de esa fila de Google Sheets).
  */
