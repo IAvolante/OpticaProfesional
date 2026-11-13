@@ -74,6 +74,36 @@ const SHOWCASE_POOL = [
 
 type ShowcasePoolId = (typeof SHOWCASE_POOL)[number]['poolId'];
 
+interface NetworkInformationLike {
+  readonly saveData?: boolean;
+  readonly effectiveType?: string;
+}
+
+function shouldConserveMobileBandwidth(): boolean {
+  if (typeof navigator === 'undefined') {
+    return false;
+  }
+  const nav = navigator as Navigator & {
+    readonly connection?: NetworkInformationLike;
+  };
+  const conn = nav.connection;
+  if (!conn) {
+    return false;
+  }
+  if (conn.saveData === true) {
+    return true;
+  }
+  return conn.effectiveType === 'slow-2g' || conn.effectiveType === '2g';
+}
+
+const NEXT_POOL_TO_PREWARM: Record<QuestionId, ShowcasePoolId | null> = {
+  improvementGoal: 'titanium',
+  activityContext: 'photochromic',
+  clientPriority: 'titanium',
+  budgetPreferences: 'hero',
+  prescriptionAttachment: null,
+};
+
 const QUESTION_VIDEO_SHOWCASE: Record<
   QuestionId,
   {
@@ -235,6 +265,38 @@ export function QuestionStep({
   });
 
   const showcase = QUESTION_VIDEO_SHOWCASE[question.id];
+  const nextPoolToPrewarm = NEXT_POOL_TO_PREWARM[question.id];
+  const [isLowBandwidth] = useState<boolean>(() =>
+    shouldConserveMobileBandwidth()
+  );
+  const shouldDisableVideo = Boolean(prefersReducedMotion) || isLowBandwidth;
+
+  const [hydratedPools, setHydratedPools] = useState<
+    Record<ShowcasePoolId, boolean>
+  >(() => ({
+    hero: showcase.poolId === 'hero',
+    titanium: showcase.poolId === 'titanium',
+    photochromic: showcase.poolId === 'photochromic',
+  }));
+  const [readyPools, setReadyPools] = useState<Record<ShowcasePoolId, boolean>>(
+    {
+      hero: false,
+      titanium: false,
+      photochromic: false,
+    }
+  );
+
+  const markPoolReady = (poolId: ShowcasePoolId) => {
+    setReadyPools((prev) =>
+      prev[poolId] ? prev : { ...prev, [poolId]: true }
+    );
+    if (poolId === showcase.poolId && nextPoolToPrewarm) {
+      setHydratedPools((prev) =>
+        prev[nextPoolToPrewarm] ? prev : { ...prev, [nextPoolToPrewarm]: true }
+      );
+    }
+  };
+
   const selectedBudgetList = answers.budgetPreferences ?? [];
 
   const currentMultiSelectedList: readonly QuestionOptionValue[] =
@@ -271,22 +333,49 @@ export function QuestionStep({
   }, [question.id]);
 
   useEffect(() => {
-    for (const item of SHOWCASE_POOL) {
-      const el = videoRefs.current[item.poolId];
-      if (!el) continue;
-
-      el.defaultMuted = true;
-      el.muted = true;
-
-      if (item.poolId === showcase.poolId) {
-        void el.play().catch(() => {
-          // Ignorar si el navegador difiere reproducción
-        });
-      } else {
-        el.pause();
-      }
+    if (shouldDisableVideo) {
+      return;
     }
-  }, [showcase.poolId]);
+
+    const syncPlayback = () => {
+      const isHidden = typeof document !== 'undefined' && document.hidden;
+      for (const item of SHOWCASE_POOL) {
+        const el = videoRefs.current[item.poolId];
+        if (!el) continue;
+
+        el.defaultMuted = true;
+        el.muted = true;
+
+        if (!isHidden && item.poolId === showcase.poolId) {
+          void el.play().catch(() => {
+            // Ignorar si el navegador difiere reproducción
+          });
+        } else {
+          el.pause();
+        }
+      }
+    };
+
+    syncPlayback();
+
+    const prewarmTimer = nextPoolToPrewarm
+      ? window.setTimeout(() => {
+          setHydratedPools((prev) =>
+            prev[nextPoolToPrewarm]
+              ? prev
+              : { ...prev, [nextPoolToPrewarm]: true }
+          );
+        }, 900)
+      : null;
+
+    document.addEventListener('visibilitychange', syncPlayback);
+    return () => {
+      if (prewarmTimer !== null) {
+        window.clearTimeout(prewarmTimer);
+      }
+      document.removeEventListener('visibilitychange', syncPlayback);
+    };
+  }, [showcase.poolId, nextPoolToPrewarm, shouldDisableVideo, hydratedPools]);
 
   const handleDragEnd = (
     _event: MouseEvent | TouchEvent | PointerEvent,
@@ -402,30 +491,41 @@ export function QuestionStep({
           className="absolute inset-0 bg-slate-900 bg-cover bg-center"
           style={{ backgroundImage: `url(${showcase.poster})` }}
         >
-          {SHOWCASE_POOL.map((item) => {
-            const isActiveVideo = item.poolId === showcase.poolId;
-            return (
-              <video
-                key={item.poolId}
-                ref={(node) => {
-                  videoRefs.current[item.poolId] = node;
-                }}
-                src={item.src}
-                poster={item.poster}
-                autoPlay={isActiveVideo}
-                loop
-                muted
-                playsInline
-                preload={isActiveVideo ? 'auto' : 'metadata'}
-                className={cn(
-                  'absolute inset-0 h-full w-full object-cover object-center transition-opacity duration-200',
-                  isActiveVideo
-                    ? 'opacity-100 z-10'
-                    : 'opacity-0 z-0 pointer-events-none'
-                )}
-              />
-            );
-          })}
+          {!shouldDisableVideo &&
+            SHOWCASE_POOL.map((item) => {
+              const isActiveVideo = item.poolId === showcase.poolId;
+              const isMounted = isActiveVideo || hydratedPools[item.poolId];
+              if (!isMounted) {
+                return null;
+              }
+              const isVisible = isActiveVideo && readyPools[item.poolId];
+
+              return (
+                <video
+                  key={item.poolId}
+                  ref={(node) => {
+                    videoRefs.current[item.poolId] = node;
+                  }}
+                  src={item.src}
+                  poster={item.poster}
+                  autoPlay={isActiveVideo}
+                  loop
+                  muted
+                  playsInline
+                  disablePictureInPicture
+                  disableRemotePlayback
+                  preload="auto"
+                  onLoadedData={() => markPoolReady(item.poolId)}
+                  onPlaying={() => markPoolReady(item.poolId)}
+                  className={cn(
+                    'absolute inset-0 h-full w-full object-cover object-center transition-opacity duration-300',
+                    isVisible
+                      ? 'opacity-100 z-10'
+                      : 'opacity-0 z-0 pointer-events-none'
+                  )}
+                />
+              );
+            })}
           {/* Velo clínico de 3 fases: parte superior luminosa para lucir el video y base oscura para contraste perfecto de la pregunta */}
           <div className="absolute inset-0 z-20 bg-gradient-to-t from-[#091524] via-[#091524]/40 via-45% to-transparent pointer-events-none" />
         </div>
