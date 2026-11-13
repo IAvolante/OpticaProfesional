@@ -19,7 +19,7 @@ export function OpticalBrandTransition(_props: OpticalBrandTransitionProps) {
       <img
         src={`${import.meta.env.BASE_URL}logo-op-icon.png`}
         alt={ENV_CONFIG.brandNameB2C}
-        className="w-56 max-w-[55%] object-contain opacity-[0.11] blur-[1.5px] select-none"
+        className="w-56 max-w-[55%] object-contain opacity-[0.07] select-none"
       />
     </div>
   );

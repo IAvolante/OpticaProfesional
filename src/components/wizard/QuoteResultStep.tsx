@@ -158,13 +158,6 @@ export function QuoteResultStep({
     (opt) => opt.lens.priceStockARS > 0 && !opt.lens.pricePrefix
   );
 
-  const handleInputFocusScroll = (inputEl: HTMLInputElement | null) => {
-    if (!inputEl) return;
-    window.setTimeout(() => {
-      inputEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }, 180);
-  };
-
   const handlePhotoChange = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     event.target.value = '';
@@ -252,9 +245,9 @@ export function QuoteResultStep({
 
   return (
     <motion.div
-      initial={prefersReducedMotion ? false : { opacity: 0, y: 14 }}
+      initial={prefersReducedMotion ? false : { opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ type: 'spring', stiffness: 360, damping: 28 }}
+      transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
       className="space-y-4 pb-10"
     >
       <input
@@ -320,11 +313,11 @@ export function QuoteResultStep({
                   setSelectedOptionNumber(optionNumber);
                 }}
                 className={cn(
-                  'group relative flex flex-col justify-between rounded-2xl p-3.5 text-left transition-all duration-200 cursor-pointer border active:scale-[0.99]',
+                  'group relative flex flex-col justify-between rounded-2xl p-3.5 text-left transition-[background-color,border-color,box-shadow,transform] duration-150 cursor-pointer border active:scale-[0.985]',
                   isOddLastCard && 'col-span-2',
                   isSelected
                     ? 'optical-glass-card-active'
-                    : 'border-[var(--brand-border)] bg-[var(--brand-surface)]/85 hover:border-[#336699]/60'
+                    : 'border-[var(--brand-border)] bg-[var(--brand-surface)]/95 hover:border-[#336699]/60'
                 )}
               >
                 <div className="space-y-1.5">
@@ -506,10 +499,14 @@ export function QuoteResultStep({
        *    - OCUPACIONAL / BIFOCAL / MULTIFOCAL -> Tips y Características + Medición en Óptica + Beneficios de Pago
        * ===================================================================== */}
       <div className="relative overflow-hidden rounded-3xl bg-gradient-to-b from-[#0E2033] via-[#0B1929] to-[#081320] text-white p-5 sm:p-6 shadow-xl border border-[#336699]/40">
-        {/* Halo luminoso verde salvia y azul profesional */}
+        {/* Halo luminoso verde salvia libre de filtros GPU */}
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute -top-16 left-1/2 -translate-x-1/2 h-36 w-72 rounded-full bg-[#99CC99]/20 blur-3xl"
+          className="pointer-events-none absolute inset-x-0 top-0 h-40"
+          style={{
+            background:
+              'radial-gradient(ellipse 68% 85% at 50% 0%, rgba(153, 204, 153, 0.22) 0%, transparent 75%)',
+          }}
         />
 
         <div className="relative z-10 space-y-4">
@@ -673,7 +670,6 @@ export function QuoteResultStep({
                       nameError ? 'coupon-fullname-error' : undefined
                     }
                     value={fullName}
-                    onFocus={() => handleInputFocusScroll(nameInputRef.current)}
                     onChange={(e) => {
                       setFullName(e.target.value);
                       if (nameError) setNameError('');
@@ -682,7 +678,7 @@ export function QuoteResultStep({
                     autoComplete="name"
                     enterKeyHint="next"
                     className={cn(
-                      'min-h-[46px] w-full rounded-xl bg-white/10 pl-10 pr-10 py-2.5 text-base text-white placeholder:text-slate-400 transition-all focus:outline-none',
+                      'min-h-[46px] w-full rounded-xl bg-white/10 pl-10 pr-10 py-2.5 text-base text-white placeholder:text-slate-400 transition-[background-color,border-color] duration-150 focus:outline-none',
                       nameError
                         ? 'border-2 border-rose-400 bg-rose-950/40'
                         : isNameValid
@@ -731,9 +727,6 @@ export function QuoteResultStep({
                       phoneError ? 'coupon-whatsapp-error' : undefined
                     }
                     value={whatsapp}
-                    onFocus={() =>
-                      handleInputFocusScroll(phoneInputRef.current)
-                    }
                     onChange={(e) => {
                       setWhatsapp(e.target.value);
                       if (phoneError) setPhoneError('');
@@ -742,7 +735,7 @@ export function QuoteResultStep({
                     autoComplete="tel"
                     enterKeyHint="done"
                     className={cn(
-                      'min-h-[46px] w-full rounded-xl bg-white/10 pl-10 pr-10 py-2.5 text-base text-white placeholder:text-slate-400 transition-all focus:outline-none',
+                      'min-h-[46px] w-full rounded-xl bg-white/10 pl-10 pr-10 py-2.5 text-base text-white placeholder:text-slate-400 transition-[background-color,border-color] duration-150 focus:outline-none',
                       phoneError
                         ? 'border-2 border-rose-400 bg-rose-950/40'
                         : isPhoneValid
@@ -773,7 +766,7 @@ export function QuoteResultStep({
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="flex min-h-[52px] w-full items-center justify-center gap-2 rounded-full bg-white px-6 py-3 text-[15px] font-bold text-[#0E2033] shadow-lg hover:bg-[#EFF7EF] active:scale-[0.99] transition-all cursor-pointer disabled:opacity-60"
+                className="flex min-h-[52px] w-full items-center justify-center gap-2 rounded-full bg-white px-6 py-3 text-[15px] font-bold text-[#0E2033] shadow-lg hover:bg-[#EFF7EF] active:scale-[0.985] transition-[background-color,transform] duration-150 cursor-pointer disabled:opacity-60"
               >
                 <span>
                   {isSubmitting
@@ -790,7 +783,7 @@ export function QuoteResultStep({
                 type="button"
                 disabled={isDownloadingCard}
                 onClick={() => void handleDownloadQuoteImage()}
-                className="flex min-h-[44px] w-full items-center justify-center gap-2 rounded-full border border-[#99CC99]/50 bg-white/[0.08] px-5 py-2.5 text-xs sm:text-[13px] font-semibold text-[#99CC99] hover:bg-white/[0.14] active:scale-[0.99] transition-all cursor-pointer"
+                className="flex min-h-[44px] w-full items-center justify-center gap-2 rounded-full border border-[#99CC99]/50 bg-white/[0.08] px-5 py-2.5 text-xs sm:text-[13px] font-semibold text-[#99CC99] hover:bg-white/[0.14] active:scale-[0.985] transition-[background-color,transform] duration-150 cursor-pointer"
               >
                 <DownloadSimple weight="bold" className="h-4 w-4 shrink-0" />
                 <span>

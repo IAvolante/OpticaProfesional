@@ -3,7 +3,6 @@ import {
   AnimatePresence,
   motion,
   useReducedMotion,
-  type PanInfo,
   type Variants,
 } from 'framer-motion';
 import {
@@ -147,9 +146,9 @@ const QUESTION_VIDEO_SHOWCASE: Record<
 };
 
 const VIDEO_BOX_HEIGHT_CLASSES: Record<VideoBoxSizeId, string> = {
-  compact: 'min-h-[148px] sm:min-h-[164px]',
-  balanced: 'min-h-[188px] sm:min-h-[216px]',
-  cinematic: 'min-h-[268px] sm:min-h-[288px]',
+  compact: 'min-h-[136px] sm:min-h-[164px]',
+  balanced: 'min-h-[164px] sm:min-h-[214px]',
+  cinematic: 'min-h-[236px] sm:min-h-[288px]',
 };
 
 const FONT_SCALE_CLASSES: Record<
@@ -186,50 +185,48 @@ const CONTAINER_VARIANTS_BY_STYLE: Record<TransitionStyleId, Variants> = {
     hidden: { opacity: 0 },
     visible: {
       opacity: 1,
-      transition: { staggerChildren: 0.04, delayChildren: 0.01 },
+      transition: { staggerChildren: 0.025, delayChildren: 0 },
     },
   },
   'transition-lens': {
     hidden: { opacity: 0 },
     visible: {
       opacity: 1,
-      transition: { staggerChildren: 0.055, delayChildren: 0.02 },
+      transition: { staggerChildren: 0.028, delayChildren: 0 },
     },
   },
   'transition-cascade': {
     hidden: { opacity: 0 },
     visible: {
       opacity: 1,
-      transition: { staggerChildren: 0.075, delayChildren: 0.02 },
+      transition: { staggerChildren: 0.028, delayChildren: 0 },
     },
   },
 };
 
 const CARD_VARIANTS_BY_STYLE: Record<TransitionStyleId, Variants> = {
   'transition-slide': {
-    hidden: { opacity: 0, x: 18 },
+    hidden: { opacity: 0, x: 10 },
     visible: {
       opacity: 1,
       x: 0,
-      transition: { type: 'spring', stiffness: 420, damping: 30 },
+      transition: { duration: 0.18, ease: [0.22, 1, 0.36, 1] },
     },
   },
   'transition-lens': {
-    hidden: { opacity: 0, scale: 0.94, filter: 'blur(6px)' },
+    hidden: { opacity: 0, scale: 0.98 },
     visible: {
       opacity: 1,
       scale: 1,
-      filter: 'blur(0px)',
-      transition: { duration: 0.34, ease: [0.22, 1, 0.36, 1] },
+      transition: { duration: 0.2, ease: [0.22, 1, 0.36, 1] },
     },
   },
   'transition-cascade': {
-    hidden: { opacity: 0, y: 24, scale: 0.96 },
+    hidden: { opacity: 0, y: 10 },
     visible: {
       opacity: 1,
       y: 0,
-      scale: 1,
-      transition: { type: 'spring', stiffness: 280, damping: 20 },
+      transition: { duration: 0.18, ease: [0.22, 1, 0.36, 1] },
     },
   },
 };
@@ -241,7 +238,6 @@ export function QuestionStep({
   onSelectOption,
   onConfirmBudgetStep,
   onAttachPrescriptionPhoto,
-  onSwipeBack,
 }: QuestionStepProps) {
   const prefersReducedMotion = useReducedMotion();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -385,21 +381,6 @@ export function QuestionStep({
     };
   }, [showcase.poolId, nextPoolToPrewarm, shouldDisableVideo, hydratedPools]);
 
-  const handleDragEnd = (
-    _event: MouseEvent | TouchEvent | PointerEvent,
-    info: PanInfo
-  ) => {
-    if (
-      question.stepNumber > 1 &&
-      info.offset.x > 85 &&
-      Math.abs(info.offset.y) < 45 &&
-      onSwipeBack
-    ) {
-      triggerHapticFeedback(12);
-      onSwipeBack();
-    }
-  };
-
   const handleFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     event.target.value = '';
@@ -461,7 +442,7 @@ export function QuestionStep({
       onSelectOption(question.id, value);
 
       // Si acaba de completar el cupo máximo (ej. 2 de 2 opciones en Pasos 1, 2 o 3),
-      // damos 380ms de confirmación visual y avanzamos solos sin obligar a otro clic.
+      // damos 250ms ágiles de confirmación visual y avanzamos solos sin obligar a otro clic.
       if (willCompleteMaxSlots) {
         triggerHapticFeedback(18);
         const stepIdAtTap = question.id;
@@ -470,12 +451,12 @@ export function QuestionStep({
           multiAdvanceTimerRef.current = null;
           setAutoAdvancingStepId(null);
           onConfirmBudgetStep();
-        }, 380);
+        }, 250);
       }
       return;
     }
 
-    // En el Paso 5 ("Aún no la tengo"), iluminamos la tarjeta 150ms antes de avanzar
+    // En el Paso 5 ("Aún no la tengo"), iluminamos la tarjeta 100ms antes de avanzar
     setPendingOption(value);
     if (advanceTimerRef.current !== null) {
       window.clearTimeout(advanceTimerRef.current);
@@ -483,7 +464,7 @@ export function QuestionStep({
     advanceTimerRef.current = window.setTimeout(() => {
       setPendingOption(null);
       onSelectOption(question.id, value);
-    }, 150);
+    }, 100);
   };
 
   const isOptionSelected = (value: QuestionOptionValue): boolean => {
@@ -514,16 +495,19 @@ export function QuestionStep({
     return answers[question.id] === value;
   };
 
-  const canDragBack =
-    !prefersReducedMotion && question.stepNumber > 1 && Boolean(onSwipeBack);
-
   const showFloatingContinuePill =
     question.isMultiSelect === true && currentMultiSelectedList.length > 0;
+
+  const isDenseStep = question.options.length >= 5;
+  const resolvedVideoBoxHeight =
+    activeVideoBoxSize === 'balanced' && isDenseStep
+      ? 'min-h-[152px] sm:min-h-[208px]'
+      : VIDEO_BOX_HEIGHT_CLASSES[activeVideoBoxSize];
 
   return (
     <div
       className={cn(
-        'space-y-3 touch-pan-y',
+        'space-y-2.5 sm:space-y-3 touch-pan-y',
         question.isMultiSelect ? 'pb-20' : 'pb-10'
       )}
     >
@@ -536,45 +520,7 @@ export function QuestionStep({
         className="hidden"
       />
 
-      {/* Barra visual de avance en 5 tramos para dar ritmo y sensación de cercanía al resultado */}
-      <div className="space-y-1.5 px-0.5">
-        <div className="flex items-center justify-between text-[11px] font-semibold">
-          <span className="text-[var(--brand-accent-foreground)]">
-            Paso {question.stepNumber} de 5
-          </span>
-          <span className="text-[var(--brand-text-muted)]">
-            {question.stepNumber === 5
-              ? '¡Último toque para ver precios!'
-              : question.maxSelections
-                ? `Elegí 1 o ${question.maxSelections} opciones`
-                : 'Opcional · Podés marcar varias'}
-          </span>
-        </div>
-        <div
-          aria-hidden="true"
-          className="grid grid-cols-5 gap-1.5"
-        >
-          {[1, 2, 3, 4, 5].map((stepIdx) => {
-            const isDone = stepIdx < question.stepNumber;
-            const isCurrent = stepIdx === question.stepNumber;
-            return (
-              <div
-                key={stepIdx}
-                className={cn(
-                  'h-1.5 rounded-full transition-all duration-300',
-                  isCurrent
-                    ? 'bg-[#336699]'
-                    : isDone
-                      ? 'bg-[#99CC99]'
-                      : 'bg-[var(--brand-border)]/80'
-                )}
-              />
-            );
-          })}
-        </div>
-      </div>
-
-      {/* 1. Cabecera Card Full-Video al DOBLE de altura (2x) con la Pregunta superpuesta encima del video */}
+      {/* 1. Cabecera Card Full-Video con HUD superior estilo Instagram Stories + Pregunta superpuesta */}
       <Card className="relative overflow-hidden border-[#336699]/35 bg-[#0B1929] shadow-md">
         <div
           className="absolute inset-0 bg-slate-900 bg-cover bg-center"
@@ -615,33 +561,63 @@ export function QuestionStep({
                 />
               );
             })}
-          {/* Velo clínico de 3 fases: parte superior luminosa para lucir el video y base oscura para contraste perfecto de la pregunta */}
-          <div className="absolute inset-0 z-20 bg-gradient-to-t from-[#091524] via-[#091524]/40 via-45% to-transparent pointer-events-none" />
+          {/* Velo clínico superior e inferior para legibilidad perfecta del progreso y de la pregunta */}
+          <div className="absolute inset-0 z-20 bg-gradient-to-t from-[#091524] via-[#091524]/35 via-45% to-[#091524]/55 pointer-events-none" />
+        </div>
+
+        {/* HUD Superior Integrado (ahorra ~42px verticales para que las 5 opciones entren en pantalla sin scroll) */}
+        <div className="pointer-events-none absolute inset-x-0 top-0 z-30 space-y-1.5 px-3.5 pt-2.5 sm:px-4 sm:pt-3">
+          <div
+            aria-hidden="true"
+            className="grid grid-cols-5 gap-1.5"
+          >
+            {[1, 2, 3, 4, 5].map((stepIdx) => {
+              const isDone = stepIdx < question.stepNumber;
+              const isCurrent = stepIdx === question.stepNumber;
+              return (
+                <div
+                  key={stepIdx}
+                  className={cn(
+                    'h-1 rounded-full transition-colors duration-200',
+                    isCurrent
+                      ? 'bg-white shadow-[0_0_8px_rgba(255,255,255,0.65)]'
+                      : isDone
+                        ? 'bg-[#99CC99]'
+                        : 'bg-white/30'
+                  )}
+                />
+              );
+            })}
+          </div>
+          <div className="flex items-center justify-between text-[11px] font-semibold tracking-tight drop-shadow-xs">
+            <span className="text-white/95">
+              Paso {question.stepNumber} de 5
+            </span>
+            <span className="text-[#CBE6CB]">
+              {question.stepNumber === 5
+                ? '¡Último toque para ver precios!'
+                : question.maxSelections
+                  ? `Elegí 1 o ${question.maxSelections} opciones`
+                  : 'Podés marcar varias'}
+            </span>
+          </div>
         </div>
 
         <CardHeader
           className={cn(
-            'relative z-30 flex flex-col justify-end p-4 sm:p-5 transition-all duration-300',
-            VIDEO_BOX_HEIGHT_CLASSES[activeVideoBoxSize]
+            'relative z-30 flex flex-col justify-end px-3.5 pb-3.5 pt-11 sm:p-5 sm:pt-12',
+            resolvedVideoBoxHeight
           )}
         >
           <motion.div
-            key={`header-${question.id}-${activeTransitionStyle}`}
-            initial={
-              prefersReducedMotion
-                ? false
-                : activeTransitionStyle === 'transition-lens'
-                  ? { opacity: 0, scale: 0.95, filter: 'blur(6px)' }
-                  : activeTransitionStyle === 'transition-cascade'
-                    ? { opacity: 0, y: 16 }
-                    : { opacity: 0, x: 14 }
-            }
-            animate={{ opacity: 1, scale: 1, x: 0, y: 0, filter: 'blur(0px)' }}
-            transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+            key={`header-${question.id}`}
+            initial={prefersReducedMotion ? false : { opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
           >
             <CardTitle
               className={cn(
-                'leading-[1.24] font-bold text-white drop-shadow-xs transition-all duration-200',
+                'leading-[1.22] font-bold text-white drop-shadow-xs',
                 scaleClasses.questionTitle
               )}
             >
@@ -651,168 +627,158 @@ export function QuestionStep({
         </CardHeader>
       </Card>
 
-      {/* 2. Opciones del Paso Actual */}
+      {/* 2. Opciones del Paso Actual (scroll vertical 100% nativo sin intercepción de gestos) */}
       <motion.div
         key={`${question.id}-${activeTransitionStyle}`}
-        drag={canDragBack ? 'x' : false}
-        dragDirectionLock
-        dragConstraints={{ left: 0, right: 0 }}
-        dragElastic={{ left: 0.02, right: 0.25 }}
-        onDragEnd={handleDragEnd}
-        initial={
+        variants={
           prefersReducedMotion
-            ? false
-            : activeTransitionStyle === 'transition-lens'
-              ? { opacity: 0, scale: 0.96, filter: 'blur(8px)' }
-              : activeTransitionStyle === 'transition-cascade'
-                ? { opacity: 0, y: 20 }
-                : { opacity: 0, x: 18 }
+            ? undefined
+            : CONTAINER_VARIANTS_BY_STYLE[activeTransitionStyle]
         }
-        animate={{ opacity: 1, scale: 1, x: 0, y: 0, filter: 'blur(0px)' }}
-        transition={
-          activeTransitionStyle === 'transition-lens'
-            ? { duration: 0.35, ease: [0.22, 1, 0.36, 1] }
-            : { type: 'spring', stiffness: 360, damping: 28 }
-        }
+        initial="hidden"
+        animate="visible"
+        className={isDenseStep ? 'space-y-2' : 'space-y-2.5'}
       >
-        <motion.div
-          variants={
-            prefersReducedMotion
-              ? undefined
-              : CONTAINER_VARIANTS_BY_STYLE[activeTransitionStyle]
-          }
-          initial="hidden"
-          animate="visible"
-          className={
-            question.options.length >= 5 ? 'space-y-2' : 'space-y-2.5'
-          }
-        >
-          {question.options.map((option) => {
-            const isSelected = isOptionSelected(option.value);
-            const isUploadRxButton =
-              question.id === 'prescriptionAttachment' &&
-              option.value === 'cargar_foto_receta';
+        {question.options.map((option) => {
+          const isSelected = isOptionSelected(option.value);
+          const isUploadRxButton =
+            question.id === 'prescriptionAttachment' &&
+            option.value === 'cargar_foto_receta';
 
-            return (
-              <motion.div
-                key={option.value}
-                variants={
-                  prefersReducedMotion
-                    ? undefined
-                    : CARD_VARIANTS_BY_STYLE[activeTransitionStyle]
-                }
+          return (
+            <motion.div
+              key={option.value}
+              variants={
+                prefersReducedMotion
+                  ? undefined
+                  : CARD_VARIANTS_BY_STYLE[activeTransitionStyle]
+              }
+            >
+              <button
+                type="button"
+                aria-pressed={isSelected}
+                disabled={isProcessingPhoto}
+                onClick={() => handleOptionPress(option.value)}
+                className={cn(
+                  'optical-glass-card group relative w-full text-left rounded-2xl transition-[background-color,border-color,box-shadow,transform] duration-150 cursor-pointer select-none block',
+                  isDenseStep ? 'p-2.5 sm:p-3.5' : 'p-3 sm:p-3.5',
+                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-ring)]',
+                  'active:scale-[0.985]',
+                  isSelected || (isUploadRxButton && isProcessingPhoto)
+                    ? 'optical-glass-card-active'
+                    : 'hover:border-[#336699]/50'
+                )}
               >
-                <button
-                  type="button"
-                  aria-pressed={isSelected}
-                  disabled={isProcessingPhoto}
-                  onClick={() => handleOptionPress(option.value)}
-                  className={cn(
-                    'optical-glass-card group relative w-full text-left rounded-2xl transition-all duration-200 cursor-pointer select-none block',
-                    question.options.length >= 5 ? 'p-3 sm:p-3.5' : 'p-3.5',
-                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-ring)]',
-                    'active:scale-[0.99]',
-                    isSelected || (isUploadRxButton && isProcessingPhoto)
-                      ? 'optical-glass-card-active'
-                      : 'hover:border-[#336699]/50'
-                  )}
-                >
-                  <div className="flex items-start gap-3.5">
-                    <OpticalOptionDiagram
-                      value={option.value}
-                      isSelected={isSelected}
-                    />
+                <div className="flex items-start gap-3 sm:gap-3.5">
+                  <OpticalOptionDiagram
+                    value={option.value}
+                    isSelected={isSelected}
+                  />
 
-                    <div className="min-w-0 flex-1 space-y-1">
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="min-w-0">
-                          <p
-                            className={cn(
-                              'font-brand-heading font-semibold text-[var(--brand-text)] leading-snug transition-all duration-200',
-                              scaleClasses.optionLabel
-                            )}
-                          >
-                            {isUploadRxButton && isProcessingPhoto
-                              ? 'Optimizando imagen de tu receta...'
-                              : option.label}
-                          </p>
-                        </div>
-
-                        {/* Indicador de Selección (Checkbox en Paso 4, Spinner/Radio/Cámara en los demás) */}
-                        <div
+                  <div className="min-w-0 flex-1 space-y-0.5 sm:space-y-1">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p
                           className={cn(
-                            'mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center border transition-colors',
-                            question.isMultiSelect ? 'rounded-md' : 'rounded-full',
-                            isSelected || (isUploadRxButton && isProcessingPhoto)
-                              ? 'border-[#336699] bg-[#336699] text-white'
-                              : 'border-[var(--brand-border)] bg-[var(--brand-surface)] group-hover:border-[#336699]'
+                            'font-brand-heading font-semibold text-[var(--brand-text)] leading-snug',
+                            scaleClasses.optionLabel
                           )}
                         >
-                          {isUploadRxButton && isProcessingPhoto ? (
-                            <CircleNotch
-                              weight="bold"
-                              className="h-3.5 w-3.5 animate-spin"
-                            />
-                          ) : isSelected ? (
-                            <Check weight="bold" className="h-3 w-3" />
-                          ) : isUploadRxButton ? (
-                            <Camera
-                              weight="duotone"
-                              className="h-3.5 w-3.5 text-[var(--brand-icon-primary)]"
-                            />
-                          ) : (
-                            <span className="h-1.5 w-1.5 rounded-full bg-transparent" />
-                          )}
-                        </div>
+                          {isUploadRxButton && isProcessingPhoto
+                            ? 'Optimizando imagen de tu receta...'
+                            : option.label}
+                        </p>
                       </div>
 
-                      <p
+                      {/* Indicador de Selección (Checkbox en multi-select, Spinner/Radio/Cámara en Paso 5) */}
+                      <div
                         className={cn(
-                          'text-[var(--brand-text-muted)] leading-relaxed transition-all duration-200',
-                          scaleClasses.optionDescription
+                          'mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center border transition-colors duration-150',
+                          question.isMultiSelect ? 'rounded-md' : 'rounded-full',
+                          isSelected || (isUploadRxButton && isProcessingPhoto)
+                            ? 'border-[#336699] bg-[#336699] text-white'
+                            : 'border-[var(--brand-border)] bg-[var(--brand-surface)] group-hover:border-[#336699]'
                         )}
                       >
-                        {option.description}
-                      </p>
-
-                      {option.value === 'interes_cuotas_tarjeta' ? (
-                        <BankPromoLogos variant="light" />
-                      ) : null}
-
-                      {isUploadRxButton && photoError ? (
-                        <p
-                          role="alert"
-                          className="pt-1 text-xs font-medium text-rose-500"
-                        >
-                          {photoError}
-                        </p>
-                      ) : null}
-
-                      {isUploadRxButton && answers.prescriptionPhotoDataUrl ? (
-                        <div className="pt-2 flex items-center gap-2.5 rounded-xl bg-[var(--brand-accent)] border border-[var(--brand-accent-border)] p-2">
-                          <img
-                            src={answers.prescriptionPhotoDataUrl}
-                            alt="Receta adjunta"
-                            className="h-10 w-10 rounded-lg object-cover border border-[#336699]/30 shrink-0"
+                        {isUploadRxButton && isProcessingPhoto ? (
+                          <CircleNotch
+                            weight="bold"
+                            className="h-3.5 w-3.5 animate-spin"
                           />
-                          <div className="min-w-0 flex-1">
-                            <p className="text-xs font-semibold text-[var(--brand-text)]">
-                              Receta cargada correctamente
-                            </p>
-                            <p className="font-mono text-[10px] text-[var(--brand-text-muted)] truncate">
-                              {answers.prescriptionPhotoName ?? 'receta.jpg'} — Tocá para cambiar foto
-                            </p>
-                          </div>
-                        </div>
-                      ) : null}
+                        ) : isSelected ? (
+                          <Check weight="bold" className="h-3 w-3" />
+                        ) : isUploadRxButton ? (
+                          <Camera
+                            weight="duotone"
+                            className="h-3.5 w-3.5 text-[var(--brand-icon-primary)]"
+                          />
+                        ) : (
+                          <span className="h-1.5 w-1.5 rounded-full bg-transparent" />
+                        )}
+                      </div>
                     </div>
+
+                    <p
+                      className={cn(
+                        'text-[var(--brand-text-muted)] leading-snug sm:leading-relaxed',
+                        scaleClasses.optionDescription
+                      )}
+                    >
+                      {option.description}
+                    </p>
+
+                    {option.value === 'interes_cuotas_tarjeta' ? (
+                      <BankPromoLogos variant="light" />
+                    ) : null}
+
+                    {isUploadRxButton && photoError ? (
+                      <p
+                        role="alert"
+                        className="pt-1 text-xs font-medium text-rose-500"
+                      >
+                        {photoError}
+                      </p>
+                    ) : null}
+
+                    {isUploadRxButton && answers.prescriptionPhotoDataUrl ? (
+                      <div className="pt-2 flex items-center gap-2.5 rounded-xl bg-[var(--brand-accent)] border border-[var(--brand-accent-border)] p-2">
+                        <img
+                          src={answers.prescriptionPhotoDataUrl}
+                          alt="Receta adjunta"
+                          className="h-10 w-10 rounded-lg object-cover border border-[#336699]/30 shrink-0"
+                        />
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-semibold text-[var(--brand-text)]">
+                            Receta cargada correctamente
+                          </p>
+                          <p className="font-mono text-[10px] text-[var(--brand-text-muted)] truncate">
+                            {answers.prescriptionPhotoName ?? 'receta.jpg'} — Tocá para cambiar foto
+                          </p>
+                        </div>
+                      </div>
+                    ) : null}
                   </div>
-                </button>
-              </motion.div>
-            );
-          })}
-        </motion.div>
+                </div>
+              </button>
+            </motion.div>
+          );
+        })}
       </motion.div>
+
+      {/* Atajo sutil en Paso 4 si el usuario prefiere omitir sin marcar ninguna preferencia */}
+      {question.id === 'budgetPreferences' &&
+        currentMultiSelectedList.length === 0 && (
+          <div className="flex justify-center pt-1">
+            <button
+              type="button"
+              onClick={handleManualConfirmStep}
+              className="inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-semibold text-[var(--brand-text-muted)] hover:text-[var(--brand-accent-foreground)] transition-colors duration-150 cursor-pointer"
+            >
+              <span>Continuar sin marcar preferencias</span>
+              <ArrowRight weight="bold" className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        )}
 
       {/* Si el usuario volvió al Paso 5 y ya tenía una foto cargada, permitirle avanzar en 1 toque sin re-subirla */}
       {question.id === 'prescriptionAttachment' &&

@@ -40,7 +40,7 @@ export function OpticalOptionDiagram({
     <div
       aria-hidden="true"
       className={cn(
-        'optical-duotone-icon flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border transition-all duration-200',
+        'optical-duotone-icon flex h-10 w-10 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-xl border transition-colors duration-150',
         isSelected
           ? 'optical-duotone-icon-selected border-[#336699] bg-[#336699] text-white shadow-2xs'
           : 'border-[var(--brand-border)] bg-[var(--brand-surface-elevated)]/90 text-[var(--brand-icon-primary,#336699)] group-hover:border-[#99CC99]'
@@ -52,7 +52,7 @@ export function OpticalOptionDiagram({
 }
 
 function renderPhosphorDuotoneByOption(value: QuestionOptionValue) {
-  const iconClass = 'h-7 w-7 transition-transform duration-200 group-hover:scale-105';
+  const iconClass = 'h-6 w-6 sm:h-7 sm:w-7';
 
   switch (value) {
     /* =========================================================================

@@ -129,7 +129,6 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
-    scroll-behavior: smooth;
     -webkit-text-size-adjust: 100%;
     overflow-x: clip;
   }
@@ -180,16 +179,15 @@
   opacity: 0.68;
 }
 
-/* Superficie Liquid Glass adaptable a Light y Dark Glass (sin layout shift al activar) */
+/* Superficie Clínica Ultra-Fluida (0 backdrop-filter en tarjetas repetidas para 60/120fps en mobile) */
 .optical-glass-card {
   position: relative;
-  background-color: color-mix(in srgb, var(--brand-surface) 92%, transparent);
-  backdrop-filter: blur(18px) saturate(150%);
-  -webkit-backdrop-filter: blur(18px) saturate(150%);
+  background-color: color-mix(in srgb, var(--brand-surface) 96%, transparent);
   border: 1.5px solid var(--brand-border);
+  -webkit-touch-callout: none;
   box-shadow:
-    0 10px 30px -10px rgba(15, 23, 42, 0.12),
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.14);
+    0 6px 18px -8px rgba(15, 23, 42, 0.10),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.45);
 }
 
 /* Tarjeta Activa con Halo Bicolor */

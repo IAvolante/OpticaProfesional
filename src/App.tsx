@@ -142,7 +142,7 @@ export function App() {
       : wizardState.step;
 
   useEffect(() => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0, behavior: 'instant' });
     tagClaritySession('wizardStep', activeTransitionKey);
     if (wizardState.lead?.passportCode) {
       tagClaritySession('passportCode', wizardState.lead.passportCode);
@@ -161,9 +161,9 @@ export function App() {
       {/* Sello de Agua Sutil con el Isotipo 2026 "op" */}
       <OpticalBrandTransition stepKey={activeTransitionKey} />
 
-      {/* Header Sticky con Logo 2026 siempre centrado matemáticamente */}
-      <header className="sticky top-0 z-30 w-full border-b border-[var(--brand-border)] bg-[var(--brand-header-bg)] backdrop-blur-xl transition-colors duration-200">
-        <div className="relative mx-auto flex h-14 w-full max-w-[480px] items-center justify-between px-4">
+      {/* Header Sticky compacto Mobile-First con Logo 2026 siempre centrado matemáticamente */}
+      <header className="sticky top-0 z-30 w-full border-b border-[var(--brand-border)] bg-[var(--brand-header-bg)] backdrop-blur-md transition-colors duration-150">
+        <div className="relative mx-auto flex h-12 sm:h-14 w-full max-w-[480px] items-center justify-between px-4">
           {/* Slot Izquierdo: Botón Volver con ancho fijo w-10 (nunca desplaza al logo) */}
           <div className="flex w-10 items-center justify-start shrink-0 z-10">
             {canGoBack ? (
@@ -171,7 +171,7 @@ export function App() {
                 type="button"
                 onClick={goToPreviousStep}
                 aria-label="Volver al paso anterior"
-                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[var(--brand-border)] bg-[var(--brand-surface)] text-[var(--brand-accent-foreground)] hover:bg-[var(--brand-surface-elevated)] active:scale-95 transition-all cursor-pointer"
+                className="flex h-9 w-9 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-xl border border-[var(--brand-border)] bg-[var(--brand-surface)] text-[var(--brand-accent-foreground)] hover:bg-[var(--brand-surface-elevated)] active:scale-95 transition-[background-color,transform] duration-150 cursor-pointer"
               >
                 <ArrowLeft weight="bold" className="h-4 w-4" />
               </button>
@@ -184,7 +184,7 @@ export function App() {
               src={`${import.meta.env.BASE_URL}logo-optica-profesional.png`}
               alt={ENV_CONFIG.brandNameB2C}
               draggable={false}
-              className="brand-header-logo h-8 w-auto object-contain select-none pointer-events-none transition-all duration-200"
+              className="brand-header-logo h-7 sm:h-8 w-auto object-contain select-none pointer-events-none"
             />
           </div>
 
@@ -212,7 +212,7 @@ export function App() {
 
       {/* Contenedor Responsive Mobile-First (100% en smartphone, 480px centrado en desktop) */}
       <main
-        className={`relative z-10 mx-auto w-full max-w-[480px] flex-1 flex flex-col px-4 pt-3.5 ${
+        className={`relative z-10 mx-auto w-full max-w-[480px] flex-1 flex flex-col px-3.5 sm:px-4 pt-2.5 sm:pt-3.5 ${
           isDesignLabEnabled ? 'pb-16' : 'pb-8'
         }`}
       >
