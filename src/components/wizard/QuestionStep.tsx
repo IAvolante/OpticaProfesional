@@ -524,7 +524,7 @@ export function QuestionStep({
     <div
       className={cn(
         'space-y-3 touch-pan-y',
-        showFloatingContinuePill ? 'pb-20' : 'pb-10'
+        question.isMultiSelect ? 'pb-20' : 'pb-10'
       )}
     >
       {/* Input oculto para carga directa de foto de receta en el Paso 5 */}
@@ -837,30 +837,24 @@ export function QuestionStep({
           </div>
         )}
 
-      {/* 3. Pequeño botón cápsula flotante que aparece recién al marcar la 1ra opción */}
+      {/* 3. Pequeño botón cápsula flotante que aparece en un solo movimiento limpio al marcar la 1ra opción */}
       <AnimatePresence>
         {showFloatingContinuePill && (
-          <div className="pointer-events-none fixed inset-x-0 bottom-[max(1.15rem,env(safe-area-inset-bottom))] z-40 flex justify-center px-4">
-            <motion.button
-              key={`floating-pill-${question.id}`}
+          <motion.div
+            key={`floating-pill-${question.id}`}
+            initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 18 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 14 }}
+            transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+            className="pointer-events-none fixed inset-x-0 bottom-[max(1.15rem,env(safe-area-inset-bottom))] z-40 flex justify-center px-4 will-change-transform"
+          >
+            <button
               type="button"
               onClick={handleManualConfirmStep}
-              initial={
-                prefersReducedMotion
-                  ? { opacity: 0 }
-                  : { y: 24, scale: 0.9, opacity: 0 }
-              }
-              animate={{ y: 0, scale: 1, opacity: 1 }}
-              exit={
-                prefersReducedMotion
-                  ? { opacity: 0 }
-                  : { y: 18, scale: 0.92, opacity: 0 }
-              }
-              transition={{ type: 'spring', stiffness: 480, damping: 28 }}
-              className="pointer-events-auto inline-flex h-11 items-center gap-2.5 rounded-full border border-white/25 bg-[#336699] pl-5 pr-3.5 font-brand-heading text-[14px] font-semibold text-white shadow-[0_10px_28px_-4px_rgba(22,50,79,0.52)] ring-2 ring-[#99CC99]/45 backdrop-blur-md transition-transform hover:bg-[#265077] active:scale-95 cursor-pointer"
+              className="pointer-events-auto inline-flex h-11 items-center gap-2.5 rounded-full border border-white/25 bg-[#336699] pl-5 pr-3.5 font-brand-heading text-[14px] font-semibold text-white shadow-[0_10px_28px_-4px_rgba(22,50,79,0.52)] ring-2 ring-[#99CC99]/45 backdrop-blur-md transition-colors duration-150 hover:bg-[#265077] cursor-pointer"
             >
-              <span>{isAutoAdvancing ? 'Avanzando' : 'Siguiente'}</span>
-              <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-white/18 px-2 font-mono text-[11px] font-bold text-[#CBE6CB]">
+              <span>Siguiente</span>
+              <span className="inline-flex h-6 min-w-7 items-center justify-center rounded-full bg-white/18 px-2 font-mono tabular-nums text-[11px] font-bold text-[#CBE6CB]">
                 {question.maxSelections
                   ? `${currentMultiSelectedList.length}/${question.maxSelections}`
                   : currentMultiSelectedList.length}
@@ -876,8 +870,8 @@ export function QuestionStep({
                   className="h-4 w-4 text-[#99CC99]"
                 />
               )}
-            </motion.button>
-          </div>
+            </button>
+          </motion.div>
         )}
       </AnimatePresence>
     </div>
