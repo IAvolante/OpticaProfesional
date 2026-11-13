@@ -517,16 +517,14 @@ export function QuestionStep({
   const canDragBack =
     !prefersReducedMotion && question.stepNumber > 1 && Boolean(onSwipeBack);
 
-  const showFloatingContinueBar =
-    question.isMultiSelect === true &&
-    (question.id === 'budgetPreferences' ||
-      currentMultiSelectedList.length > 0);
+  const showFloatingContinuePill =
+    question.isMultiSelect === true && currentMultiSelectedList.length > 0;
 
   return (
     <div
       className={cn(
         'space-y-3 touch-pan-y',
-        question.isMultiSelect ? 'pb-32' : 'pb-10'
+        showFloatingContinuePill ? 'pb-20' : 'pb-10'
       )}
     >
       {/* Input oculto para carga directa de foto de receta en el Paso 5 */}
@@ -839,64 +837,47 @@ export function QuestionStep({
           </div>
         )}
 
-      {/* 3. Barra flotante fija al pie de la pantalla (siempre visible en el viewport sin scrollear) */}
+      {/* 3. Pequeño botón cápsula flotante que aparece recién al marcar la 1ra opción */}
       <AnimatePresence>
-        {showFloatingContinueBar && (
-          <motion.div
-            key={`floating-dock-${question.id}`}
-            initial={prefersReducedMotion ? { opacity: 0 } : { y: 56, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={prefersReducedMotion ? { opacity: 0 } : { y: 48, opacity: 0 }}
-            transition={{ type: 'spring', stiffness: 440, damping: 30 }}
-            className="pointer-events-none fixed inset-x-0 bottom-0 z-40 bg-gradient-to-t from-[var(--brand-canvas)] via-[var(--brand-canvas)]/92 to-transparent px-4 pt-5 pb-[max(0.75rem,env(safe-area-inset-bottom))]"
-          >
-            <div className="pointer-events-auto mx-auto w-full max-w-[480px] rounded-2xl border border-[#336699]/65 bg-[#0E2033]/96 p-2.5 text-white shadow-[0_14px_34px_-6px_rgba(14,32,51,0.48)] backdrop-blur-xl">
-              <div className="flex items-center justify-between gap-2 px-1.5 pb-1.5 text-[11.5px]">
-                <span className="font-medium text-slate-200 truncate">
-                  {isAutoAdvancing
-                    ? '¡Perfecto! Avanzando a la siguiente pregunta...'
-                    : question.maxSelections === 2 &&
-                        currentMultiSelectedList.length === 1
-                      ? '1 elegida · Podés sumar 1 más o avanzar ahora'
-                      : question.maxSelections === 2
-                        ? '2 de 2 elegidas · Listo para avanzar'
-                        : currentMultiSelectedList.length === 0
-                          ? 'Podés marcar tus beneficios o avanzar directo'
-                          : `${currentMultiSelectedList.length} ${currentMultiSelectedList.length === 1 ? 'opción marcada' : 'opciones marcadas'}`}
-                </span>
-                <span className="shrink-0 rounded-full bg-[#99CC99]/20 border border-[#99CC99]/50 px-2 py-0.5 font-mono text-[10.5px] font-bold text-[#99CC99]">
-                  {question.maxSelections
-                    ? `${currentMultiSelectedList.length}/${question.maxSelections}`
-                    : `${currentMultiSelectedList.length} ✓`}
-                </span>
-              </div>
-
-              <button
-                type="button"
-                onClick={handleManualConfirmStep}
-                className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl border border-[#99CC99]/45 bg-gradient-to-r from-[#336699] to-[#265077] px-5 py-2.5 font-brand-heading text-[15px] font-bold text-white shadow-md transition-all hover:brightness-110 active:scale-[0.99] cursor-pointer"
-              >
-                <span>
-                  {isAutoAdvancing
-                    ? `Pasando al Paso ${question.stepNumber + 1}...`
-                    : question.id === 'budgetPreferences'
-                      ? 'Continuar al último paso'
-                      : `Continuar al Paso ${question.stepNumber + 1}`}
-                </span>
-                {isAutoAdvancing ? (
-                  <CircleNotch
-                    weight="bold"
-                    className="h-4 w-4 animate-spin text-[#99CC99]"
-                  />
-                ) : (
-                  <ArrowRight
-                    weight="bold"
-                    className="h-4 w-4 text-[#99CC99]"
-                  />
-                )}
-              </button>
-            </div>
-          </motion.div>
+        {showFloatingContinuePill && (
+          <div className="pointer-events-none fixed inset-x-0 bottom-[max(1.15rem,env(safe-area-inset-bottom))] z-40 flex justify-center px-4">
+            <motion.button
+              key={`floating-pill-${question.id}`}
+              type="button"
+              onClick={handleManualConfirmStep}
+              initial={
+                prefersReducedMotion
+                  ? { opacity: 0 }
+                  : { y: 24, scale: 0.9, opacity: 0 }
+              }
+              animate={{ y: 0, scale: 1, opacity: 1 }}
+              exit={
+                prefersReducedMotion
+                  ? { opacity: 0 }
+                  : { y: 18, scale: 0.92, opacity: 0 }
+              }
+              transition={{ type: 'spring', stiffness: 480, damping: 28 }}
+              className="pointer-events-auto inline-flex h-11 items-center gap-2.5 rounded-full border border-white/25 bg-[#336699] pl-5 pr-3.5 font-brand-heading text-[14px] font-semibold text-white shadow-[0_10px_28px_-4px_rgba(22,50,79,0.52)] ring-2 ring-[#99CC99]/45 backdrop-blur-md transition-transform hover:bg-[#265077] active:scale-95 cursor-pointer"
+            >
+              <span>{isAutoAdvancing ? 'Avanzando' : 'Siguiente'}</span>
+              <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-white/18 px-2 font-mono text-[11px] font-bold text-[#CBE6CB]">
+                {question.maxSelections
+                  ? `${currentMultiSelectedList.length}/${question.maxSelections}`
+                  : currentMultiSelectedList.length}
+              </span>
+              {isAutoAdvancing ? (
+                <CircleNotch
+                  weight="bold"
+                  className="h-4 w-4 animate-spin text-[#99CC99]"
+                />
+              ) : (
+                <ArrowRight
+                  weight="bold"
+                  className="h-4 w-4 text-[#99CC99]"
+                />
+              )}
+            </motion.button>
+          </div>
         )}
       </AnimatePresence>
     </div>
