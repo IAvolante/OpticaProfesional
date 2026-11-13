@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ChangeEvent } from 'react';
 import {
+  AnimatePresence,
   motion,
   useReducedMotion,
   type PanInfo,
@@ -245,10 +246,14 @@ export function QuestionStep({
   const prefersReducedMotion = useReducedMotion();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const advanceTimerRef = useRef<number | null>(null);
+  const multiAdvanceTimerRef = useRef<number | null>(null);
   const [isProcessingPhoto, setIsProcessingPhoto] = useState<boolean>(false);
   const [photoError, setPhotoError] = useState<string>('');
   const [pendingOption, setPendingOption] =
     useState<QuestionOptionValue | null>(null);
+  const [autoAdvancingStepId, setAutoAdvancingStepId] =
+    useState<QuestionId | null>(null);
+  const isAutoAdvancing = autoAdvancingStepId === question.id;
 
   const activeVideoBoxSize: VideoBoxSizeId =
     designLabConfig?.videoBoxSize ?? 'balanced';
@@ -328,6 +333,9 @@ export function QuestionStep({
     return () => {
       if (advanceTimerRef.current !== null) {
         window.clearTimeout(advanceTimerRef.current);
+      }
+      if (multiAdvanceTimerRef.current !== null) {
+        window.clearTimeout(multiAdvanceTimerRef.current);
       }
     };
   }, [question.id]);
@@ -414,8 +422,24 @@ export function QuestionStep({
     }
   };
 
+  const handleManualConfirmStep = () => {
+    if (multiAdvanceTimerRef.current !== null) {
+      window.clearTimeout(multiAdvanceTimerRef.current);
+      multiAdvanceTimerRef.current = null;
+    }
+    setAutoAdvancingStepId(null);
+    triggerHapticFeedback(15);
+    onConfirmBudgetStep();
+  };
+
   const handleOptionPress = (value: QuestionOptionValue) => {
     triggerHapticFeedback(12);
+
+    if (multiAdvanceTimerRef.current !== null) {
+      window.clearTimeout(multiAdvanceTimerRef.current);
+      multiAdvanceTimerRef.current = null;
+    }
+    setAutoAdvancingStepId(null);
 
     // En el Paso 5, tocar "Cargar la foto de la receta" abre directamente la cámara/galería
     if (
@@ -426,13 +450,32 @@ export function QuestionStep({
       return;
     }
 
-    // En el Paso 4 (selección múltiple), marca/desmarca al instante sin avanzar
+    // En pasos de selección múltiple (Pasos 1-3 con máx 2; Paso 4 libre)
     if (question.isMultiSelect) {
+      const alreadySelected = currentMultiSelectedList.includes(value);
+      const willCompleteMaxSlots =
+        typeof question.maxSelections === 'number' &&
+        !alreadySelected &&
+        currentMultiSelectedList.length === question.maxSelections - 1;
+
       onSelectOption(question.id, value);
+
+      // Si acaba de completar el cupo máximo (ej. 2 de 2 opciones en Pasos 1, 2 o 3),
+      // damos 380ms de confirmación visual y avanzamos solos sin obligar a otro clic.
+      if (willCompleteMaxSlots) {
+        triggerHapticFeedback(18);
+        const stepIdAtTap = question.id;
+        setAutoAdvancingStepId(stepIdAtTap);
+        multiAdvanceTimerRef.current = window.setTimeout(() => {
+          multiAdvanceTimerRef.current = null;
+          setAutoAdvancingStepId(null);
+          onConfirmBudgetStep();
+        }, 380);
+      }
       return;
     }
 
-    // En los Pasos 1, 2, 3 y 5 ("Aún no la tengo"), iluminamos la tarjeta 150ms antes de avanzar
+    // En el Paso 5 ("Aún no la tengo"), iluminamos la tarjeta 150ms antes de avanzar
     setPendingOption(value);
     if (advanceTimerRef.current !== null) {
       window.clearTimeout(advanceTimerRef.current);
@@ -474,8 +517,18 @@ export function QuestionStep({
   const canDragBack =
     !prefersReducedMotion && question.stepNumber > 1 && Boolean(onSwipeBack);
 
+  const showFloatingContinueBar =
+    question.isMultiSelect === true &&
+    (question.id === 'budgetPreferences' ||
+      currentMultiSelectedList.length > 0);
+
   return (
-    <div className="space-y-3 pb-10 touch-pan-y">
+    <div
+      className={cn(
+        'space-y-3 touch-pan-y',
+        question.isMultiSelect ? 'pb-32' : 'pb-10'
+      )}
+    >
       {/* Input oculto para carga directa de foto de receta en el Paso 5 */}
       <input
         ref={fileInputRef}
@@ -484,6 +537,44 @@ export function QuestionStep({
         onChange={(e) => void handleFileChange(e)}
         className="hidden"
       />
+
+      {/* Barra visual de avance en 5 tramos para dar ritmo y sensación de cercanía al resultado */}
+      <div className="space-y-1.5 px-0.5">
+        <div className="flex items-center justify-between text-[11px] font-semibold">
+          <span className="text-[var(--brand-accent-foreground)]">
+            Paso {question.stepNumber} de 5
+          </span>
+          <span className="text-[var(--brand-text-muted)]">
+            {question.stepNumber === 5
+              ? '¡Último toque para ver precios!'
+              : question.maxSelections
+                ? `Elegí 1 o ${question.maxSelections} opciones`
+                : 'Opcional · Podés marcar varias'}
+          </span>
+        </div>
+        <div
+          aria-hidden="true"
+          className="grid grid-cols-5 gap-1.5"
+        >
+          {[1, 2, 3, 4, 5].map((stepIdx) => {
+            const isDone = stepIdx < question.stepNumber;
+            const isCurrent = stepIdx === question.stepNumber;
+            return (
+              <div
+                key={stepIdx}
+                className={cn(
+                  'h-1.5 rounded-full transition-all duration-300',
+                  isCurrent
+                    ? 'bg-[#336699]'
+                    : isDone
+                      ? 'bg-[#99CC99]'
+                      : 'bg-[var(--brand-border)]/80'
+                )}
+              />
+            );
+          })}
+        </div>
+      </div>
 
       {/* 1. Cabecera Card Full-Video al DOBLE de altura (2x) con la Pregunta superpuesta encima del video */}
       <Card className="relative overflow-hidden border-[#336699]/35 bg-[#0B1929] shadow-md">
@@ -562,23 +653,7 @@ export function QuestionStep({
         </CardHeader>
       </Card>
 
-      {/* 2. Indicador sutil de selección cuando el paso permite elegir hasta 2 opciones o múltiples sin límite */}
-      {question.isMultiSelect ? (
-        <div className="flex items-center justify-between px-1 text-[11.5px] font-medium text-[var(--brand-text-muted)]">
-          <span>
-            {question.maxSelections
-              ? `Podés seleccionar hasta ${question.maxSelections} opciones`
-              : 'Podés seleccionar todas las opciones que quieras'}
-          </span>
-          <span className="font-mono text-[11px] font-semibold text-[var(--brand-accent-foreground)]">
-            {question.maxSelections
-              ? `${currentMultiSelectedList.length}/${question.maxSelections}`
-              : `${currentMultiSelectedList.length} ${currentMultiSelectedList.length === 1 ? 'elegida' : 'elegidas'}`}
-          </span>
-        </div>
-      ) : null}
-
-      {/* 3. Opciones del Paso Actual */}
+      {/* 2. Opciones del Paso Actual */}
       <motion.div
         key={`${question.id}-${activeTransitionStyle}`}
         drag={canDragBack ? 'x' : false}
@@ -764,34 +839,66 @@ export function QuestionStep({
           </div>
         )}
 
-      {/* 4. En los pasos con selección múltiple (Pasos 1, 2 y 3 hasta 2 opciones; Paso 4 sin límite), barra Sticky inferior para avanzar */}
-      {question.isMultiSelect && (
-        <div className="sticky bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-30 pt-2">
-          <div className="rounded-2xl bg-[var(--brand-canvas)]/85 p-1.5 backdrop-blur-md shadow-lg border border-[var(--brand-border)]">
-            <Button
-              type="button"
-              variant="primary"
-              size="lg"
-              fullWidth
-              disabled={
-                question.id !== 'budgetPreferences' &&
-                currentMultiSelectedList.length === 0
-              }
-              onClick={() => {
-                triggerHapticFeedback(15);
-                onConfirmBudgetStep();
-              }}
-              rightIcon={<ArrowRight weight="bold" className="h-4 w-4" />}
-            >
-              {currentMultiSelectedList.length > 0
-                ? `Continuar (${currentMultiSelectedList.length}${question.maxSelections ? `/${question.maxSelections}` : ''} ${currentMultiSelectedList.length === 1 ? 'seleccionada' : 'seleccionadas'})`
-                : question.id === 'budgetPreferences'
-                  ? 'Continuar al último paso'
-                  : 'Seleccioná al menos 1 opción para continuar'}
-            </Button>
-          </div>
-        </div>
-      )}
+      {/* 3. Barra flotante fija al pie de la pantalla (siempre visible en el viewport sin scrollear) */}
+      <AnimatePresence>
+        {showFloatingContinueBar && (
+          <motion.div
+            key={`floating-dock-${question.id}`}
+            initial={prefersReducedMotion ? { opacity: 0 } : { y: 56, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={prefersReducedMotion ? { opacity: 0 } : { y: 48, opacity: 0 }}
+            transition={{ type: 'spring', stiffness: 440, damping: 30 }}
+            className="pointer-events-none fixed inset-x-0 bottom-0 z-40 bg-gradient-to-t from-[var(--brand-canvas)] via-[var(--brand-canvas)]/92 to-transparent px-4 pt-5 pb-[max(0.75rem,env(safe-area-inset-bottom))]"
+          >
+            <div className="pointer-events-auto mx-auto w-full max-w-[480px] rounded-2xl border border-[#336699]/65 bg-[#0E2033]/96 p-2.5 text-white shadow-[0_14px_34px_-6px_rgba(14,32,51,0.48)] backdrop-blur-xl">
+              <div className="flex items-center justify-between gap-2 px-1.5 pb-1.5 text-[11.5px]">
+                <span className="font-medium text-slate-200 truncate">
+                  {isAutoAdvancing
+                    ? '¡Perfecto! Avanzando a la siguiente pregunta...'
+                    : question.maxSelections === 2 &&
+                        currentMultiSelectedList.length === 1
+                      ? '1 elegida · Podés sumar 1 más o avanzar ahora'
+                      : question.maxSelections === 2
+                        ? '2 de 2 elegidas · Listo para avanzar'
+                        : currentMultiSelectedList.length === 0
+                          ? 'Podés marcar tus beneficios o avanzar directo'
+                          : `${currentMultiSelectedList.length} ${currentMultiSelectedList.length === 1 ? 'opción marcada' : 'opciones marcadas'}`}
+                </span>
+                <span className="shrink-0 rounded-full bg-[#99CC99]/20 border border-[#99CC99]/50 px-2 py-0.5 font-mono text-[10.5px] font-bold text-[#99CC99]">
+                  {question.maxSelections
+                    ? `${currentMultiSelectedList.length}/${question.maxSelections}`
+                    : `${currentMultiSelectedList.length} ✓`}
+                </span>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleManualConfirmStep}
+                className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl border border-[#99CC99]/45 bg-gradient-to-r from-[#336699] to-[#265077] px-5 py-2.5 font-brand-heading text-[15px] font-bold text-white shadow-md transition-all hover:brightness-110 active:scale-[0.99] cursor-pointer"
+              >
+                <span>
+                  {isAutoAdvancing
+                    ? `Pasando al Paso ${question.stepNumber + 1}...`
+                    : question.id === 'budgetPreferences'
+                      ? 'Continuar al último paso'
+                      : `Continuar al Paso ${question.stepNumber + 1}`}
+                </span>
+                {isAutoAdvancing ? (
+                  <CircleNotch
+                    weight="bold"
+                    className="h-4 w-4 animate-spin text-[#99CC99]"
+                  />
+                ) : (
+                  <ArrowRight
+                    weight="bold"
+                    className="h-4 w-4 text-[#99CC99]"
+                  />
+                )}
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

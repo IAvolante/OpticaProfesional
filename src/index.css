@@ -131,7 +131,7 @@
     text-rendering: optimizeLegibility;
     scroll-behavior: smooth;
     -webkit-text-size-adjust: 100%;
-    overflow-x: hidden;
+    overflow-x: clip;
   }
 
   body {
@@ -141,7 +141,7 @@
     letter-spacing: -0.008em;
     line-height: 1.5;
     min-height: 100dvh;
-    overflow-x: hidden;
+    overflow-x: clip;
     touch-action: manipulation;
     transition: background-color 220ms ease, color 220ms ease;
   }
