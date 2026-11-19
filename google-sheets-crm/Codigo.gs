@@ -246,6 +246,18 @@ function asegurarHojaTracking_(ss) {
 }
 
 /**
+ * EJECUTAR ESTA FUNCIÓN ("activarColumnaFichaSinBorrarDatos") SI QUERÉS AGREGAR YA MISMO
+ * LA COLUMNA "Link Ficha de Presupuesto (Google Drive)" EN TUS HOJAS ACTUALES SIN BORRAR NINGUNA FILA.
+ * (Igual también se crea sola automáticamente en cuanto entre la próxima consulta desde la web).
+ */
+function activarColumnaFichaSinBorrarDatos() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  asegurarHojaClientes_(ss);
+  asegurarHojaTracking_(ss);
+  obtenerOCrearCarpetaRecetas_();
+}
+
+/**
  * EJECUTAR ESTA FUNCIÓN ("inicializarPlanillaCRM") SI QUERÉS LIMPIAR LAS PRUEBAS Y ALINEAR TODAS LAS COLUMNAS DE CERO.
  */
 function inicializarPlanillaCRM() {
@@ -277,8 +289,9 @@ function inicializarPlanillaCRM() {
   leadsSheet.setColumnWidth(3, 185); // Nombre y Apellido
   leadsSheet.setColumnWidth(4, 195); // Link Directo WhatsApp
   leadsSheet.setColumnWidth(5, 230); // Link Foto de Receta
-  leadsSheet.setColumnWidth(6, 210); // Cristal Elegido
-  leadsSheet.setColumnWidth(7, 135); // Precio Elegido
+  leadsSheet.setColumnWidth(6, 240); // Link Ficha de Presupuesto
+  leadsSheet.setColumnWidth(7, 210); // Cristal Elegido
+  leadsSheet.setColumnWidth(8, 135); // Precio Elegido
 
   // 2. Limpiar y alinear TRACKING_INCOMPLETOS
   let trackingSheet = ss.getSheetByName(SHEET_TRACKING_NAME);
