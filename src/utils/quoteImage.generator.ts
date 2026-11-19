@@ -7,8 +7,8 @@ import type {
 import { formatLensPriceARS } from './formatters';
 import {
   ACTIVITY_CONTEXT_LABELS,
-  BUDGET_PREFERENCE_LABELS,
   CLIENT_PRIORITY_LABELS,
+  formatBudgetPreferenceForLens,
   IMPROVEMENT_GOAL_LABELS,
 } from './whatsapp.encoder';
 
@@ -215,13 +215,15 @@ function drawClockIcon(
 }
 
 /**
- * Genera una imagen PNG de alta definición (1080px de ancho) con la "Ficha de Presupuesto"
- * de Óptica Profesional respetando estrictamente la paleta del logo (#336699 y #99CC99),
- * con ajuste automático de textos y logos vectoriales de WhatsApp e Instagram en el footer.
+ * Renderiza el canvas de alta definición (1080px de ancho) con la "Ficha de Presupuesto"
+ * de Óptica Profesional respetando estrictamente la paleta del logo (#336699 y #99CC99).
  */
-export async function downloadQuoteSummaryImage(
+async function renderQuoteSummaryCanvas(
   params: GenerateQuoteCardImageParams
-): Promise<boolean> {
+): Promise<{
+  readonly canvas: HTMLCanvasElement;
+  readonly passportCode: string;
+} | null> {
   const {
     answers,
     recommendation,
@@ -239,7 +241,7 @@ export async function downloadQuoteSummaryImage(
 
   const ctx = canvas.getContext('2d');
   if (!ctx) {
-    return false;
+    return null;
   }
 
   // 1. Fondo clínico luminoso en gama del logo (#F4F8FB -> #E6EFF7)
@@ -349,18 +351,12 @@ export async function downloadQuoteSummaryImage(
   ctx.font = '600 21px "DM Sans", system-ui, sans-serif';
   ctx.fillText(customerLabel, innerX, cardY + 152);
 
-  // 4. Sección: LAS 2 OPCIONES RECOMENDADAS Y SUS PRECIOS
+  // 4. Sección: OPCIONES RECOMENDADAS Y SUS PRECIOS (1 o 2 tarjetas según matriz clínica)
   let cursorY = cardY + headerH + 36;
-
-  ctx.fillStyle = BRAND_COLORS.blueDeep;
-  ctx.font = '800 21px "Sora", system-ui, sans-serif';
-  ctx.fillText('OPCIONES RECOMENDADAS SEGÚN TUS RESPUESTAS', innerX, cursorY);
-
-  cursorY += 18;
 
   const displayOptions =
     recommendation.allMatchedOptions &&
-    recommendation.allMatchedOptions.length >= 2
+    recommendation.allMatchedOptions.length >= 1
       ? recommendation.allMatchedOptions
       : [
           {
@@ -377,13 +373,28 @@ export async function downloadQuoteSummaryImage(
           },
         ];
 
+  const visibleCards = displayOptions.slice(0, 2);
+  const isSingleCard = visibleCards.length === 1;
+
+  ctx.fillStyle = BRAND_COLORS.blueDeep;
+  ctx.font = '800 21px "Sora", system-ui, sans-serif';
+  ctx.fillText(
+    isSingleCard
+      ? 'OPCIÓN RECOMENDADA SEGÚN TUS RESPUESTAS'
+      : 'OPCIONES RECOMENDADAS SEGÚN TUS RESPUESTAS',
+    innerX,
+    cursorY
+  );
+
+  cursorY += 18;
+
   const colGap = 24;
-  const colW = (innerW - colGap) / 2;
+  const colW = isSingleCard ? innerW : (innerW - colGap) / 2;
   const boxH = 260;
 
-  displayOptions.slice(0, 2).forEach((item, index) => {
+  visibleCards.forEach((item, index) => {
     const boxX = innerX + index * (colW + colGap);
-    const isSelected = item.optionNumber === selectedOptionNumber;
+    const isSelected = isSingleCard || item.optionNumber === selectedOptionNumber;
     const formattedPrice = formatLensPriceARS(item.lens);
 
     drawRoundedRect(ctx, boxX, cursorY, colW, boxH, 26);
@@ -395,20 +406,29 @@ export async function downloadQuoteSummaryImage(
     ctx.lineWidth = isSelected ? 3.5 : 2;
     ctx.stroke();
 
-    // Etiqueta Opción 1 / Opción 2
+    // Etiqueta Opción Recomendada / Opción 1 / Opción 2
     ctx.fillStyle = BRAND_COLORS.blueDeep;
     ctx.font = '800 19px "Sora", system-ui, sans-serif';
-    ctx.fillText(`OPCIÓN ${item.optionNumber}`, boxX + 26, cursorY + 42);
+    ctx.fillText(
+      isSingleCard ? 'OPCIÓN RECOMENDADA' : `OPCIÓN ${item.optionNumber}`,
+      boxX + 26,
+      cursorY + 42
+    );
 
-    // Píldora "ELEGIDA" con colores del logo
+    // Píldora "ELEGIDA" / "RECOMENDADA" con colores del logo
     if (isSelected) {
-      drawRoundedRect(ctx, boxX + colW - 144, cursorY + 18, 120, 34, 17);
+      const pillW = isSingleCard ? 168 : 120;
+      drawRoundedRect(ctx, boxX + colW - pillW - 24, cursorY + 18, pillW, 34, 17);
       ctx.fillStyle = BRAND_COLORS.bluePrimary;
       ctx.fill();
       ctx.fillStyle = BRAND_COLORS.white;
       ctx.font = '700 15.5px "DM Sans", system-ui, sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText('✓ ELEGIDA', boxX + colW - 84, cursorY + 40);
+      ctx.fillText(
+        isSingleCard ? '✓ RECOMENDADA' : '✓ ELEGIDA',
+        boxX + colW - 24 - pillW / 2,
+        cursorY + 40
+      );
       ctx.textAlign = 'left';
     }
 
@@ -441,6 +461,15 @@ export async function downloadQuoteSummaryImage(
 
   cursorY += boxH + 30;
 
+  const activeOption =
+    displayOptions.find((o) => o.optionNumber === selectedOptionNumber) ??
+    displayOptions[0]!;
+  const hasAnnualPromo = activeOption.lens.hasAnnualReplacementPromo;
+  const hasCashBenefitSelected = answers.budgetPreferences.includes(
+    'beneficio_pago_contado'
+  );
+  const qualifiesForAnnualCashPromo = hasAnnualPromo && hasCashBenefitSelected;
+
   // 5. Sección: RESUMEN DE LO QUE ELEGISTE EN LA ENCUESTA
   const step1Goals =
     answers.improvementGoals && answers.improvementGoals.length > 0
@@ -466,7 +495,7 @@ export async function downloadQuoteSummaryImage(
   const step4Budgets =
     answers.budgetPreferences.length > 0
       ? answers.budgetPreferences
-          .map((b) => BUDGET_PREFERENCE_LABELS[b])
+          .map((b) => formatBudgetPreferenceForLens(b, hasAnnualPromo))
           .join(' · ')
       : 'Soy particular';
 
@@ -476,7 +505,7 @@ export async function downloadQuoteSummaryImage(
       : 'Aún no tengo la receta a mano';
 
   const rows: readonly { readonly label: string; readonly value: string }[] = [
-    { label: '1. ¿Qué querés mejorar?', value: step1Goals },
+    { label: '1. Necesito mis lentes para:', value: step1Goals },
     { label: '2. Actividad principal:', value: step2Activities },
     { label: '3. Tu prioridad:', value: step3Priorities },
     { label: '4. Presupuesto / Beneficios:', value: step4Budgets },
@@ -596,12 +625,14 @@ export async function downloadQuoteSummaryImage(
   ctx.fillStyle = BRAND_COLORS.navyDark;
   ctx.font = '600 18.5px "DM Sans", system-ui, sans-serif';
   ctx.fillText(
-    '• Obra Social: ¡Tenés un armazón sin cargo seleccionado!',
+    '• Obra Social: ¡Tenés un armazón seleccionado sin cargo!',
     innerX + 28,
     cursorY + 130
   );
   ctx.fillText(
-    '• Efectivo / Contado: Consultanos por beneficios de contado a nuestro WhatsApp.',
+    hasAnnualPromo
+      ? '• Efectivo / Contado: ¡Renová tus cristales sin cargo dentro de los 12 meses!'
+      : '• Efectivo / Contado: Consultá por beneficios de contado por WhatsApp.',
     innerX + 28,
     cursorY + 160
   );
@@ -609,20 +640,19 @@ export async function downloadQuoteSummaryImage(
   cursorY += promoBoxH + 26;
 
   // 7. FOOTER DEL VOUCHER — Todos los datos perfectamente contenidos + Logos oficiales de WhatsApp e Instagram
-  const activeOption =
-    displayOptions.find((o) => o.optionNumber === selectedOptionNumber) ??
-    displayOptions[0]!;
-  const hasAnnualPromo = activeOption.lens.hasAnnualReplacementPromo;
-
   const footerTextMaxW = innerW - 56;
 
-  const footerHeadlineText = hasAnnualPromo
-    ? '★ CERTIFICADO: ¡RENOVÁ TUS CRISTALES GRATIS EN 12 MESES!'
-    : '★ CRISTALES A MEDIDA: MEDICIÓN DIGITAL SIN CARGO EN LA ÓPTICA';
+  const footerHeadlineText = qualifiesForAnnualCashPromo
+    ? '★ CERTIFICADO CONTADO: ¡RENOVÁ TUS CRISTALES GRATIS EN 12 MESES!'
+    : hasAnnualPromo
+      ? '★ PRESUPUESTO PERSONALIZADO · ÓPTICA PROFESIONAL'
+      : '★ CRISTALES A MEDIDA: MEDICIÓN DIGITAL SIN CARGO EN LA ÓPTICA';
 
-  const footerSubText = hasAnnualPromo
-    ? 'Presentando esta ficha con tu compra de cristales monofocales tenés 1 recambio sin cargo durante los próximos 12 meses.'
-    : 'Presentá esta ficha en la óptica para tomar tus mediciones oculares sin cargo y cotizar tu cristal exacto.';
+  const footerSubText = qualifiesForAnnualCashPromo
+    ? 'Abonando de contado tus cristales monofocales tenés 1 recambio sin cargo durante los próximos 12 meses.'
+    : hasAnnualPromo
+      ? 'Presentando esta ficha en la óptica accedés a tus beneficios seleccionados en armazón y financiación.'
+      : 'Presentá esta ficha en la óptica para tomar tus mediciones oculares sin cargo y cotizar tu cristal exacto.';
 
   ctx.font = '800 20.5px "Sora", system-ui, sans-serif';
   const headlineLines = wrapCanvasText(ctx, footerHeadlineText, footerTextMaxW);
@@ -761,9 +791,76 @@ export async function downloadQuoteSummaryImage(
     socialRowY + 29
   );
 
-  // 8. Descargar PNG automáticamente
+  return { canvas, passportCode };
+}
+
+/**
+ * Genera el Data URL de la Ficha de Presupuesto para subirla automáticamente a Google Drive / Sheets.
+ */
+export async function generateQuoteSummaryDataUrl(
+  params: GenerateQuoteCardImageParams,
+  mimeType: 'image/png' | 'image/jpeg' = 'image/jpeg',
+  quality = 0.86
+): Promise<string | null> {
+  if (typeof document === 'undefined') {
+    return null;
+  }
+  try {
+    const rendered = await renderQuoteSummaryCanvas(params);
+    if (!rendered) {
+      return null;
+    }
+    return rendered.canvas.toDataURL(mimeType, quality);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Genera y descarga la imagen PNG de alta definición (1080px de ancho) con la "Ficha de Presupuesto".
+ * En el navegador interno de Instagram/Facebook usa Web Share API (si está disponible) para evitar bloqueos de descarga.
+ */
+export async function downloadQuoteSummaryImage(
+  params: GenerateQuoteCardImageParams
+): Promise<boolean> {
+  const rendered = await renderQuoteSummaryCanvas(params);
+  if (!rendered) {
+    return false;
+  }
+
+  const { canvas, passportCode } = rendered;
   const fileName = `Presupuesto-Optica-Profesional-${passportCode}.png`;
   const dataUrl = canvas.toDataURL('image/png');
+
+  const isInAppWebView =
+    typeof navigator !== 'undefined' &&
+    /Instagram|FBAN|FBAV/i.test(navigator.userAgent);
+
+  if (
+    isInAppWebView &&
+    typeof navigator.share === 'function' &&
+    typeof navigator.canShare === 'function'
+  ) {
+    try {
+      const blob = await new Promise<Blob | null>((resolve) =>
+        canvas.toBlob((b) => resolve(b), 'image/png')
+      );
+      if (blob) {
+        const file = new File([blob], fileName, { type: 'image/png' });
+        if (navigator.canShare({ files: [file] })) {
+          await navigator.share({
+            files: [file],
+            title: 'Ficha de Presupuesto · Óptica Profesional',
+          });
+          return true;
+        }
+      }
+    } catch (err) {
+      if (err instanceof DOMException && err.name === 'AbortError') {
+        return false;
+      }
+    }
+  }
 
   const link = document.createElement('a');
   link.href = dataUrl;

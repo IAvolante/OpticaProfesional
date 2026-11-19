@@ -28,6 +28,7 @@ const LEADS_DEFAULT_HEADERS = [
   'Nombre y Apellido',
   'Link Directo WhatsApp',
   'Link Foto de Receta (Google Drive)',
+  'Link Ficha de Presupuesto (Google Drive)',
   'Cristal Elegido',
   'Precio Elegido (ARS)',
   'Paso 1: Mejora / Material',
@@ -55,6 +56,7 @@ const TRACKING_DEFAULT_HEADERS = [
   'Paso 4: Obra Social / Financiación',
   'Paso 5: ¿Adjuntó Receta?',
   'Link Foto de Receta (Google Drive)',
+  'Link Ficha de Presupuesto (Google Drive)',
   'Opción 1 Mostrada',
   'Precio Opción 1 (ARS)',
   'Opción 2 Mostrada',
@@ -139,6 +141,52 @@ function repararValidacionEstado_(leadsSheet) {
 }
 
 /**
+ * Asegura que exista la columna "Link Ficha de Presupuesto (Google Drive)" en hojas ya creadas,
+ * insertándola justo al lado de "Link Foto de Receta (Google Drive)" sin borrar ningún dato previo.
+ */
+function asegurarColumnaFichaPresupuesto_(sheet, headerBgColor) {
+  if (sheet.getLastRow() < 1) return;
+  const fichaTitle = 'Link Ficha de Presupuesto (Google Drive)';
+  const existingCol = encontrarColumnaPorTitulo_(sheet, [fichaTitle]);
+  if (existingCol > 0) return;
+
+  const rxCol = encontrarColumnaPorTitulo_(sheet, ['Link Foto de Receta (Google Drive)']);
+  let targetCol;
+  if (rxCol > 0) {
+    sheet.insertColumnAfter(rxCol);
+    targetCol = rxCol + 1;
+  } else {
+    const lastCol = sheet.getLastColumn();
+    sheet.insertColumnAfter(lastCol);
+    targetCol = lastCol + 1;
+  }
+
+  const headerCell = sheet.getRange(1, targetCol);
+  headerCell
+    .setValue(fichaTitle)
+    .setBackground(headerBgColor)
+    .setFontColor('#FFFFFF')
+    .setFontWeight('bold')
+    .setHorizontalAlignment('center')
+    .setVerticalAlignment('middle');
+  sheet.setColumnWidth(targetCol, 240);
+}
+
+/**
+ * Formatea montos fijos como número y rangos ("Desde $ ... hasta $ ...") como texto limpio (evitando NaN).
+ */
+function formatearPrecioCelda_(val) {
+  if (typeof val === 'number' && !isNaN(val)) {
+    return val;
+  }
+  const asNum = Number(val);
+  if (!isNaN(asNum) && String(val || '').trim() !== '') {
+    return asNum;
+  }
+  return String(val || '');
+}
+
+/**
  * Configura o asegura que exista la pestaña CONSULTAS_Y_CLIENTES (Registros Completos)
  */
 function asegurarHojaClientes_(ss) {
@@ -161,6 +209,8 @@ function asegurarHojaClientes_(ss) {
     leadsSheet.setFrozenRows(1);
     leadsSheet.setRowHeight(1, 36);
     repararValidacionEstado_(leadsSheet);
+  } else {
+    asegurarColumnaFichaPresupuesto_(leadsSheet, '#336699');
   }
 
   return leadsSheet;
@@ -188,6 +238,8 @@ function asegurarHojaTracking_(ss) {
 
     trackingSheet.setFrozenRows(1);
     trackingSheet.setRowHeight(1, 36);
+  } else {
+    asegurarColumnaFichaPresupuesto_(trackingSheet, '#4A607A');
   }
 
   return trackingSheet;
@@ -482,21 +534,41 @@ function doPost(e) {
       );
     }
 
+    let uploadedQuoteCardUrl = String(data.quoteCardUrl || '').trim();
+    if (data.quoteCardBase64) {
+      uploadedQuoteCardUrl = guardarRecetaEnDrive_(
+        data.quoteCardBase64,
+        data.quoteCardFileName || 'Ficha_Presupuesto.jpg',
+        passportCode,
+        isAnonymousPreview ? 'Ficha_VistaPrevia' : data.fullName
+      );
+    }
+
     // =========================================================================
     // CASO 1: VISITANTE VIENDO PRECIOS SIN COMPLETAR DATOS -> TRACKING_INCOMPLETOS
     // =========================================================================
     if (isAnonymousPreview) {
       const existingTrackingRow = buscarFilaPorCodigo_(trackingSheet, passportCode);
       let prevPhotoUrl = '';
+      let prevQuoteCardUrl = '';
       if (existingTrackingRow > 0) {
         prevPhotoUrl = leerValorPorTitulo_(trackingSheet, existingTrackingRow, [
           'Link Foto de Receta (Google Drive)'
+        ]);
+        prevQuoteCardUrl = leerValorPorTitulo_(trackingSheet, existingTrackingRow, [
+          'Link Ficha de Presupuesto (Google Drive)'
         ]);
       }
 
       const finalPhotoTracking =
         uploadedPhotoUrl ||
         (prevPhotoUrl && prevPhotoUrl !== 'Sin foto adjunta' ? prevPhotoUrl : 'Sin foto adjunta');
+
+      const finalQuoteCardTracking =
+        uploadedQuoteCardUrl ||
+        (prevQuoteCardUrl && prevQuoteCardUrl !== 'Sin ficha generada'
+          ? prevQuoteCardUrl
+          : 'Sin ficha generada');
 
       const datosTracking = {
         'Fecha y Hora': formattedDate,
@@ -509,10 +581,11 @@ function doPost(e) {
         'Paso 4: Obra Social / Financiación': String(data.step4Label || data.budgetPreferences || ''),
         'Paso 5: ¿Adjuntó Receta?': String(data.step5Label || data.prescriptionAttachment || ''),
         'Link Foto de Receta (Google Drive)': finalPhotoTracking,
+        'Link Ficha de Presupuesto (Google Drive)': finalQuoteCardTracking,
         'Opción 1 Mostrada': String(data.primaryName || ''),
-        'Precio Opción 1 (ARS)': Number(data.priceStockARS || 0),
+        'Precio Opción 1 (ARS)': formatearPrecioCelda_(data.priceStockARS),
         'Opción 2 Mostrada': String(data.alternativeName || ''),
-        'Precio Opción 2 (ARS)': Number(data.alternativePriceARS || 0)
+        'Precio Opción 2 (ARS)': formatearPrecioCelda_(data.alternativePriceARS)
       };
 
       const trackingRowValues = armarFilaSegunEncabezadosActuales_(
@@ -533,7 +606,9 @@ function doPost(e) {
         ok: true,
         sheet: SHEET_TRACKING_NAME,
         leadId: passportCode,
-        photoUrl: finalPhotoTracking !== 'Sin foto adjunta' ? finalPhotoTracking : undefined
+        photoUrl: finalPhotoTracking !== 'Sin foto adjunta' ? finalPhotoTracking : undefined,
+        quoteCardUrl:
+          finalQuoteCardTracking !== 'Sin ficha generada' ? finalQuoteCardTracking : undefined
       });
     }
 
@@ -541,19 +616,27 @@ function doPost(e) {
     // CASO 2: CLIENTE COMPLETÓ NOMBRE Y WHATSAPP -> CONSULTAS_Y_CLIENTES
     // =========================================================================
     let photoFromTracking = '';
+    let quoteCardFromTracking = '';
     const existingTrackingRow = buscarFilaPorCodigo_(trackingSheet, passportCode);
     if (existingTrackingRow > 0) {
       photoFromTracking = leerValorPorTitulo_(trackingSheet, existingTrackingRow, [
         'Link Foto de Receta (Google Drive)'
+      ]);
+      quoteCardFromTracking = leerValorPorTitulo_(trackingSheet, existingTrackingRow, [
+        'Link Ficha de Presupuesto (Google Drive)'
       ]);
       trackingSheet.deleteRow(existingTrackingRow);
     }
 
     const existingLeadRow = buscarFilaPorCodigo_(leadsSheet, passportCode);
     let prevLeadPhoto = '';
+    let prevLeadQuoteCard = '';
     if (existingLeadRow > 0) {
       prevLeadPhoto = leerValorPorTitulo_(leadsSheet, existingLeadRow, [
         'Link Foto de Receta (Google Drive)'
+      ]);
+      prevLeadQuoteCard = leerValorPorTitulo_(leadsSheet, existingLeadRow, [
+        'Link Ficha de Presupuesto (Google Drive)'
       ]);
     }
 
@@ -561,6 +644,15 @@ function doPost(e) {
       uploadedPhotoUrl ||
       (photoFromTracking && photoFromTracking !== 'Sin foto adjunta' ? photoFromTracking : '') ||
       (prevLeadPhoto && prevLeadPhoto !== 'Sin foto adjunta' ? prevLeadPhoto : 'Sin foto adjunta');
+
+    const finalLeadQuoteCard =
+      uploadedQuoteCardUrl ||
+      (quoteCardFromTracking && quoteCardFromTracking !== 'Sin ficha generada'
+        ? quoteCardFromTracking
+        : '') ||
+      (prevLeadQuoteCard && prevLeadQuoteCard !== 'Sin ficha generada'
+        ? prevLeadQuoteCard
+        : 'Sin ficha generada');
 
     const fullName = String(data.fullName || '').trim();
     const whatsapp = String(data.whatsapp || '').trim();
@@ -574,17 +666,18 @@ function doPost(e) {
       'WhatsApp': whatsapp,
       'Link Directo WhatsApp': whatsappLink,
       'Cristal Elegido': String(data.selectedCommercialName || '') + ' (' + String(data.selectedTier || '') + ')',
-      'Precio Elegido (ARS)': Number(data.selectedPriceARS || 0),
+      'Precio Elegido (ARS)': formatearPrecioCelda_(data.selectedPriceARS),
       'Paso 1: Mejora / Material': String(data.step1Label || data.improvementGoal || ''),
       'Paso 2: Actividad Diaria': String(data.step2Label || data.activityContext || ''),
       'Paso 3: Prioridad del Cliente': String(data.step3Label || data.clientPriority || ''),
       'Paso 4: Obra Social / Financiación': String(data.step4Label || data.budgetPreferences || ''),
       'Paso 5: ¿Adjuntó Receta?': String(data.step5Label || data.prescriptionAttachment || ''),
       'Link Foto de Receta (Google Drive)': finalLeadPhoto,
+      'Link Ficha de Presupuesto (Google Drive)': finalLeadQuoteCard,
       'Opción 1 Cotizada': String(data.primaryName || ''),
-      'Precio Opción 1 (ARS)': Number(data.priceStockARS || 0),
+      'Precio Opción 1 (ARS)': formatearPrecioCelda_(data.priceStockARS),
       'Opción 2 Cotizada': String(data.alternativeName || ''),
-      'Precio Opción 2 (ARS)': Number(data.alternativePriceARS || 0),
+      'Precio Opción 2 (ARS)': formatearPrecioCelda_(data.alternativePriceARS),
       'Notas Internas Óptica': 'Origen: ' + utmOrigin,
       'Notas Internas / Origen': 'Origen: ' + utmOrigin
     };
@@ -606,7 +699,9 @@ function doPost(e) {
       sheet: SHEET_LEADS_NAME,
       movedFromTracking: existingTrackingRow > 0,
       leadId: passportCode,
-      photoUrl: finalLeadPhoto !== 'Sin foto adjunta' ? finalLeadPhoto : undefined
+      photoUrl: finalLeadPhoto !== 'Sin foto adjunta' ? finalLeadPhoto : undefined,
+      quoteCardUrl:
+        finalLeadQuoteCard !== 'Sin ficha generada' ? finalLeadQuoteCard : undefined
     });
   } catch (err) {
     return respuestaJson_({

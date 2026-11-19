@@ -589,23 +589,16 @@ export function QuestionStep({
               );
             })}
           </div>
-          <div className="flex items-center justify-between text-[11px] font-semibold tracking-tight drop-shadow-xs">
+          <div className="flex items-center justify-start text-[11px] font-semibold tracking-tight drop-shadow-xs">
             <span className="text-white/95">
               Paso {question.stepNumber} de 5
-            </span>
-            <span className="text-[#CBE6CB]">
-              {question.stepNumber === 5
-                ? '¡Último toque para ver precios!'
-                : question.maxSelections
-                  ? `Elegí 1 o ${question.maxSelections} opciones`
-                  : 'Podés marcar varias'}
             </span>
           </div>
         </div>
 
         <CardHeader
           className={cn(
-            'relative z-30 flex flex-col justify-end px-3.5 pb-3.5 pt-11 sm:p-5 sm:pt-12',
+            'relative z-30 flex flex-col justify-end px-4 pb-3.5 pt-11 sm:p-5 sm:pt-12',
             resolvedVideoBoxHeight
           )}
         >
@@ -614,15 +607,23 @@ export function QuestionStep({
             initial={prefersReducedMotion ? false : { opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
+            className="space-y-1 text-center"
           >
             <CardTitle
               className={cn(
-                'leading-[1.22] font-bold text-white drop-shadow-xs',
+                'text-center leading-[1.22] font-bold text-white drop-shadow-xs',
                 scaleClasses.questionTitle
               )}
             >
               {question.title}
             </CardTitle>
+            <p className="text-center text-[13px] sm:text-[14px] font-semibold text-[#CBE6CB] drop-shadow-xs">
+              {question.stepNumber === 5
+                ? '¡Último toque para ver precios!'
+                : question.maxSelections
+                  ? `Elegí 1 o ${question.maxSelections} opciones`
+                  : 'Podés marcar varias opciones'}
+            </p>
           </motion.div>
         </CardHeader>
       </Card>

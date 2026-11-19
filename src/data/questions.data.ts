@@ -10,7 +10,7 @@ export const OPTICAL_WIZARD_QUESTIONS: readonly WizardQuestionDefinition[] = [
     id: 'improvementGoal',
     stepNumber: 1,
     categoryBadge: 'Paso 1 de 5 · Material y Mejora Visual',
-    title: '¿Qué es lo principal que querés mejorar con tus nuevos anteojos?',
+    title: 'Necesito mis lentes para...',
     subtitle:
       'Podés seleccionar hasta 2 opciones para tus nuevos cristales.',
     isMultiSelect: true,
@@ -146,7 +146,7 @@ export const OPTICAL_WIZARD_QUESTIONS: readonly WizardQuestionDefinition[] = [
         value: 'tengo_obra_social',
         label: 'Tengo obra social',
         description:
-          '¡Si tenés obra social, tenés un armazón sin cargo seleccionado!',
+          '¡Si tenés obra social, tenés un armazón seleccionado sin cargo!',
         clinicalHint: 'Armazón Seleccionado Sin Cargo',
       },
       {
@@ -167,8 +167,8 @@ export const OPTICAL_WIZARD_QUESTIONS: readonly WizardQuestionDefinition[] = [
         value: 'beneficio_pago_contado',
         label: 'Beneficio pago contado',
         description:
-          'Consultanos por beneficios de contado a nuestro WhatsApp.',
-        clinicalHint: 'Beneficios de Contado por WhatsApp',
+          'Renová tus cristales sin cargo dentro de los 12 meses si abonás de contado (en monofocales).',
+        clinicalHint: 'Renová tus Cristales Sin Cargo (Contado)',
       },
     ],
   },

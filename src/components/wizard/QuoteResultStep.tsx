@@ -46,12 +46,23 @@ export interface QuoteResultStepProps {
   readonly onResetWizard: () => void;
 }
 
-const BUDGET_BADGE_LABELS: Record<BudgetPreferenceAnswer, string> = {
-  tengo_obra_social: '¡Con obra social tenés un armazón sin cargo seleccionado!',
-  soy_particular: 'Soy particular',
-  interes_cuotas_tarjeta: '12 cuotas Naranja X · 6 cuotas Macro',
-  beneficio_pago_contado: 'Consultanos por beneficios de contado a nuestro WhatsApp',
-};
+function resolveBudgetBadgeLabel(
+  pref: BudgetPreferenceAnswer,
+  isMonofocal: boolean
+): string {
+  switch (pref) {
+    case 'tengo_obra_social':
+      return '¡Con obra social tenés un armazón seleccionado sin cargo!';
+    case 'soy_particular':
+      return 'Soy particular';
+    case 'interes_cuotas_tarjeta':
+      return '12 cuotas Naranja X · 6 cuotas Macro';
+    case 'beneficio_pago_contado':
+      return isMonofocal
+        ? 'Pago contado: ¡Renová tus cristales sin cargo dentro de los 12 meses!'
+        : 'Consultá por beneficios de contado por WhatsApp.';
+  }
+}
 
 function resolveDefaultSelectedOptionNumber(
   answers: CompletedOpticalAnswers,
@@ -123,7 +134,7 @@ export function QuoteResultStep({
   } = recommendation;
 
   const displayOptions =
-    allMatchedOptions && allMatchedOptions.length >= 2
+    allMatchedOptions && allMatchedOptions.length >= 1
       ? allMatchedOptions
       : [
           {
@@ -140,6 +151,7 @@ export function QuoteResultStep({
           },
         ];
 
+  const isSingleRecommendation = displayOptions.length === 1;
   const isNameValid = fullName.trim().length >= 2;
   const isPhoneValid = sanitizeArgentinePhone(whatsapp).length >= 8;
 
@@ -147,12 +159,23 @@ export function QuoteResultStep({
     displayOptions.find((item) => item.optionNumber === selectedOptionNumber) ??
     displayOptions[0]!;
   const activeSelectedLens = activeCardItem.lens;
-  const activeOptionLabel = `Opción ${activeCardItem.optionNumber}`;
+  const activeOptionLabel = isSingleRecommendation
+    ? 'Opción recomendada'
+    : `Opción ${activeCardItem.optionNumber}`;
   const selectedTier: 'PRIMARY' | 'ALTERNATIVE' =
     activeCardItem.optionNumber === 1 ? 'PRIMARY' : 'ALTERNATIVE';
 
+  const isMonofocalLens = activeSelectedLens.hasAnnualReplacementPromo;
+  const hasCashBenefitSelected = answers.budgetPreferences.includes(
+    'beneficio_pago_contado'
+  );
+  const hasObraSocialSelected =
+    answers.budgetPreferences.includes('tengo_obra_social');
+  const hasInstallmentsSelected = answers.budgetPreferences.includes(
+    'interes_cuotas_tarjeta'
+  );
   const isMonofocalWithAnnualPromo =
-    activeSelectedLens.hasAnnualReplacementPromo;
+    isMonofocalLens && hasCashBenefitSelected;
   const multiDistanceGuide = activeSelectedLens.multiDistanceGuide;
   const hasAnyNumericStockPrice = displayOptions.some(
     (opt) => opt.lens.priceStockARS > 0 && !opt.lens.pricePrefix
@@ -294,7 +317,13 @@ export function QuoteResultStep({
         </div>
 
         {/* Grilla de Opciones según la Matriz Oficial `encuesta.xlsx` */}
-        <div className="grid grid-cols-2 gap-3 pt-1">
+        <div className="space-y-2 pt-1">
+          <p className="font-brand-heading text-[13px] sm:text-[14px] font-bold text-[var(--brand-accent-foreground)]">
+            {isSingleRecommendation
+              ? 'Opción recomendada según tus respuestas:'
+              : 'Seleccioná la opción que más te guste:'}
+          </p>
+          <div className="grid grid-cols-2 gap-3">
           {displayOptions.map(({ optionNumber, lens, tagline }, idx) => {
             const isSelected = activeCardItem.optionNumber === optionNumber;
             const isOddLastCard =
@@ -323,7 +352,9 @@ export function QuoteResultStep({
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between gap-1.5">
                     <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--brand-accent-foreground)]">
-                      Opción {optionNumber}
+                      {isSingleRecommendation
+                        ? 'Opción Recomendada'
+                        : `Opción ${optionNumber}`}
                     </span>
                     <span
                       className={cn(
@@ -336,7 +367,11 @@ export function QuoteResultStep({
                       {isSelected ? (
                         <>
                           <Check weight="bold" className="h-2.5 w-2.5" />
-                          <span>Elegida</span>
+                          <span>
+                            {isSingleRecommendation
+                              ? 'Recomendada'
+                              : 'Elegida'}
+                          </span>
                         </>
                       ) : (
                         <span>Elegir</span>
@@ -374,6 +409,7 @@ export function QuoteResultStep({
               </button>
             );
           })}
+          </div>
         </div>
 
         {/* Aclaración clínica sutil sobre precios de Stock vs. Rango/Laboratorio acordada con Solana */}
@@ -403,7 +439,9 @@ export function QuoteResultStep({
                     weight="duotone"
                     className="h-3.5 w-3.5 shrink-0 text-[var(--brand-icon-primary)]"
                   />
-                  <span>{BUDGET_BADGE_LABELS[pref]}</span>
+                  <span>
+                    {resolveBudgetBadgeLabel(pref, isMonofocalLens)}
+                  </span>
                 </span>
               ))}
             </div>
@@ -512,12 +550,12 @@ export function QuoteResultStep({
         <div className="relative z-10 space-y-4">
           {isMonofocalWithAnnualPromo ? (
             /* ---------------------------------------------------------------
-             * CASO A: CRISTAL MONOFOCAL -> CERTIFICADO 12 MESES GRATIS
+             * CASO A: CRISTAL MONOFOCAL + PAGO CONTADO -> CERTIFICADO 12 MESES GRATIS
              * --------------------------------------------------------------- */
             <div className="space-y-4 text-center">
               <div className="flex justify-center">
                 <span className="inline-flex items-center gap-1.5 rounded-full bg-[#99CC99]/20 border border-[#99CC99]/60 px-3.5 py-1 font-mono text-[11px] font-bold uppercase tracking-widest text-[#99CC99]">
-                  BENEFICIO EXCLUSIVO
+                  BENEFICIO EXCLUSIVO · PAGO CONTADO
                 </span>
               </div>
 
@@ -526,22 +564,84 @@ export function QuoteResultStep({
                   ¡RENOVÁ TUS CRISTALES GRATIS!
                 </h2>
                 <p className="text-sm sm:text-[15px] font-semibold text-[#99CC99]">
-                  Comprá hoy y tenés un recambio sin cargo durante los próximos
-                  12 meses.
+                  Abonando de contado hoy, tenés un recambio sin cargo durante
+                  los próximos 12 meses.
                 </p>
               </div>
 
               <div className="space-y-2 text-xs leading-relaxed text-slate-300 max-w-[410px] mx-auto">
                 <p>
-                  Con la compra de tus anteojos con cristales monofocales
-                  incluidos, te llevás un certificado para realizar un recambio
-                  de cristales de la misma categoría y características, por
-                  única vez, dentro de los 12 meses posteriores a tu compra.
+                  Con la compra de contado de tus anteojos con cristales
+                  monofocales incluidos, te llevás un certificado para realizar
+                  un recambio de cristales de la misma categoría y
+                  características, por única vez, dentro de los 12 meses
+                  posteriores a tu compra.
                 </p>
                 <p className="text-[11px] text-slate-400">
-                  Beneficio personal, no transferible, exclusivo para cristales
-                  monofocales. Sujeto a las condiciones del certificado.
+                  Beneficio personal por pago de contado, no transferible,
+                  exclusivo para cristales monofocales. Sujeto a las
+                  condiciones del certificado.
                 </p>
+              </div>
+            </div>
+          ) : isMonofocalLens ? (
+            /* ---------------------------------------------------------------
+             * CASO C: CRISTAL MONOFOCAL SIN CONTADO (OBRA SOCIAL / TARJETA / PARTICULAR)
+             * --------------------------------------------------------------- */
+            <div className="space-y-3.5 text-center">
+              <div className="flex justify-center">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-[#99CC99]/20 border border-[#99CC99]/60 px-3.5 py-1 font-mono text-[10.5px] font-bold uppercase tracking-wider text-[#99CC99]">
+                  <ShieldCheck weight="fill" className="h-3.5 w-3.5" />
+                  <span>BENEFICIOS PARA TU PRESUPUESTO</span>
+                </span>
+              </div>
+
+              <div className="space-y-1.5">
+                <h2 className="font-brand-heading text-lg sm:text-xl font-extrabold tracking-tight text-white">
+                  {hasObraSocialSelected
+                    ? '¡TENÉS UN ARMAZÓN SELECCIONADO SIN CARGO!'
+                    : hasInstallmentsSelected
+                      ? 'FINANCIÁ TUS CRISTALES EN CUOTAS'
+                      : 'RESERVÁ TU PRESUPUESTO PERSONALIZADO'}
+                </h2>
+                <p className="text-xs sm:text-[13.5px] font-semibold text-[#99CC99] leading-snug">
+                  {hasObraSocialSelected
+                    ? 'Presentando tu obra social accedés a un armazón seleccionado sin cargo con la compra de tus cristales.'
+                    : activeSelectedLens.idealForSummary}
+                </p>
+              </div>
+
+              <div className="rounded-2xl bg-[#336699]/25 border border-[#99CC99]/35 p-3.5 space-y-2.5 text-left">
+                {hasObraSocialSelected ? (
+                  <div className="flex items-start gap-2 text-xs text-slate-100">
+                    <ShieldCheck
+                      weight="duotone"
+                      className="h-4 w-4 shrink-0 text-[#99CC99] mt-0.5"
+                    />
+                    <p className="leading-snug">
+                      <span className="font-semibold text-[#99CC99]">
+                        Obra Social:{' '}
+                      </span>
+                      ¡Si tenés obra social, tenés un armazón seleccionado sin
+                      cargo!
+                    </p>
+                  </div>
+                ) : null}
+
+                {hasInstallmentsSelected || !hasObraSocialSelected ? (
+                  <>
+                    <BankPromoLogos variant="dark" className="pt-0.5" />
+                    <div className="flex flex-wrap items-center gap-2 pt-0.5">
+                      <span className="inline-flex items-center gap-1 rounded-lg bg-white/10 px-2.5 py-1 text-[10.5px] font-semibold text-[#99CC99]">
+                        <CreditCard
+                          weight="duotone"
+                          className="h-3.5 w-3.5 shrink-0"
+                        />
+                        <span>12 cuotas con Naranja X y 6 con Banco Macro</span>
+                      </span>
+                    </div>
+                  </>
+                ) : null}
               </div>
             </div>
           ) : (
@@ -611,7 +711,7 @@ export function QuoteResultStep({
                   </span>
                   <span className="inline-flex items-center gap-1 rounded-lg bg-white/10 px-2.5 py-1 text-[10.5px] font-semibold text-[#99CC99]">
                     <Money weight="duotone" className="h-3.5 w-3.5 shrink-0" />
-                    <span>Efectivo: consultanos por beneficios de contado a nuestro WhatsApp</span>
+                    <span>Consultá por beneficios de contado por WhatsApp.</span>
                   </span>
                 </div>
               </div>
@@ -631,8 +731,10 @@ export function QuoteResultStep({
             <div className="rounded-xl bg-white/[0.07] border border-white/15 px-3 py-2 text-center">
               <p className="text-[11.5px] text-slate-300">
                 {isMonofocalWithAnnualPromo
-                  ? 'Activando certificado para: '
-                  : 'Solicitando asesoramiento para: '}
+                  ? 'Activando certificado (contado) para: '
+                  : isMonofocalLens
+                    ? 'Reservando presupuesto para: '
+                    : 'Solicitando asesoramiento para: '}
                 <span className="font-semibold text-[#99CC99]">
                   {activeOptionLabel} — {activeSelectedLens.commercialName} (
                   {formatLensPriceARS(activeSelectedLens)})
@@ -643,7 +745,9 @@ export function QuoteResultStep({
             <p className="text-xs font-semibold text-center text-slate-200">
               {isMonofocalWithAnnualPromo
                 ? 'Completá tu nombre y WhatsApp para activar tu certificado:'
-                : 'Completá tu nombre y WhatsApp para recibir tu cotización a medida:'}
+                : isMonofocalLens
+                  ? 'Completá tu nombre y WhatsApp para recibir tu presupuesto:'
+                  : 'Completá tu nombre y WhatsApp para recibir tu cotización a medida:'}
             </p>
 
             <div className="space-y-2.5">
@@ -773,8 +877,10 @@ export function QuoteResultStep({
                     ? 'Abriendo WhatsApp...'
                     : isMonofocalWithAnnualPromo
                       ? 'Quiero aprovechar mi beneficio'
-                      : (multiDistanceGuide?.ctaButtonText ??
-                        'Quiero recibir asesoramiento por WhatsApp')}
+                      : isMonofocalLens
+                        ? 'Quiero recibir mi presupuesto por WhatsApp'
+                        : (multiDistanceGuide?.ctaButtonText ??
+                          'Quiero recibir asesoramiento por WhatsApp')}
                 </span>
                 <ArrowRight weight="bold" className="h-4 w-4 text-[#336699]" />
               </button>

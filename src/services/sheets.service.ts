@@ -11,10 +11,11 @@ import {
   formatLensPriceARS,
   parseFlexibleARSPrice,
 } from '../utils/formatters';
+import { generateQuoteSummaryDataUrl } from '../utils/quoteImage.generator';
 import {
   ACTIVITY_CONTEXT_LABELS,
-  BUDGET_PREFERENCE_LABELS,
   CLIENT_PRIORITY_LABELS,
+  formatBudgetPreferenceForLens,
   IMPROVEMENT_GOAL_LABELS,
 } from '../utils/whatsapp.encoder';
 
@@ -46,6 +47,7 @@ interface RemoteSheetsGetResponse {
 interface RemoteSheetsPostResponse {
   readonly ok?: unknown;
   readonly photoUrl?: unknown;
+  readonly quoteCardUrl?: unknown;
 }
 
 export interface FetchCatalogResult {
@@ -70,6 +72,7 @@ export interface SubmitLeadToSheetsPayload {
 export interface SubmitLeadToSheetsResult {
   readonly ok: boolean;
   readonly uploadedPhotoUrl?: string;
+  readonly uploadedQuoteCardUrl?: string;
 }
 
 const LEGACY_SKU_ALIAS_MAP: Readonly<Record<string, string>> = {
@@ -379,10 +382,16 @@ export async function submitLeadToGoogleSheets(
         ? payload.recommendation.alternativeOption
         : payload.recommendation.primaryOption);
 
+    const isChosenMonofocal = chosenOption.hasAnnualReplacementPromo;
+    const hasCashBenefit = payload.answers.budgetPreferences.includes(
+      'beneficio_pago_contado'
+    );
+    const qualifiesForAnnualCashPromo = isChosenMonofocal && hasCashBenefit;
+
     const step4Labels =
       payload.answers.budgetPreferences.length > 0
         ? payload.answers.budgetPreferences
-            .map((item) => BUDGET_PREFERENCE_LABELS[item])
+            .map((item) => formatBudgetPreferenceForLens(item, isChosenMonofocal))
             .join(' + ')
         : 'Soy particular';
 
@@ -391,13 +400,40 @@ export async function submitLeadToGoogleSheets(
       payload.lead.prescriptionPhotoRemoteUrl ??
       '';
 
+    const existingQuoteCardUrl =
+      payload.answers.quoteCardRemoteUrl ??
+      payload.lead.quoteCardRemoteUrl ??
+      '';
+
+    const passportCode = payload.lead.passportCode ?? payload.leadId;
+
+    // Generamos automáticamente la Ficha de Presupuesto en imagen para que quede guardada en Google Drive / Sheets
+    // (En LEAD_SUBMITTED se regenera siempre con el Nombre, WhatsApp y la Opción definitiva elegida por el cliente)
+    const shouldGenerateQuoteCard =
+      stage === 'LEAD_SUBMITTED' || !existingQuoteCardUrl;
+
+    const generatedQuoteCardDataUrl = shouldGenerateQuoteCard
+      ? await generateQuoteSummaryDataUrl(
+          {
+            answers: payload.answers,
+            recommendation: payload.recommendation,
+            selectedOptionNumber: activeOptNumber,
+            fullName: isAnonymousPreview ? '' : payload.lead.fullName,
+            whatsapp: isAnonymousPreview ? '' : payload.lead.whatsapp,
+            lead: payload.lead,
+          },
+          'image/jpeg',
+          0.85
+        )
+      : null;
+
     const body = JSON.stringify({
       stage,
       leadStatus: isAnonymousPreview
         ? 'Vio precios (Sin completar datos)'
         : 'Pendiente de contacto',
       leadId: payload.leadId,
-      passportCode: payload.lead.passportCode ?? payload.leadId,
+      passportCode,
       fullName: isAnonymousPreview
         ? '⏳ Vio precios (Sin completar datos)'
         : payload.lead.fullName,
@@ -411,21 +447,31 @@ export async function submitLeadToGoogleSheets(
       selectedSku: chosenOption.sku,
       selectedCommercialName: chosenOption.commercialName,
       selectedPriceARS:
-        chosenOption.priceStockARS > 0
+        chosenOption.priceStockARS > 0 && !chosenOption.pricePrefix
           ? chosenOption.priceStockARS
           : formatLensPriceARS(chosenOption),
       primarySku: payload.recommendation.primaryOption.sku,
       primaryName: payload.recommendation.primaryOption.commercialName,
       priceStockARS:
-        payload.recommendation.primaryOption.priceStockARS > 0
+        payload.recommendation.primaryOption.priceStockARS > 0 &&
+        !payload.recommendation.primaryOption.pricePrefix
           ? payload.recommendation.primaryOption.priceStockARS
           : formatLensPriceARS(payload.recommendation.primaryOption),
-      alternativeSku: payload.recommendation.alternativeOption.sku,
-      alternativeName: payload.recommendation.alternativeOption.commercialName,
+      alternativeSku:
+        payload.recommendation.allMatchedOptions?.length === 1
+          ? '-'
+          : payload.recommendation.alternativeOption.sku,
+      alternativeName:
+        payload.recommendation.allMatchedOptions?.length === 1
+          ? 'Única opción recomendada'
+          : payload.recommendation.alternativeOption.commercialName,
       alternativePriceARS:
-        payload.recommendation.alternativeOption.priceStockARS > 0
-          ? payload.recommendation.alternativeOption.priceStockARS
-          : formatLensPriceARS(payload.recommendation.alternativeOption),
+        payload.recommendation.allMatchedOptions?.length === 1
+          ? '-'
+          : payload.recommendation.alternativeOption.priceStockARS > 0 &&
+              !payload.recommendation.alternativeOption.pricePrefix
+            ? payload.recommendation.alternativeOption.priceStockARS
+            : formatLensPriceARS(payload.recommendation.alternativeOption),
       improvementGoal:
         payload.answers.improvementGoals &&
         payload.answers.improvementGoals.length > 0
@@ -474,9 +520,14 @@ export async function submitLeadToGoogleSheets(
       prescriptionPhotoBase64: alreadyUploadedUrl
         ? ''
         : (payload.answers.prescriptionPhotoDataUrl ?? ''),
-      warrantyBenefit: chosenOption.hasAnnualReplacementPromo
-        ? 'CERTIFICADO RECAMBIO 12 MESES GRATIS (MONOFOCAL)'
-        : 'ASESORAMIENTO Y MEDICIÓN A MEDIDA (NO APLICA PROMO 12 MESES)',
+      quoteCardFileName: `Ficha_Presupuesto_${passportCode}.jpg`,
+      quoteCardUrl: generatedQuoteCardDataUrl ? '' : existingQuoteCardUrl,
+      quoteCardBase64: generatedQuoteCardDataUrl ?? '',
+      warrantyBenefit: qualifiesForAnnualCashPromo
+        ? 'CERTIFICADO RECAMBIO 12 MESES GRATIS (CONTADO · MONOFOCAL)'
+        : isChosenMonofocal
+          ? 'PRESUPUESTO MONOFOCAL (SIN RECAMBIO 12 MESES · NO CONTADO)'
+          : 'ASESORAMIENTO Y MEDICIÓN A MEDIDA (NO APLICA PROMO 12 MESES)',
       activeTheme: payload.activeTheme,
       utmSource:
         typeof window !== 'undefined' && window.location.search
@@ -497,14 +548,24 @@ export async function submitLeadToGoogleSheets(
     try {
       const json: unknown = await response.json();
       const parsed = json as RemoteSheetsPostResponse;
-      if (
+      const uploadedPhotoUrl =
         parsed &&
         typeof parsed.photoUrl === 'string' &&
         parsed.photoUrl.trim().length > 0
-      ) {
+          ? parsed.photoUrl.trim()
+          : undefined;
+      const uploadedQuoteCardUrl =
+        parsed &&
+        typeof parsed.quoteCardUrl === 'string' &&
+        parsed.quoteCardUrl.trim().length > 0
+          ? parsed.quoteCardUrl.trim()
+          : undefined;
+
+      if (uploadedPhotoUrl || uploadedQuoteCardUrl) {
         return {
           ok: true,
-          uploadedPhotoUrl: parsed.photoUrl.trim(),
+          uploadedPhotoUrl,
+          uploadedQuoteCardUrl,
         };
       }
     } catch {

@@ -91,6 +91,7 @@ function normalizeToCompletedAnswers(
     prescriptionPhotoName: answers.prescriptionPhotoName,
     prescriptionPhotoDataUrl: answers.prescriptionPhotoDataUrl,
     prescriptionPhotoRemoteUrl: answers.prescriptionPhotoRemoteUrl,
+    quoteCardRemoteUrl: answers.quoteCardRemoteUrl,
   };
 }
 
@@ -615,6 +616,9 @@ export function useOpticalWizard({
       passportCode: sessionPassportCode,
       prescriptionPhotoName: snapshot.answers.prescriptionPhotoName,
       prescriptionPhotoRemoteUrl: snapshot.answers.prescriptionPhotoRemoteUrl,
+      quoteCardRemoteUrl:
+        snapshot.answers.quoteCardRemoteUrl ??
+        snapshot.lead?.quoteCardRemoteUrl,
     };
 
     void submitLeadToGoogleSheets({
@@ -626,24 +630,33 @@ export function useOpticalWizard({
       selectedTier: 'PRIMARY',
       activeTheme,
     }).then((result) => {
-      if (result.uploadedPhotoUrl) {
+      if (result.uploadedPhotoUrl || result.uploadedQuoteCardUrl) {
         setSnapshot((prev) => ({
           ...prev,
           lead: prev.lead
             ? {
                 ...prev.lead,
                 passportCode: sessionPassportCode,
-                prescriptionPhotoRemoteUrl: result.uploadedPhotoUrl,
+                prescriptionPhotoRemoteUrl:
+                  result.uploadedPhotoUrl ??
+                  prev.lead.prescriptionPhotoRemoteUrl,
+                quoteCardRemoteUrl:
+                  result.uploadedQuoteCardUrl ?? prev.lead.quoteCardRemoteUrl,
               }
             : {
                 fullName: '',
                 whatsapp: '',
                 passportCode: sessionPassportCode,
                 prescriptionPhotoRemoteUrl: result.uploadedPhotoUrl,
+                quoteCardRemoteUrl: result.uploadedQuoteCardUrl,
               },
           answers: {
             ...prev.answers,
-            prescriptionPhotoRemoteUrl: result.uploadedPhotoUrl,
+            prescriptionPhotoRemoteUrl:
+              result.uploadedPhotoUrl ??
+              prev.answers.prescriptionPhotoRemoteUrl,
+            quoteCardRemoteUrl:
+              result.uploadedQuoteCardUrl ?? prev.answers.quoteCardRemoteUrl,
           },
         }));
       }
@@ -725,6 +738,9 @@ export function useOpticalWizard({
       const alreadyUploadedUrl =
         snapshot.answers.prescriptionPhotoRemoteUrl ??
         snapshot.lead?.prescriptionPhotoRemoteUrl;
+      const alreadyUploadedQuoteCardUrl =
+        snapshot.answers.quoteCardRemoteUrl ??
+        snapshot.lead?.quoteCardRemoteUrl;
 
       const leadData: LeadContactData = {
         fullName,
@@ -732,19 +748,13 @@ export function useOpticalWizard({
         passportCode: leadId,
         prescriptionPhotoName: snapshot.answers.prescriptionPhotoName,
         prescriptionPhotoRemoteUrl: alreadyUploadedUrl,
+        quoteCardRemoteUrl: alreadyUploadedQuoteCardUrl,
       };
 
-      const hasUnuploadedPhotoData = Boolean(
-        !alreadyUploadedUrl &&
-          snapshot.answers.prescriptionPhotoDataUrl &&
-          snapshot.answers.prescriptionPhotoDataUrl.length > 50
-      );
-
-      let uploadedPhotoUrl: string | undefined = alreadyUploadedUrl;
-
-      if (hasUnuploadedPhotoData) {
-        // Si la foto aún no terminó de subirse en segundo plano, esperamos hasta 4s para obtener el link
-        const submitResult = await submitLeadToGoogleSheets({
+      // Subimos los datos finales del cliente + su Ficha de Presupuesto personalizada a Google Drive/Sheets
+      // con un tope ágil de 3.8s para no bloquear la apertura de WhatsApp si hay baja señal móvil.
+      const submitResult = await Promise.race([
+        submitLeadToGoogleSheets({
           stage: 'LEAD_SUBMITTED',
           leadId,
           lead: leadData,
@@ -753,30 +763,27 @@ export function useOpticalWizard({
           selectedTier,
           selectedOptionNumber: activeOptionNumber,
           activeTheme,
-        });
-        uploadedPhotoUrl = submitResult.uploadedPhotoUrl ?? alreadyUploadedUrl;
-      } else {
-        // Enviamos los datos finales del cliente (Nombre, WhatsApp y Opción elegida) en segundo plano y abrimos WhatsApp en el acto
-        void submitLeadToGoogleSheets({
-          stage: 'LEAD_SUBMITTED',
-          leadId,
-          lead: leadData,
-          answers: snapshot.answers,
-          recommendation,
-          selectedTier,
-          selectedOptionNumber: activeOptionNumber,
-          activeTheme,
-        });
-      }
+        }),
+        new Promise<null>((resolve) => {
+          window.setTimeout(() => resolve(null), 3800);
+        }),
+      ]);
+
+      const uploadedPhotoUrl =
+        submitResult?.uploadedPhotoUrl ?? alreadyUploadedUrl;
+      const uploadedQuoteCardUrl =
+        submitResult?.uploadedQuoteCardUrl ?? alreadyUploadedQuoteCardUrl;
 
       const finalLead: LeadContactData = {
         ...leadData,
         prescriptionPhotoRemoteUrl: uploadedPhotoUrl,
+        quoteCardRemoteUrl: uploadedQuoteCardUrl,
       };
 
       const finalAnswers: CompletedOpticalAnswers = {
         ...snapshot.answers,
         prescriptionPhotoRemoteUrl: uploadedPhotoUrl,
+        quoteCardRemoteUrl: uploadedQuoteCardUrl,
       };
 
       setSnapshot((prev) => ({

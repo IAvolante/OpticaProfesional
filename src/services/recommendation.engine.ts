@@ -368,34 +368,191 @@ export function calculateOpticalRecommendation(
 
   // Ordenamos de mayor a menor puntaje total.
   // En caso de empate exacto en puntos totales, desempatamos por:
-  // 1) Mayor puntaje en la Pregunta 1 (lo principal que quiere mejorar)
-  // 2) Mayor puntaje en la Pregunta 2 (su actividad principal)
-  // 3) Mayor puntaje en la Pregunta 3 (su prioridad)
-  // 4) Orden en la tabla oficial del PDF
+  // 1) Mayor cantidad de preguntas que coincidieron (ej. P1 + P3 precio vs solo P1)
+  // 2) Mayor puntaje en la Pregunta 1 (lo principal que quiere mejorar)
+  // 3) Mayor puntaje en la Pregunta 2 (su actividad principal)
+  // 4) Mayor puntaje en la Pregunta 3 (su prioridad)
+  // 5) Orden en la tabla oficial del PDF
   const sortedByScore = [...scoredCandidates].sort(
     (a, b) =>
       b.totalPoints - a.totalPoints ||
+      b.matchedQuestions.length - a.matchedQuestions.length ||
       b.p1Points - a.p1Points ||
       b.p2Points - a.p2Points ||
       b.p3Points - a.p3Points ||
       a.matrixIndex - b.matrixIndex
   );
 
-  const firstWinner = sortedByScore[0]!;
-  const secondWinner = sortedByScore[1]!;
+  // ==========================================================================
+  // REGLAS CLÍNICAS ESTRICTAS + SCORING ÓPTICO (CERO RECETAS INCOHERENTES)
+  // ==========================================================================
+  const bySku = new Map<string, ScoredLensCandidate>(
+    scoredCandidates.map((c) => [c.sku, c])
+  );
 
-  // Si ambos ganadores tienen precio numérico de stock, mostramos el más accesible como Opción 1 y el superador como Opción 2
-  const shouldSwapByPrice =
-    firstWinner.lens.priceStockARS > 0 &&
-    secondWinner.lens.priceStockARS > 0 &&
-    firstWinner.lens.priceStockARS > secondWinner.lens.priceStockARS;
+  const pickBestFromPool = (
+    allowedSkus: readonly string[],
+    excludeSku?: string
+  ): ScoredLensCandidate | undefined =>
+    sortedByScore.find(
+      (c) => allowedSkus.includes(c.sku) && c.sku !== excludeSku
+    );
 
-  const topTwoWinners: readonly [ScoredLensCandidate, ScoredLensCandidate] =
-    shouldSwapByPrice
-      ? [secondWinner, firstWinner]
-      : [firstWinner, secondWinner];
+  let selectedWinners: readonly ScoredLensCandidate[];
 
-  const allMatchedOptions: RecommendedLensCardItem[] = topTwoWinners.map(
+  if (selectedP1.includes('bifocal_multifocal')) {
+    // REGLA 1 (Múltiples distancias):
+    // Prohibido arrojar cristales monofocales (Orgánicos / Policarbonato).
+    // Siempre se incluye `Multifocales` (`Desde $ 180.000 hasta $ 1.050.000`) y solo se suma
+    // `Ocupacionales` o `Bifocales` cuando es 100% coherente clínicamente con la rutina y prioridad;
+    // si no aplica ninguna de las otras dos, se muestra UNA SOLA OPCIÓN (`Multifocales`).
+    const multifocalCandidate = bySku.get('MULTIFOCAL-AR')!;
+
+    const hasDriving = selectedP2.includes('manejando_aire_libre');
+    const hasComputer = selectedP2.includes('computadora_celular');
+    const hasNearReading = selectedP2.includes('lectura_cerca');
+    const hasAllDay = selectedP2.includes('actividades_diarias');
+    const hasFashion = selectedP3.includes('moda');
+    const hasThinGoal = selectedP1.includes('alto_indice');
+    const hasSunGoal = selectedP1.includes('filtro_fotocromatico');
+    const hasScreenGoal = selectedP1.includes('organico_blue_ar');
+
+    // Ocupacionales (cerca + intermedia escritorio): solo si NO necesita manejo de lejos, NO pidió todo el día general sin escritorio/lectura y tiene foco en pantallas o lectura
+    const canOfferOcupacional =
+      !hasDriving &&
+      !hasSunGoal &&
+      !hasThinGoal &&
+      (hasNearReading || hasComputer || hasScreenGoal) &&
+      (!hasAllDay || hasNearReading || hasComputer) &&
+      (selectedP3.includes('tecnologia') ||
+        selectedP3.includes('solucion') ||
+        hasScreenGoal);
+
+    // Bifocales (lejos + cerca con segmento visible): solo si NO prioriza computadora intermedia, NO prioriza estética/moda sin línea ni alto índice, y busca precio o practicidad
+    const canOfferBifocal =
+      !hasComputer &&
+      !hasScreenGoal &&
+      !hasFashion &&
+      !hasThinGoal &&
+      !hasSunGoal &&
+      (hasNearReading || hasAllDay || hasDriving) &&
+      (selectedP3.includes('precio') || selectedP3.includes('solucion'));
+
+    const validMultiCompanions: string[] = [];
+    if (canOfferOcupacional) validMultiCompanions.push('OCUPACIONALES');
+    if (canOfferBifocal) validMultiCompanions.push('BIFOCAL-AR');
+
+    const bestCompanion = pickBestFromPool(validMultiCompanions);
+    if (bestCompanion) {
+      selectedWinners =
+        bestCompanion.lens.priceStockARS <=
+        multifocalCandidate.lens.priceStockARS
+          ? [bestCompanion, multifocalCandidate]
+          : [multifocalCandidate, bestCompanion];
+    } else {
+      selectedWinners = [multifocalCandidate];
+    }
+  } else {
+    // REGLA 2 (Visión Simple / Monofocales — NO marcó evitar cambiar de anteojos):
+    // Jamás recetar Bifocales ni Multifocales, y garantizar que cada objetivo elegido en Paso 1 esté cubierto.
+    const GOAL_POOLS: Record<
+      Exclude<ImprovementGoalAnswer, 'bifocal_multifocal'>,
+      readonly string[]
+    > = {
+      organico_ar: selectedP2.includes('manejando_aire_libre')
+        ? ['ORGANICO-AR', 'ORGANICO-BLUE-AR', 'POLICARBONATO-AR']
+        : ['ORGANICO-BLANCO', 'ORGANICO-AR', 'ORGANICO-BLUE-AR'],
+      organico_blue_ar:
+        selectedP2.includes('lectura_cerca') &&
+        !selectedP2.includes('manejando_aire_libre') &&
+        (selectedP3.includes('tecnologia') || selectedP3.includes('solucion'))
+          ? ['ORGANICO-BLUE-AR', 'OCUPACIONALES', 'ORGANICO-AR']
+          : ['ORGANICO-BLUE-AR', 'ORGANICO-AR'],
+      alto_indice: ['POLICARBONATO-AR', 'ORGANICO-161', 'ALTO-INDICE-167'],
+      filtro_fotocromatico: [
+        'ORGANICO-FOTOCROMATICO',
+        'ORGANICO-AR',
+        'POLICARBONATO-AR',
+      ],
+    };
+
+    const monofocalGoals = selectedP1.filter(
+      (g): g is Exclude<ImprovementGoalAnswer, 'bifocal_multifocal'> =>
+        g !== 'bifocal_multifocal'
+    );
+
+    if (monofocalGoals.length >= 2) {
+      // Si eligió 2 objetivos monofocales (ej. Pantallas + Sol, o Finos + Pantallas),
+      // aseguramos la mejor opción del Objetivo 1 y la mejor opción del Objetivo 2.
+      const g1 = monofocalGoals[0]!;
+      const g2 = monofocalGoals[1]!;
+
+      // Para objetivos específicos como Fotocromático o Pantallas, priorizamos el cristal especialista de ese objetivo
+      const resolveSpecialistForGoal = (
+        goal: Exclude<ImprovementGoalAnswer, 'bifocal_multifocal'>,
+        excludeSku?: string
+      ): ScoredLensCandidate => {
+        if (
+          goal === 'filtro_fotocromatico' &&
+          excludeSku !== 'ORGANICO-FOTOCROMATICO'
+        ) {
+          return bySku.get('ORGANICO-FOTOCROMATICO')!;
+        }
+        if (
+          goal === 'organico_blue_ar' &&
+          excludeSku !== 'ORGANICO-BLUE-AR'
+        ) {
+          return bySku.get('ORGANICO-BLUE-AR')!;
+        }
+        return (
+          pickBestFromPool(GOAL_POOLS[goal], excludeSku) ??
+          sortedByScore.find((c) => c.sku !== excludeSku)!
+        );
+      };
+
+      const firstPick = resolveSpecialistForGoal(g1);
+      const secondPick = resolveSpecialistForGoal(g2, firstPick.sku);
+
+      const shouldSwap =
+        !firstPick.lens.pricePrefix &&
+        !secondPick.lens.pricePrefix &&
+        firstPick.lens.priceStockARS > 0 &&
+        secondPick.lens.priceStockARS > 0 &&
+        firstPick.lens.priceStockARS > secondPick.lens.priceStockARS;
+
+      selectedWinners = shouldSwap
+        ? [secondPick, firstPick]
+        : [firstPick, secondPick];
+    } else {
+      // Un único objetivo monofocal en Paso 1
+      const singleGoal = monofocalGoals[0] ?? 'organico_ar';
+      const allowedPool = GOAL_POOLS[singleGoal];
+
+      const firstPick =
+        singleGoal === 'filtro_fotocromatico'
+          ? bySku.get('ORGANICO-FOTOCROMATICO')!
+          : singleGoal === 'organico_blue_ar'
+            ? bySku.get('ORGANICO-BLUE-AR')!
+            : (pickBestFromPool(allowedPool) ?? sortedByScore[0]!);
+
+      const secondPick =
+        pickBestFromPool(allowedPool, firstPick.sku) ??
+        sortedByScore.find((c) => c.sku !== firstPick.sku)!;
+
+      const shouldSwap =
+        !firstPick.lens.pricePrefix &&
+        !secondPick.lens.pricePrefix &&
+        firstPick.lens.priceStockARS > 0 &&
+        secondPick.lens.priceStockARS > 0 &&
+        firstPick.lens.priceStockARS > secondPick.lens.priceStockARS;
+
+      selectedWinners = shouldSwap
+        ? [secondPick, firstPick]
+        : [firstPick, secondPick];
+    }
+  }
+
+  const allMatchedOptions: RecommendedLensCardItem[] = selectedWinners.map(
     (entry, index) => ({
       optionNumber: index + 1,
       lens: entry.lens,
@@ -411,10 +568,13 @@ export function calculateOpticalRecommendation(
   );
 
   const primaryItem = allMatchedOptions[0]!;
-  const alternativeItem = allMatchedOptions[1]!;
+  const alternativeItem = allMatchedOptions[1] ?? primaryItem;
+  const isSingleMatchedOption = allMatchedOptions.length === 1;
 
   const reasoning: string[] = [
-    `Recomendación calculada con el sistema de puntuación clínica de Óptica Profesional (${primaryItem.lens.commercialName}: ${primaryItem.totalPoints ?? 0} pts · ${alternativeItem.lens.commercialName}: ${alternativeItem.totalPoints ?? 0} pts).`,
+    isSingleMatchedOption
+      ? `Recomendación calculada con el sistema de puntuación clínica de Óptica Profesional (${primaryItem.lens.commercialName}: ${primaryItem.totalPoints ?? 0} pts).`
+      : `Recomendación calculada con el sistema de puntuación clínica de Óptica Profesional (${primaryItem.lens.commercialName}: ${primaryItem.totalPoints ?? 0} pts · ${alternativeItem.lens.commercialName}: ${alternativeItem.totalPoints ?? 0} pts).`,
   ];
 
   const tags: ClinicalTag[] = allMatchedOptions.map((item) => ({
@@ -426,18 +586,24 @@ export function calculateOpticalRecommendation(
   if (answers.budgetPreferences.includes('tengo_obra_social')) {
     tags.push({
       id: 'tag-obra-social',
-      label: 'Obra Social · ¡Armazón Sin Cargo Seleccionado!',
+      label: 'Obra Social · ¡Armazón Seleccionado Sin Cargo!',
       category: 'range',
     });
     reasoning.push(
-      '¡Si tenés obra social, tenés un armazón sin cargo seleccionado!'
+      '¡Si tenés obra social, tenés un armazón seleccionado sin cargo!'
     );
   }
+
+  const hasMonofocalOption = allMatchedOptions.some(
+    (item) => item.lens.hasAnnualReplacementPromo
+  );
 
   if (answers.budgetPreferences.includes('beneficio_pago_contado')) {
     tags.push({
       id: 'tag-contado',
-      label: 'Contado · Consultar Beneficios por WhatsApp',
+      label: hasMonofocalOption
+        ? 'Contado · ¡Renová tus Cristales Sin Cargo en 12 Meses!'
+        : 'Contado · Consultá por beneficios de contado por WhatsApp.',
       category: 'range',
     });
   }
@@ -451,20 +617,23 @@ export function calculateOpticalRecommendation(
   }
 
   const advisorObservationParagraph = buildAdvisorObservation(answers);
-  const advisorClosingParagraph =
-    'Por eso, seleccionamos las dos alternativas con mayor puntaje para tu rutina, para que puedas elegir la que mejor se ajuste a lo que necesitás.';
+  const advisorClosingParagraph = isSingleMatchedOption
+    ? 'Por eso, seleccionamos la alternativa a medida ideal para resolver todas tus distancias visuales en un único anteojo.'
+    : 'Por eso, seleccionamos las dos alternativas con mayor puntaje para tu rutina, para que puedas elegir la que mejor se ajuste a lo que necesitás.';
 
   const requiresLabRangeWarning = allMatchedOptions.some(
     (item) => !item.lens.hasAnnualReplacementPromo
   );
 
-  const hasMonofocalOption = allMatchedOptions.some(
-    (item) => item.lens.hasAnnualReplacementPromo
-  );
+  const qualifiesForAnnualCashPromo =
+    hasMonofocalOption &&
+    answers.budgetPreferences.includes('beneficio_pago_contado');
 
-  const estimatedRangeNote = hasMonofocalOption
-    ? 'Incluye Certificado de Garantía Exclusivo en cristales monofocales: 1 recambio sin cargo de la misma categoría y características durante los próximos 12 meses.'
-    : 'Cristales fabricados a medida según graduación y mediciones oculares en gabinete óptico.';
+  const estimatedRangeNote = qualifiesForAnnualCashPromo
+    ? 'Abonando de contado en cristales monofocales incluye Certificado de Garantía Exclusivo: 1 recambio sin cargo de la misma categoría y características durante los próximos 12 meses.'
+    : hasMonofocalOption
+      ? 'Valores de referencia para graduaciones de stock con facilidades en armazón seleccionado sin cargo por Obra Social y planes en cuotas.'
+      : 'Cristales fabricados a medida según graduación y mediciones oculares en gabinete óptico.';
 
   return {
     primaryOption: primaryItem.lens,

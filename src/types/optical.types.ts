@@ -118,6 +118,7 @@ export interface UserOpticalAnswers {
   readonly prescriptionPhotoName?: string;
   readonly prescriptionPhotoDataUrl?: string;
   readonly prescriptionPhotoRemoteUrl?: string;
+  readonly quoteCardRemoteUrl?: string;
 }
 
 /**
@@ -135,6 +136,7 @@ export interface CompletedOpticalAnswers {
   readonly prescriptionPhotoName?: string;
   readonly prescriptionPhotoDataUrl?: string;
   readonly prescriptionPhotoRemoteUrl?: string;
+  readonly quoteCardRemoteUrl?: string;
 }
 
 /**
@@ -269,6 +271,7 @@ export interface LeadContactData {
   readonly clinicalNotes?: string;
   readonly prescriptionPhotoName?: string;
   readonly prescriptionPhotoRemoteUrl?: string;
+  readonly quoteCardRemoteUrl?: string;
   readonly passportCode?: string;
 }
 

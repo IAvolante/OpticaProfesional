@@ -48,20 +48,32 @@ export const CLIENT_PRIORITY_LABELS: Record<ClientPriorityAnswer, string> = {
 };
 
 export const BUDGET_PREFERENCE_LABELS: Record<BudgetPreferenceAnswer, string> = {
-  tengo_obra_social: 'Tengo obra social (¡Armazón sin cargo seleccionado!)',
+  tengo_obra_social: 'Tengo obra social (¡Armazón seleccionado sin cargo!)',
   soy_particular: 'Soy particular',
   interes_cuotas_tarjeta:
     'Me interesa conocer cuotas según mi tarjeta (12 cuotas Naranja X / 6 cuotas Macro)',
   beneficio_pago_contado:
-    'Beneficio pago contado (Consultar beneficios de contado por WhatsApp)',
+    'Beneficio pago contado (Renová tus cristales sin cargo dentro de los 12 meses en monofocales)',
 };
+
+export function formatBudgetPreferenceForLens(
+  pref: BudgetPreferenceAnswer,
+  isMonofocal: boolean
+): string {
+  if (pref === 'beneficio_pago_contado') {
+    return isMonofocal
+      ? 'Beneficio pago contado (Renová tus cristales sin cargo dentro de los 12 meses)'
+      : 'Beneficio pago contado (Consultá por beneficios de contado por WhatsApp.)';
+  }
+  return BUDGET_PREFERENCE_LABELS[pref];
+}
 
 /**
  * Construye el mensaje de cierre para WhatsApp con:
- * - Certificado de Beneficio Exclusivo (Recambio de cristales gratis en 12 meses)
+ * - Certificado de Beneficio Exclusivo (Recambio de cristales gratis en 12 meses abonando de contado en monofocales)
  * - Las 2 opciones cotizadas (destacando la elegida)
  * - Las respuestas de los 5 pasos del asesor virtual
- * - Link directo a la foto de la receta cargada en el Paso 5 (si se subió)
+ * - Link directo a la foto de la receta y a la ficha de presupuesto en Google Drive (si están disponibles)
  */
 export function buildWhatsAppQuoteMessage(
   payload: WhatsAppMessagePayload
@@ -74,21 +86,26 @@ export function buildWhatsAppQuoteMessage(
     selectedOptionNumber,
   } = payload;
 
-  const allOptions = recommendation.allMatchedOptions ?? [
-    {
-      optionNumber: 1,
-      lens: recommendation.primaryOption,
-      tagline: recommendation.primaryCardTagline,
-      matchedQuestions: ['P1'] as const,
-    },
-    {
-      optionNumber: 2,
-      lens: recommendation.alternativeOption,
-      tagline: recommendation.alternativeCardTagline,
-      matchedQuestions: ['P2'] as const,
-    },
-  ];
+  const allOptions =
+    recommendation.allMatchedOptions &&
+    recommendation.allMatchedOptions.length >= 1
+      ? recommendation.allMatchedOptions
+      : [
+          {
+            optionNumber: 1,
+            lens: recommendation.primaryOption,
+            tagline: recommendation.primaryCardTagline,
+            matchedQuestions: ['P1'] as const,
+          },
+          {
+            optionNumber: 2,
+            lens: recommendation.alternativeOption,
+            tagline: recommendation.alternativeCardTagline,
+            matchedQuestions: ['P2'] as const,
+          },
+        ];
 
+  const isSingleOption = allOptions.length === 1;
   const activeOptionNumber =
     selectedOptionNumber ?? (selectedLensType === 'ALTERNATIVE' ? 2 : 1);
 
@@ -98,11 +115,16 @@ export function buildWhatsAppQuoteMessage(
   const chosenLens = chosenItem.lens;
 
   const passportCode = lead.passportCode ?? 'OP-2026';
+  const isMonofocal = chosenLens.hasAnnualReplacementPromo;
+  const hasCashBenefitSelected = answers.budgetPreferences.includes(
+    'beneficio_pago_contado'
+  );
+  const qualifiesForAnnualCashPromo = isMonofocal && hasCashBenefitSelected;
 
   const budgetLabels =
     answers.budgetPreferences.length > 0
       ? answers.budgetPreferences
-          .map((item) => BUDGET_PREFERENCE_LABELS[item])
+          .map((item) => formatBudgetPreferenceForLens(item, isMonofocal))
           .join(' / ')
       : 'Particular';
 
@@ -117,26 +139,36 @@ export function buildWhatsAppQuoteMessage(
       ? `Receta cargada en el cotizador (${photoName}) — La envío a continuación`
       : 'Aún no tengo la receta';
 
-  const optionLines = allOptions.map(
-    (item) =>
-      `- *Opción ${item.optionNumber}${item.optionNumber === activeOptionNumber ? ' (Elegida)' : ''}:* ${item.lens.commercialName} (${item.lens.visionRangeLabel ?? 'monofocal'}) — *${formatLensPriceARS(item.lens)}*`
+  const optionLines = allOptions.map((item) =>
+    isSingleOption
+      ? `- *Opción Recomendada:* ${item.lens.commercialName} (${item.lens.visionRangeLabel ?? 'monofocal'}) — *${formatLensPriceARS(item.lens)}*`
+      : `- *Opción ${item.optionNumber}${item.optionNumber === activeOptionNumber ? ' (Elegida)' : ''}:* ${item.lens.commercialName} (${item.lens.visionRangeLabel ?? 'monofocal'}) — *${formatLensPriceARS(item.lens)}*`
   );
 
-  const hasAnnualPromo = chosenLens.hasAnnualReplacementPromo;
-
-  const headerLines: string[] = hasAnnualPromo
+  const headerLines: string[] = qualifiesForAnnualCashPromo
     ? [
-        `Hola *${ENV_CONFIG.brandNameB2C}*! Quiero aprovechar mi beneficio exclusivo del cotizador online.`,
+        `Hola *${ENV_CONFIG.brandNameB2C}*! Quiero aprovechar mi beneficio exclusivo de pago contado del cotizador online.`,
         ``,
         `*CERTIFICADO BENEFICIO EXCLUSIVO #${passportCode}*`,
-        `*¡RENOVÁ TUS CRISTALES GRATIS!* (1 recambio sin cargo durante los próximos 12 meses en monofocales)`,
+        `*¡RENOVÁ TUS CRISTALES GRATIS!* (1 recambio sin cargo durante los próximos 12 meses en monofocales abonando de contado)`,
       ]
-    : [
-        `Hola *${ENV_CONFIG.brandNameB2C}*! Hice mi consulta en el Asesor Virtual y quiero recibir asesoramiento para mis cristales *${chosenLens.commercialName}* (#${passportCode}).`,
-        ``,
-        `*ASESORAMIENTO Y MEDICIÓN A MEDIDA #${passportCode}*`,
-        `*Cristal de Laboratorio:* ${chosenLens.commercialName} (${chosenLens.visionRangeLabel ?? 'múltiples distancias'}) — Quiero conocer opciones según mi receta, planes de cuotas o beneficio de contado.`,
-      ];
+    : isMonofocal
+      ? [
+          `Hola *${ENV_CONFIG.brandNameB2C}*! Hice mi consulta en el Asesor Virtual y quiero avanzar con mi presupuesto *#${passportCode}*.`,
+          ``,
+          `*PRESUPUESTO ASESOR VIRTUAL #${passportCode}*`,
+          `*Cristal Monofocal Elegido:* ${chosenLens.commercialName} — *${formatLensPriceARS(chosenLens)}*`,
+        ]
+      : [
+          `Hola *${ENV_CONFIG.brandNameB2C}*! Hice mi consulta en el Asesor Virtual y quiero recibir asesoramiento para mis cristales *${chosenLens.commercialName}* (#${passportCode}).`,
+          ``,
+          `*ASESORAMIENTO Y MEDICIÓN A MEDIDA #${passportCode}*`,
+          `*Cristal de Laboratorio:* ${chosenLens.commercialName} (${chosenLens.visionRangeLabel ?? 'múltiples distancias'}) — ${
+            hasCashBenefitSelected
+              ? 'Quiero consultar por beneficios de contado y opciones según mi receta.'
+              : 'Quiero conocer opciones según mi receta y planes de pago.'
+          }`,
+        ];
 
   const step1Goals =
     answers.improvementGoals && answers.improvementGoals.length > 0
@@ -171,7 +203,7 @@ export function buildWhatsAppQuoteMessage(
     `- *Cristal Seleccionado:* *Opción ${chosenItem.optionNumber} — ${chosenLens.commercialName}* (*${formatLensPriceARS(chosenLens)}*)`,
     ``,
     `*RESPUESTAS DEL ASESOR VIRTUAL*`,
-    `1. Mejora principal: ${step1Goals}`,
+    `1. Necesito mis lentes para: ${step1Goals}`,
     `2. Actividad principal: ${step2Activities}`,
     `3. Prioridad: ${step3Priorities}`,
     `4. Datos para presupuesto: *${budgetLabels}*`,
