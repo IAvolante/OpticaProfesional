@@ -146,9 +146,9 @@ const QUESTION_VIDEO_SHOWCASE: Record<
 };
 
 const VIDEO_BOX_HEIGHT_CLASSES: Record<VideoBoxSizeId, string> = {
-  compact: 'min-h-[136px] sm:min-h-[164px]',
-  balanced: 'min-h-[164px] sm:min-h-[214px]',
-  cinematic: 'min-h-[236px] sm:min-h-[288px]',
+  compact: 'h-[144px] sm:h-[168px]',
+  balanced: 'h-[162px] sm:h-[212px]',
+  cinematic: 'h-[238px] sm:h-[288px]',
 };
 
 const FONT_SCALE_CLASSES: Record<
@@ -499,10 +499,7 @@ export function QuestionStep({
     question.isMultiSelect === true && currentMultiSelectedList.length > 0;
 
   const isDenseStep = question.options.length >= 5;
-  const resolvedVideoBoxHeight =
-    activeVideoBoxSize === 'balanced' && isDenseStep
-      ? 'min-h-[152px] sm:min-h-[208px]'
-      : VIDEO_BOX_HEIGHT_CLASSES[activeVideoBoxSize];
+  const resolvedVideoBoxHeight = VIDEO_BOX_HEIGHT_CLASSES[activeVideoBoxSize];
 
   return (
     <div
@@ -561,8 +558,8 @@ export function QuestionStep({
                 />
               );
             })}
-          {/* Velo clínico superior e inferior para legibilidad perfecta del progreso y de la pregunta */}
-          <div className="absolute inset-0 z-20 bg-gradient-to-t from-[#091524] via-[#091524]/35 via-45% to-[#091524]/55 pointer-events-none" />
+          {/* Velo clínico equilibrado para contraste nítido con la pregunta centrada al medio */}
+          <div className="absolute inset-0 z-20 bg-gradient-to-b from-[#091524]/60 via-[#091524]/45 to-[#091524]/80 pointer-events-none" />
         </div>
 
         {/* HUD Superior Integrado (ahorra ~42px verticales para que las 5 opciones entren en pantalla sin scroll) */}
@@ -596,35 +593,33 @@ export function QuestionStep({
           </div>
         </div>
 
-        <CardHeader
-          className={cn(
-            'relative z-30 flex flex-col justify-end px-4 pb-3.5 pt-11 sm:p-5 sm:pt-12',
-            resolvedVideoBoxHeight
-          )}
-        >
+        <CardHeader className={cn('relative z-30 p-0', resolvedVideoBoxHeight)}>
+          {/* Pregunta anclada en el centro geométrico exacto (50% vertical y horizontal) en los 5 pasos */}
           <motion.div
             key={`header-${question.id}`}
-            initial={prefersReducedMotion ? false : { opacity: 0, y: 8 }}
+            initial={prefersReducedMotion ? false : { opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
-            className="space-y-1 text-center"
+            className="pointer-events-none absolute inset-0 flex items-center justify-center px-5 sm:px-7 text-center"
           >
             <CardTitle
               className={cn(
-                'text-center leading-[1.22] font-bold text-white drop-shadow-xs',
+                'text-center leading-[1.22] font-bold text-white drop-shadow-[0_2px_10px_rgba(9,21,36,0.85)]',
                 scaleClasses.questionTitle
               )}
             >
               {question.title}
             </CardTitle>
-            <p className="text-center text-[13px] sm:text-[14px] font-semibold text-[#CBE6CB] drop-shadow-xs">
-              {question.stepNumber === 5
-                ? '¡Último toque para ver precios!'
-                : question.maxSelections
-                  ? `Elegí 1 o ${question.maxSelections} opciones`
-                  : 'Podés marcar varias opciones'}
-            </p>
           </motion.div>
+
+          {/* Guía de selección fija en el margen inferior en todos los pasos */}
+          <p className="pointer-events-none absolute inset-x-0 bottom-0 pb-2.5 sm:pb-3.5 px-4 text-center text-[13px] sm:text-[14px] font-semibold text-[#CBE6CB] drop-shadow-xs">
+            {question.stepNumber === 5
+              ? '¡Último toque para ver precios!'
+              : question.maxSelections
+                ? `Elegí 1 o ${question.maxSelections} opciones`
+                : 'Podés marcar varias opciones'}
+          </p>
         </CardHeader>
       </Card>
 
