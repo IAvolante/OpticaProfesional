@@ -612,8 +612,8 @@ export function QuestionStep({
             </CardTitle>
           </motion.div>
 
-          {/* Guía de selección fija en el margen inferior en todos los pasos */}
-          <p className="pointer-events-none absolute inset-x-0 bottom-0 pb-2.5 sm:pb-3.5 px-4 text-center text-[13px] sm:text-[14px] font-semibold text-[#CBE6CB] drop-shadow-xs">
+          {/* Guía de selección fija en el margen inferior derecho en todos los pasos */}
+          <p className="pointer-events-none absolute bottom-2.5 right-3.5 sm:bottom-3.5 sm:right-4 text-right text-[12.5px] sm:text-[13.5px] font-semibold text-[#CBE6CB] drop-shadow-xs">
             {question.stepNumber === 5
               ? '¡Último toque para ver precios!'
               : question.maxSelections
